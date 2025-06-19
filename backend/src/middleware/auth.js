@@ -1,0 +1,96 @@
+import jwt from 'jsonwebtoken';
+import { pool } from '../config/database.js';
+import { sendError } from '../utils/response.js';
+
+export const authenticateToken = async (req, res, next) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+        if (!token) {
+            return sendError(res, 'Access token is required', 401);
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Check if user still exists and is active
+        const [users] = await pool.execute(
+            `SELECT id, username, email, full_name, phone, date_of_birth, gender, 
+                    membership_type, avatar_url, is_active, created_at 
+             FROM smoker 
+             WHERE id = ? AND is_active = true`,
+            [decoded.userId]
+        );
+
+        if (users.length === 0) {
+            return sendError(res, 'User not found or account deactivated', 401);
+        }
+
+        // Add user info to request object
+        req.user = {
+            id: users[0].id,
+            username: users[0].username,
+            email: users[0].email,
+            fullName: users[0].full_name,
+            phone: users[0].phone,
+            dateOfBirth: users[0].date_of_birth,
+            gender: users[0].gender,
+            membershipType: users[0].membership_type,
+            avatarUrl: users[0].avatar_url,
+            isActive: users[0].is_active,
+            createdAt: users[0].created_at
+        };
+
+        next();
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            return sendError(res, 'Invalid token', 401);
+        }
+        if (error.name === 'TokenExpiredError') {
+            return sendError(res, 'Token expired', 401);
+        }
+        console.error('Auth middleware error:', error);
+        return sendError(res, 'Authentication failed', 500);
+    }
+};
+
+// Optional authentication (for endpoints that work with or without auth)
+export const optionalAuth = async (req, res, next) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            const [users] = await pool.execute(
+                `SELECT id, username, email, full_name, phone, date_of_birth, gender, 
+                        membership_type, avatar_url, is_active, created_at 
+                 FROM smoker 
+                 WHERE id = ? AND is_active = true`,
+                [decoded.userId]
+            );
+
+            if (users.length > 0) {
+                req.user = {
+                    id: users[0].id,
+                    username: users[0].username,
+                    email: users[0].email,
+                    fullName: users[0].full_name,
+                    phone: users[0].phone,
+                    dateOfBirth: users[0].date_of_birth,
+                    gender: users[0].gender,
+                    membershipType: users[0].membership_type,
+                    avatarUrl: users[0].avatar_url,
+                    isActive: users[0].is_active,
+                    createdAt: users[0].created_at
+                };
+            }
+        }
+
+        next();
+    } catch (error) {
+        // For optional auth, continue even if token is invalid
+        next();
+    }
+};
