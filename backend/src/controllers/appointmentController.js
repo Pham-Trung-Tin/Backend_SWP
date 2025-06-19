@@ -1,89 +1,146 @@
 import Appointment from '../models/Appointment.js';
 import User from '../models/User.js';
 
-// Get all appointments for a user
+// @desc    Lấy danh sách cuộc hẹn của user
+// @route   GET /api/appointments
+// @access  Private
 export const getUserAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find({ userId: req.user.id })
-      .sort({ date: -1 })
-      .populate('userId', 'firstName lastName email');
-    
+    const { status, page = 1, limit = 10 } = req.query;
+    const userId = req.user._id;
+
+    // Build query
+    const query = { user: userId };
+    if (status) query.status = status;
+
+    // Pagination
+    const skip = (page - 1) * limit;
+
+    const appointments = await Appointment.find(query)
+      .sort({ appointmentDate: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('user', 'name email');
+
+    const total = await Appointment.countDocuments(query);
+
     res.json({
       success: true,
-      data: appointments
+      data: {
+        appointments,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
     });
+
   } catch (error) {
     console.error('Get user appointments error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch appointments',
-      error: error.message
+      message: 'Lỗi server khi lấy danh sách cuộc hẹn'
     });
   }
 };
 
-// Book a new appointment
-export const bookAppointment = async (req, res) => {
+// @desc    Tạo cuộc hẹn mới  
+// @route   POST /api/appointments
+// @access  Private
+export const createAppointment = async (req, res) => {
   try {
     const {
-      date,
-      time,
       coachId,
       coachName,
-      appointmentType,
-      notes,
-      duration = 60
+      appointmentDate,
+      appointmentTime,
+      type,
+      reason,
+      duration
     } = req.body;
 
-    // Check if user has premium/pro membership for certain appointment types
-    const user = await User.findById(req.user.id);
-    if (appointmentType === 'one-on-one' && user.membership.type === 'free') {
-      return res.status(403).json({
+    const userId = req.user._id;
+
+    // Kiểm tra các trường bắt buộc
+    if (!coachId || !coachName || !appointmentDate || !appointmentTime) {
+      return res.status(400).json({
         success: false,
-        message: 'One-on-one appointments require premium or pro membership'
+        message: 'Vui lòng điền đầy đủ thông tin cuộc hẹn'
       });
     }
 
-    // Check for conflicting appointments
+    // Kiểm tra ngày hẹn không được trong quá khứ
+    const appointmentDateTime = new Date(appointmentDate);
+    if (appointmentDateTime < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ngày hẹn không thể trong quá khứ'
+      });
+    }
+
+    // Kiểm tra user có premium/pro membership cho một số loại appointment
+    if (type === 'one-on-one' && req.user.membership === 'free') {
+      return res.status(403).json({
+        success: false,
+        message: 'Tư vấn 1-1 yêu cầu gói thành viên premium hoặc pro'
+      });
+    }
+
+    // Kiểm tra trùng lịch
     const existingAppointment = await Appointment.findOne({
-      userId: req.user.id,
-      date: new Date(date),
-      time,
-      status: { $in: ['scheduled', 'confirmed'] }
+      user: userId,
+      appointmentDate: appointmentDateTime,
+      appointmentTime,
+      status: { $in: ['pending', 'confirmed'] }
     });
 
     if (existingAppointment) {
       return res.status(409).json({
         success: false,
-        message: 'You already have an appointment at this time'
+        message: 'Bạn đã có lịch hẹn vào thời gian này'
       });
     }
 
+    // Tạo cuộc hẹn mới
     const appointment = new Appointment({
-      userId: req.user.id,
-      date: new Date(date),
-      time,
-      coachId,
-      coachName,
-      appointmentType,
-      notes,
-      duration,
-      status: 'scheduled'
+      user: userId,
+      coach: {
+        id: coachId,
+        name: coachName
+      },
+      appointmentDate: appointmentDateTime,
+      appointmentTime,
+      type: type || 'consultation',
+      reason,
+      duration: duration || 60,
+      status: 'pending'
     });
 
     await appointment.save();
 
     res.status(201).json({
       success: true,
-      message: 'Appointment booked successfully',
-      data: appointment
+      message: 'Đặt lịch hẹn thành công',
+      data: { appointment }
     });
+
   } catch (error) {
-    console.error('Book appointment error:', error);
+    console.error('Create appointment error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Dữ liệu không hợp lệ',
+        errors: messages
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Failed to book appointment',
-      error: error.message
+      message: 'Lỗi server khi tạo cuộc hẹn'
     });
   }
 };

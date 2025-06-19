@@ -1,30 +1,31 @@
 import User from '../models/User.js';
 
-// Get membership info
+// @desc    Lấy thông tin membership
+// @route   GET /api/membership
+// @access  Private
 export const getMembershipInfo = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('membership');
+    const user = await User.findById(req.user._id).select('membership membershipExpiry');
     
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User không tồn tại'
       });
     }
 
-    // Calculate days remaining
-    const daysRemaining = user.membership.expiresAt 
-      ? Math.max(0, Math.ceil((user.membership.expiresAt - new Date()) / (1000 * 60 * 60 * 24)))
+    // Tính số ngày còn lại
+    const daysRemaining = user.membershipExpiry 
+      ? Math.max(0, Math.ceil((user.membershipExpiry - new Date()) / (1000 * 60 * 60 * 24)))
       : null;
 
     const membershipInfo = {
-      type: user.membership.type,
-      status: user.membership.status,
-      startDate: user.membership.startDate,
-      expiresAt: user.membership.expiresAt,
+      type: user.membership,
+      isActive: user.hasActiveMembership(),
+      expiryDate: user.membershipExpiry,
       daysRemaining,
-      features: getMembershipFeatures(user.membership.type),
-      canUpgrade: user.membership.type !== 'pro'
+      features: getMembershipFeatures(user.membership),
+      canUpgrade: user.membership !== 'pro'
     };
 
     res.json({
@@ -35,8 +36,7 @@ export const getMembershipInfo = async (req, res) => {
     console.error('Get membership info error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch membership information',
-      error: error.message
+      message: 'Lỗi server khi lấy thông tin membership'
     });
   }
 };

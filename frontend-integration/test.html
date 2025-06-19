@@ -1,0 +1,287 @@
+<!-- Example HTML để test API - test.html -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Quit Smoking API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Quit Smoking API</h1>
+    
+    <!-- Authentication Section -->
+    <div class="section">
+        <h2>Authentication</h2>
+        
+        <h3>Register</h3>
+        <input type="text" id="registerName" placeholder="Tên">
+        <input type="email" id="registerEmail" placeholder="Email">
+        <input type="password" id="registerPassword" placeholder="Mật khẩu">
+        <input type="number" id="registerCigarettes" placeholder="Số điều thuốc/ngày">
+        <input type="number" id="registerCost" placeholder="Giá tiền/gói">
+        <button onclick="testRegister()">Đăng ký</button>
+        
+        <h3>Login</h3>
+        <input type="email" id="loginEmail" placeholder="Email">
+        <input type="password" id="loginPassword" placeholder="Mật khẩu">
+        <button onclick="testLogin()">Đăng nhập</button>
+        
+        <button onclick="testGetCurrentUser()">Lấy thông tin user</button>
+        <button onclick="testLogout()">Đăng xuất</button>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div class="section">
+        <h2>Dashboard</h2>
+        <button onclick="testGetDashboard()">Lấy Dashboard</button>
+        <button onclick="testGetStatistics()">Lấy Thống kê</button>
+    </div>
+
+    <!-- Check-in Section -->
+    <div class="section">
+        <h2>Daily Check-in</h2>
+        
+        <h3>Tạo Check-in</h3>
+        <select id="smokingStatus">
+            <option value="smoke-free">Không hút thuốc</option>
+            <option value="smoked">Đã hút thuốc</option>
+            <option value="almost-smoked">Suýt hút thuốc</option>
+        </select>
+        <select id="mood">
+            <option value="excellent">Rất tốt</option>
+            <option value="good">Tốt</option>
+            <option value="neutral">Bình thường</option>
+            <option value="bad">Tệ</option>
+            <option value="very-bad">Rất tệ</option>
+        </select>
+        <input type="number" id="cravingLevel" placeholder="Mức độ thèm thuốc (1-10)" min="1" max="10">
+        <textarea id="notes" placeholder="Ghi chú"></textarea>
+        <button onclick="testCreateCheckin()">Tạo Check-in</button>
+        
+        <button onclick="testGetTodayCheckin()">Check-in hôm nay</button>
+        <button onclick="testGetCheckinHistory()">Lịch sử Check-in</button>
+        <button onclick="testGetCheckinStats()">Thống kê Check-in</button>
+    </div>
+
+    <!-- Appointments Section -->
+    <div class="section">
+        <h2>Appointments</h2>
+        
+        <h3>Đặt lịch hẹn</h3>
+        <input type="text" id="coachId" placeholder="Coach ID">
+        <input type="text" id="coachName" placeholder="Tên Coach">
+        <input type="date" id="appointmentDate">
+        <input type="time" id="appointmentTime">
+        <input type="text" id="reason" placeholder="Lý do">
+        <button onclick="testCreateAppointment()">Đặt lịch</button>
+        
+        <button onclick="testGetAppointments()">Lấy danh sách lịch hẹn</button>
+        <button onclick="testGetUpcomingAppointments()">Lịch hẹn sắp tới</button>
+    </div>
+
+    <!-- Results -->
+    <div class="section">
+        <h2>Kết quả</h2>
+        <div id="result" class="result">Kết quả API sẽ hiển thị ở đây...</div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // Helper function to display results
+        function displayResult(data) {
+            document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Authentication functions
+        async function testRegister() {
+            try {
+                const result = await api.register({
+                    name: document.getElementById('registerName').value,
+                    email: document.getElementById('registerEmail').value,
+                    password: document.getElementById('registerPassword').value,
+                    cigarettesPerDay: parseInt(document.getElementById('registerCigarettes').value),
+                    costPerPack: parseInt(document.getElementById('registerCost').value)
+                });
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const result = await api.login({
+                    email: document.getElementById('loginEmail').value,
+                    password: document.getElementById('loginPassword').value
+                });
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetCurrentUser() {
+            try {
+                const result = await api.getCurrentUser();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testLogout() {
+            try {
+                await api.logout();
+                displayResult({ message: 'Đăng xuất thành công' });
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        // Dashboard functions
+        async function testGetDashboard() {
+            try {
+                const result = await api.getUserDashboard();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetStatistics() {
+            try {
+                const result = await api.getUserStatistics();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        // Check-in functions
+        async function testCreateCheckin() {
+            try {
+                const result = await api.createCheckin({
+                    smokingStatus: document.getElementById('smokingStatus').value,
+                    mood: document.getElementById('mood').value,
+                    cravingLevel: parseInt(document.getElementById('cravingLevel').value),
+                    notes: document.getElementById('notes').value
+                });
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetTodayCheckin() {
+            try {
+                const result = await api.getTodayCheckin();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetCheckinHistory() {
+            try {
+                const result = await api.getCheckinHistory();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetCheckinStats() {
+            try {
+                const result = await api.getCheckinStatistics();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        // Appointment functions
+        async function testCreateAppointment() {
+            try {
+                const result = await api.createAppointment({
+                    coachId: document.getElementById('coachId').value,
+                    coachName: document.getElementById('coachName').value,
+                    appointmentDate: document.getElementById('appointmentDate').value,
+                    appointmentTime: document.getElementById('appointmentTime').value,
+                    reason: document.getElementById('reason').value
+                });
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetAppointments() {
+            try {
+                const result = await api.getAppointments();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        async function testGetUpcomingAppointments() {
+            try {
+                const result = await api.getUpcomingAppointments();
+                displayResult(result);
+            } catch (error) {
+                displayResult({ error: api.formatError(error) });
+            }
+        }
+
+        // Check authentication status on page load
+        window.onload = function() {
+            if (api.isAuthenticated()) {
+                displayResult({ message: 'Đã đăng nhập, token có sẵn' });
+            } else {
+                displayResult({ message: 'Chưa đăng nhập' });
+            }
+        };
+    </script>
+</body>
+</html>

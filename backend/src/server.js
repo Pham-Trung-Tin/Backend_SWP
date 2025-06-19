@@ -11,10 +11,10 @@ import connectDB from './config/database.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
-// import appointmentRoutes from './routes/appointments.js';
-// import checkinRoutes from './routes/checkins.js';
-// import userRoutes from './routes/users.js';
-// import membershipRoutes from './routes/membership.js';
+import appointmentRoutes from './routes/appointments.js';
+import checkinRoutes from './routes/checkins.js';
+import userRoutes from './routes/users.js';
+import membershipRoutes from './routes/membership.js';
 // import adminRoutes from './routes/admin.js';
 
 // Load environment variables
@@ -101,10 +101,10 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/appointments', appointmentRoutes);
-// app.use('/api/checkins', checkinRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/membership', membershipRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/checkins', checkinRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/membership', membershipRoutes);
 // app.use('/api/admin', adminRoutes);
 
 // 404 handler

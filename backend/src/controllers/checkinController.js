@@ -1,86 +1,95 @@
 import DailyCheckin from '../models/DailyCheckin.js';
 import User from '../models/User.js';
 
-// Create or update daily check-in
+// @desc    Tạo check-in hàng ngày
+// @route   POST /api/checkins
+// @access  Private
 export const createDailyCheckin = async (req, res) => {
   try {
     const {
       smokingStatus,
       cigarettesSmoked,
-      moodLevel,
+      mood,
       cravingLevel,
-      stressLevel,
       withdrawalSymptoms,
       alternativeActivities,
-      stressFactors,
       notes,
-      achievements,
-      weight,
-      exerciseMinutes,
-      sleepHours
+      selfRating,
+      tomorrowGoal,
+      stressLevel,
+      stressFactors,
+      achievements
     } = req.body;
+
+    const userId = req.user._id;
+
+    // Kiểm tra các trường bắt buộc
+    if (!smokingStatus || !mood || !cravingLevel) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng điền đầy đủ thông tin bắt buộc (trạng thái hút thuốc, tâm trạng, mức độ thèm thuốc)'
+      });
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Check if check-in already exists for today
+    // Kiểm tra đã check-in hôm nay chưa
     let checkin = await DailyCheckin.findOne({
-      userId: req.user.id,
+      user: userId,
       date: today
     });
 
     if (checkin) {
-      // Update existing check-in
+      // Cập nhật check-in hiện có
       Object.assign(checkin, {
         smokingStatus,
-        cigarettesSmoked,
-        moodLevel,
+        cigarettesSmoked: cigarettesSmoked || 0,
+        mood,
         cravingLevel,
-        stressLevel,
-        withdrawalSymptoms,
-        alternativeActivities,
-        stressFactors,
+        withdrawalSymptoms: withdrawalSymptoms || [],
+        alternativeActivities: alternativeActivities || [],
         notes,
-        achievements,
-        weight,
-        exerciseMinutes,
-        sleepHours,
-        updatedAt: new Date()
+        selfRating,
+        tomorrowGoal,
+        stressLevel,
+        stressFactors: stressFactors || [],
+        achievements: achievements || []
       });
-    } else {
-      // Create new check-in
+    } else {      // Tạo check-in mới
       checkin = new DailyCheckin({
-        userId: req.user.id,
+        user: userId,
         date: today,
         smokingStatus,
-        cigarettesSmoked,
-        moodLevel,
+        cigarettesSmoked: cigarettesSmoked || 0,
+        mood,
         cravingLevel,
-        stressLevel,
-        withdrawalSymptoms,
-        alternativeActivities,
-        stressFactors,
+        withdrawalSymptoms: withdrawalSymptoms || [],
+        alternativeActivities: alternativeActivities || [],
         notes,
-        achievements,
-        weight,
-        exerciseMinutes,
-        sleepHours
+        selfRating,
+        tomorrowGoal,
+        stressLevel,
+        stressFactors: stressFactors || [],
+        achievements: achievements || []
       });
     }
 
     await checkin.save();
 
-    // Update user's last check-in date and streak
-    const user = await User.findById(req.user.id);
+    // Cập nhật progress của user
+    const user = await User.findById(userId);
     if (user) {
-      user.lastCheckinDate = new Date();
+      user.progress.lastCheckinDate = new Date();
+      user.progress.totalDaysTracked = (user.progress.totalDaysTracked || 0) + 1;
       
-      // Calculate streak
       if (smokingStatus === 'smoke-free') {
-        user.currentStreak = (user.currentStreak || 0) + 1;
-        user.longestStreak = Math.max(user.longestStreak || 0, user.currentStreak);
+        user.progress.currentStreak = (user.progress.currentStreak || 0) + 1;
+        if (user.progress.currentStreak > (user.progress.longestStreak || 0)) {
+          user.progress.longestStreak = user.progress.currentStreak;
+        }
       } else {
-        user.currentStreak = 0;
+        user.progress.currentStreak = 0;
       }
       
       await user.save();
@@ -88,7 +97,7 @@ export const createDailyCheckin = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Daily check-in saved successfully',
+      message: 'Check-in thành công',
       data: checkin
     });
   } catch (error) {

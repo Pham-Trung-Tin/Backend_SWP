@@ -1,107 +1,40 @@
 import express from 'express';
 import {
   getUserAppointments,
-  bookAppointment,
+  createAppointment,
+  getAppointmentById,
   updateAppointment,
   cancelAppointment,
   rateAppointment,
-  getAvailableSlots,
-  getAppointmentStats
+  getUpcomingAppointments,
+  getAppointmentStatistics
 } from '../controllers/appointmentController.js';
-import { authenticateToken as authenticate } from '../middleware/auth.js';
-import { body, query, param } from 'express-validator';
-import { handleValidationErrors } from '../middleware/validation.js';
+import { authenticateToken } from '../middleware/auth.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-// Validation middleware
-const validateBookAppointment = [
-  body('date')
-    .isISO8601()
-    .withMessage('Valid date is required'),
-  body('time')
-    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Valid time format (HH:MM) is required'),
-  body('coachName')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Coach name must be between 2 and 100 characters'),
-  body('appointmentType')
-    .isIn(['consultation', 'group-session', 'one-on-one', 'follow-up'])
-    .withMessage('Invalid appointment type'),
-  body('duration')
-    .optional()
-    .isInt({ min: 15, max: 180 })
-    .withMessage('Duration must be between 15 and 180 minutes'),
-  body('notes')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Notes cannot exceed 500 characters'),
-  handleValidationErrors
-];
+// Rate limiting cho appointment routes
+const appointmentLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 giờ
+  max: 10, // Tối đa 10 appointments mỗi giờ
+  message: {
+    success: false,
+    message: 'Quá nhiều lần đặt lịch hẹn, vui lòng thử lại sau'
+  }
+});
 
-const validateUpdateAppointment = [
-  param('id')
-    .isMongoId()
-    .withMessage('Valid appointment ID is required'),
-  body('notes')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Notes cannot exceed 500 characters'),
-  body('status')
-    .optional()
-    .isIn(['scheduled', 'confirmed', 'cancelled', 'completed'])
-    .withMessage('Invalid status'),
-  handleValidationErrors
-];
+// Tất cả routes đều cần authentication
+router.use(authenticateToken);
 
-const validateCancelAppointment = [
-  param('id')
-    .isMongoId()
-    .withMessage('Valid appointment ID is required'),
-  body('reason')
-    .optional()
-    .trim()
-    .isLength({ max: 200 })
-    .withMessage('Cancellation reason cannot exceed 200 characters'),
-  handleValidationErrors
-];
-
-const validateRateAppointment = [
-  param('id')
-    .isMongoId()
-    .withMessage('Valid appointment ID is required'),
-  body('rating')
-    .isInt({ min: 1, max: 5 })
-    .withMessage('Rating must be between 1 and 5'),
-  body('feedback')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Feedback cannot exceed 500 characters'),
-  handleValidationErrors
-];
-
-const validateAvailableSlots = [
-  query('date')
-    .isISO8601()
-    .withMessage('Valid date is required'),
-  query('coachId')
-    .optional()
-    .isMongoId()
-    .withMessage('Valid coach ID is required if provided'),
-  handleValidationErrors
-];
-
-// Routes
-router.get('/', authenticate, getUserAppointments);
-router.post('/', authenticate, validateBookAppointment, bookAppointment);
-router.put('/:id', authenticate, validateUpdateAppointment, updateAppointment);
-router.patch('/:id/cancel', authenticate, validateCancelAppointment, cancelAppointment);
-router.post('/:id/rate', authenticate, validateRateAppointment, rateAppointment);
-router.get('/available-slots', authenticate, validateAvailableSlots, getAvailableSlots);
-router.get('/stats', authenticate, getAppointmentStats);
+// Appointment routes
+router.get('/', getUserAppointments);
+router.get('/upcoming', getUpcomingAppointments);
+router.get('/statistics', getAppointmentStatistics);
+router.get('/:id', getAppointmentById);
+router.post('/', appointmentLimiter, createAppointment);
+router.put('/:id', updateAppointment);
+router.delete('/:id', cancelAppointment);
+router.post('/:id/rating', rateAppointment);
 
 export default router;

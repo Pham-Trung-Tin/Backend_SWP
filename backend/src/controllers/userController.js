@@ -2,55 +2,76 @@ import User from '../models/User.js';
 import DailyCheckin from '../models/DailyCheckin.js';
 import Appointment from '../models/Appointment.js';
 
-// Get user profile with progress data
-export const getUserProfile = async (req, res) => {
+// @desc    Lấy thông tin dashboard của user
+// @route   GET /api/users/dashboard
+// @access  Private
+export const getUserDashboard = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const userId = req.user._id;
+    
+    const user = await User.findById(userId).select('-password');
     
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User không tồn tại'
       });
     }
 
-    // Calculate days since quit date
-    const daysSinceQuit = user.quitPlan?.quitDate 
-      ? Math.floor((new Date() - new Date(user.quitPlan.quitDate)) / (1000 * 60 * 60 * 24))
-      : 0;
-
-    // Get recent check-ins count
+    // Tính toán thông tin dashboard
+    const now = new Date();
+    const daysSinceStart = Math.floor((now - user.startDate) / (1000 * 60 * 60 * 24));
+    const moneySaved = user.moneySaved;
+    const cigarettesNotSmoked = user.cigarettesNotSmoked;
+    
+    // Lấy thống kê check-in gần đây
     const recentCheckins = await DailyCheckin.countDocuments({
-      userId: req.user.id,
+      user: userId,
       date: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
     });
 
-    // Get total appointments
+    // Lấy tổng số appointments
     const totalAppointments = await Appointment.countDocuments({
-      userId: req.user.id
+      user: userId
     });
+    
+    // Tính thời gian sống thêm (ước tính)
+    const minutesLivedLonger = cigarettesNotSmoked * 11; // Mỗi điều thuốc = 11 phút
+    const hoursLivedLonger = Math.floor(minutesLivedLonger / 60);
+    const daysLivedLonger = Math.floor(hoursLivedLonger / 24);
 
-    const profileData = {
-      ...user.toObject(),
+    const dashboardData = {
+      user: user.toJSON(),
       stats: {
-        daysSinceQuit,
+        daysSinceStart,
+        currentStreak: user.progress.currentStreak || 0,
+        longestStreak: user.progress.longestStreak || 0,
+        moneySaved,
+        cigarettesNotSmoked,
         recentCheckins,
         totalAppointments,
-        currentStreak: user.currentStreak || 0,
-        longestStreak: user.longestStreak || 0
+        timeLivedLonger: {
+          minutes: minutesLivedLonger,
+          hours: hoursLivedLonger, 
+          days: daysLivedLonger
+        }
+      },
+      membership: {
+        type: user.membership,
+        isActive: user.hasActiveMembership(),
+        expiryDate: user.membershipExpiry
       }
     };
 
     res.json({
       success: true,
-      data: profileData
+      data: dashboardData
     });
+
   } catch (error) {
-    console.error('Get user profile error:', error);
+    console.error('Get user dashboard error:', error);
     res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user profile',
-      error: error.message
+      success: false,      message: 'Lỗi server khi lấy thông tin dashboard'
     });
   }
 };
