@@ -39,12 +39,26 @@ export const validateRegister = [
     body('dateOfBirth')
         .optional()
         .isISO8601()
-        .withMessage('Date of birth must be a valid date'),
+        .withMessage('Date of birth must be a valid date'), body('gender')
+            .optional()
+            .isIn(['male', 'female', 'other'])
+            .withMessage('Gender must be male, female, or other'),
 
-    body('gender')
+    // Smoking information (optional for registration)
+    body('cigarettesPerDay')
         .optional()
-        .isIn(['male', 'female', 'other'])
-        .withMessage('Gender must be male, female, or other')
+        .isInt({ min: 0, max: 100 })
+        .withMessage('Cigarettes per day must be between 0 and 100'),
+
+    body('costPerPack')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Cost per pack must be a positive number'),
+
+    body('cigarettesPerPack')
+        .optional()
+        .isInt({ min: 1, max: 50 })
+        .withMessage('Cigarettes per pack must be between 1 and 50')
 ];
 
 // Validation rules for login
@@ -99,15 +113,37 @@ export const validateChangePassword = [
         .isLength({ min: 8 })
         .withMessage('New password must be at least 8 characters long')
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-        .withMessage('New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+        .withMessage('New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'), body('confirmPassword')
+            .custom((value, { req }) => {
+                if (value !== req.body.newPassword) {
+                    throw new Error('Password confirmation does not match');
+                }
+                return true;
+            })
+];
 
-    body('confirmPassword')
-        .custom((value, { req }) => {
-            if (value !== req.body.newPassword) {
-                throw new Error('Password confirmation does not match');
-            }
-            return true;
-        })
+// Validation rules for email verification
+export const validateEmailVerification = [
+    body('email')
+        .trim()
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please provide a valid email address'),
+
+    body('verificationCode')
+        .trim()
+        .isLength({ min: 6, max: 6 })
+        .matches(/^[0-9]{6}$/)
+        .withMessage('Verification code must be 6 digits')
+];
+
+// Validation rules for resend verification
+export const validateResendVerification = [
+    body('email')
+        .trim()
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please provide a valid email address')
 ];
 
 // Middleware to handle validation errors

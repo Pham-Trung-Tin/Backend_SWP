@@ -1,0 +1,183 @@
+
+.membership-container {
+  max-width: 1200px;
+  margin: 50px auto;
+  padding: 0 20px;
+}
+
+.hero-image-container {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.membership-hero-image {
+  max-width: 300px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.hero-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2570e8;
+  margin-top: 20px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.membership-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.membership-subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 40px;
+}
+
+.pricing-cards {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+}
+
+.pricing-card {
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  padding: 30px;
+  width: 300px;
+  position: relative;
+  border: 1px solid #e0e4e8;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-card.featured {
+  border: 2px solid #2570e8;
+  transform: scale(1.05);
+}
+
+.pricing-card.featured:hover {
+  transform: scale(1.05) translateY(-5px);
+}
+
+.plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #2570e8;
+  color: white;
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.plan-name {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.price {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.price-amount {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2570e8;
+}
+
+.price-period {
+  font-size: 16px;
+  color: #666;
+}
+
+.plan-description {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  min-height: 40px;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 25px 0;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.feature-icon {
+  color: #2570e8;
+  margin-right: 10px;
+  font-size: 12px;
+}
+
+.plan-footer {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  margin-top: 25px;
+}
+
+.package-button {
+  display: block;
+  background-color: #2570e8;
+  color: white;
+  text-align: center;
+  padding: 12px;
+  border-radius: 5px;
+  font-weight: 500;
+  margin-top: 20px;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.package-button:hover {
+  background-color: #1a5dc8;
+}
+
+@media (max-width: 992px) {
+  .pricing-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .pricing-card {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 20px;
+  }
+  
+  .pricing-card.featured {
+    transform: scale(1);
+  }
+  
+  .pricing-card.featured:hover {
+    transform: translateY(-5px);
+  }
+}

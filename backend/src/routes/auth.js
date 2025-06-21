@@ -6,6 +6,8 @@ import {
     validateLogin,
     validateProfileUpdate,
     validateChangePassword,
+    validateEmailVerification,
+    validateResendVerification,
     handleValidationErrors
 } from '../middleware/validation.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -55,6 +57,20 @@ router.post('/login',
 router.post('/refresh-token',
     authLimiter,
     authController.refreshToken
+);
+
+router.post('/verify-email',
+    authLimiter,
+    validateEmailVerification,
+    handleValidationErrors,
+    authController.verifyEmail
+);
+
+router.post('/resend-verification',
+    authLimiter,
+    validateResendVerification,
+    handleValidationErrors,
+    authController.resendVerificationCode
 );
 
 // Protected routes

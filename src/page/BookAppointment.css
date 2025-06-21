@@ -1,0 +1,553 @@
+.appointment-section {
+  padding: 50px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(to bottom, #f9fbff, #f0f4fa);
+  min-height: calc(100vh - 100px);
+}
+
+.appointment-section .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 90%;
+  max-width: 1200px;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  padding: 30px;
+}
+
+.appointment-header {
+  text-align: center;
+  margin-bottom: 40px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.appointment-header h1 {
+  font-size: 2.5rem;
+  color: #2570e8;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.appointment-icon {
+  margin-right: 10px;
+  font-size: 2rem;
+  display: inline-block;
+}
+
+.appointment-header p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+/* Stepper */
+.appointment-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+  width: 100%;
+  max-width: 600px;
+  position: relative;
+  padding: 0 20px;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 18px;
+}
+
+.step-label {
+  font-size: 14px;
+  color: #777;
+  transition: all 0.3s ease;
+}
+
+.stepper-line {
+  flex-grow: 1;
+  height: 2px;
+  background-color: #e0e0e0;
+  max-width: 100px;
+  margin: 0 15px;
+  position: relative;
+  top: -20px;
+}
+
+.stepper-step.active .step-number {
+  background-color: #2570e8;
+  color: white;
+}
+
+.stepper-step.active .step-label {
+  color: #2570e8;
+  font-weight: 600;
+}
+
+.stepper-step.clickable {
+  cursor: pointer;
+}
+
+.stepper-step.clickable:hover .step-number {
+  background-color: #1a5cbf;
+}
+
+.stepper-step.clickable:hover .step-label {
+  color: #1a5cbf;
+}
+
+/* Coach Selection */
+.coach-selection-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.coaches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.coach-card {
+  width: 280px;
+  background-color: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 8px 20px rgba(37, 112, 232, 0.08);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid transparent;
+  min-height: 250px;
+  position: relative;
+  overflow: hidden;
+}
+
+.coach-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(37, 112, 232, 0.15);
+}
+
+.coach-card.selected {
+  border-color: #2570e8;
+  background-color: #f7faff;
+  box-shadow: 0 12px 28px rgba(37, 112, 232, 0.2);
+}
+
+.coach-avatar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 25px;
+  border-radius: 50%;
+  padding: 5px;
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  box-shadow: 0 6px 16px rgba(37, 112, 232, 0.12);
+}
+
+.coach-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+}
+
+.coach-status {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  right: 5px;
+  bottom: 10px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.coach-status.available {
+  background-color: #4caf50;
+  animation: pulse-status 2s infinite;
+}
+
+@keyframes pulse-status {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.coach-info {
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coach-info h3 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.coach-info p {
+  font-size: 0.9rem;
+  color: #777;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.coach-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.stars {
+  color: #ffba08;
+  margin-right: 5px;
+  display: inline-block;
+}
+
+.rating-value {
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* Date Selection */
+.date-selection-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.selection-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.back-button svg {
+  margin-right: 5px;
+}
+
+.selection-header h2 {
+  flex-grow: 1;
+  text-align: center;
+  font-size: 1.6rem;
+  color: #333;
+}
+
+.selected-coach {
+  display: flex;
+  align-items: center;
+  background-color: #f5faff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border-left: 4px solid #2570e8;
+  box-shadow: 0 3px 8px rgba(37, 112, 232, 0.06);
+}
+
+.small-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 12px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-container {
+  background-color: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 8px 24px rgba(37, 112, 232, 0.08);
+  border: 1px solid rgba(37, 112, 232, 0.08);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.month-nav {
+  background-color: #f5f7ff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2570e8;
+  box-shadow: 0 2px 6px rgba(37, 112, 232, 0.1);
+}
+
+.month-nav:hover {
+  background-color: #f0f0f0;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day-header {
+  text-align: center;
+  font-weight: 600;
+  color: #777;
+  padding: 5px;
+  font-size: 0.9rem;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calendar-day:not(.empty):hover {
+  background-color: #e6f0ff;
+}
+
+.calendar-day.empty {
+  pointer-events: none;
+}
+
+.calendar-day.today {
+  background-color: #e6f0ff;
+  font-weight: bold;
+  color: #2570e8;
+}
+
+/* Time Selection */
+.time-selection-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.selection-details {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.selected-date {
+  display: flex;
+  align-items: center;
+  background-color: #f5faff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-left: 10px;
+  border-left: 4px solid #2570e8;
+  box-shadow: 0 3px 8px rgba(37, 112, 232, 0.06);
+}
+
+.selected-date svg {
+  margin-right: 10px;
+  color: #2570e8;
+  font-size: 1.1rem;
+}
+
+.time-slots-container {
+  background-color: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 8px 20px rgba(37, 112, 232, 0.08);
+}
+
+.time-slots-container p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.time-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.time-slot {
+  padding: 14px;
+  border: 2px solid #eaeaea;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.time-slot:hover {
+  border-color: #2570e8;
+  background-color: #f0f7ff;
+  transform: translateY(-2px);
+}
+
+.time-slot.selected {
+  border-color: #2570e8;
+  background-color: #2570e8;
+  color: white;
+  box-shadow: 0 4px 10px rgba(37, 112, 232, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Success Message */
+.appointment-success {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 30px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: #4caf50;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 40px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.appointment-success h2 {
+  color: #4caf50;
+  font-size: 24px;
+  margin-bottom: 15px;
+}
+
+.appointment-success p {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.redirect-message {
+  margin-top: 20px;
+  color: #777;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .coaches-list {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .time-slots {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .selection-details {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .appointment-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .time-slots {
+    grid-template-columns: 1fr;
+  }
+  
+  .stepper-step .step-label {
+    font-size: 12px;
+  }
+}

@@ -11,13 +11,11 @@ export const authenticateToken = async (req, res, next) => {
             return sendError(res, 'Access token is required', 401);
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Check if user still exists and is active
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);        // Check if user still exists and is active
         const [users] = await pool.execute(
             `SELECT id, username, email, full_name, phone, date_of_birth, gender, 
-                    membership_type, avatar_url, is_active, created_at 
-             FROM smoker 
+                    role, email_verified, is_active, created_at 
+             FROM users 
              WHERE id = ? AND is_active = true`,
             [decoded.userId]
         );
@@ -35,8 +33,8 @@ export const authenticateToken = async (req, res, next) => {
             phone: users[0].phone,
             dateOfBirth: users[0].date_of_birth,
             gender: users[0].gender,
-            membershipType: users[0].membership_type,
-            avatarUrl: users[0].avatar_url,
+            role: users[0].role,
+            emailVerified: users[0].email_verified,
             isActive: users[0].is_active,
             createdAt: users[0].created_at
         };
@@ -61,12 +59,10 @@ export const optionalAuth = async (req, res, next) => {
         const token = authHeader && authHeader.split(' ')[1];
 
         if (token) {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-            const [users] = await pool.execute(
+            const decoded = jwt.verify(token, process.env.JWT_SECRET); const [users] = await pool.execute(
                 `SELECT id, username, email, full_name, phone, date_of_birth, gender, 
-                        membership_type, avatar_url, is_active, created_at 
-                 FROM smoker 
+                        role, email_verified, is_active, created_at 
+                 FROM user 
                  WHERE id = ? AND is_active = true`,
                 [decoded.userId]
             );
@@ -80,8 +76,8 @@ export const optionalAuth = async (req, res, next) => {
                     phone: users[0].phone,
                     dateOfBirth: users[0].date_of_birth,
                     gender: users[0].gender,
-                    membershipType: users[0].membership_type,
-                    avatarUrl: users[0].avatar_url,
+                    role: users[0].role,
+                    emailVerified: users[0].email_verified,
                     isActive: users[0].is_active,
                     createdAt: users[0].created_at
                 };

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
+import ensureTablesExist from './ensureTables.js';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +51,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Test database connection
 await testConnection();
+// Ensure all required tables exist on startup
+await ensureTablesExist();
 
 // Health check endpoint
 app.get('/health', (req, res) => {

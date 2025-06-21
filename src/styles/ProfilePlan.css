@@ -1,0 +1,144 @@
+/* Simple Plan Styles */
+.simple-plan {
+  width: 100%;
+}
+
+.current-plan {
+  padding: 0;
+}
+
+.plan-strategy {
+  margin-bottom: 20px;
+}
+
+.plan-strategy h3,
+.plan-goal h3 {
+  font-size: 16px;
+  margin: 0 0 8px;
+  color: #333;
+  font-weight: 600;
+}
+
+.plan-strategy p,
+.plan-goal p {
+  font-size: 15px;
+  color: #444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.plan-start-date {
+  padding: 15px;
+  background-color: #f0f7ff;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border-left: 3px solid #2570e8;
+}
+
+.date-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.icon {
+  color: #2570e8;
+}
+
+.plan-start-date strong {
+  font-size: 16px;
+  color: #2570e8;
+  display: block;
+  margin-left: 25px;
+}
+
+.plan-goal {
+  margin-bottom: 25px;
+}
+
+/* Milestones */
+.milestones {
+  margin-bottom: 30px;
+}
+
+.milestones h3 {
+  font-size: 16px;
+  margin: 0 0 15px;
+  color: #333;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.milestone-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  transition: all 0.2s ease;
+}
+
+.milestone-item:hover {
+  transform: translateX(5px);
+}
+
+.milestone-status {
+  margin-right: 15px;
+  padding-top: 3px;
+}
+
+.status-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+}
+
+.status-circle.completed {
+  background-color: #28a745;
+}
+
+.status-circle.in-progress {
+  background-color: #2570e8;
+}
+
+.status-circle.upcoming {
+  background-color: #6c757d;
+}
+
+.milestone-info h4 {
+  font-size: 15px;
+  margin: 0 0 5px;
+  color: #333;
+}
+
+.milestone-info p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.edit-plan-btn {
+  display: block;
+  width: 100%;
+  background-color: #fff;
+  color: #2570e8;
+  border: 1px solid #2570e8;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-plan-btn:hover {
+  background-color: #2570e8;
+  color: #fff;
+}
