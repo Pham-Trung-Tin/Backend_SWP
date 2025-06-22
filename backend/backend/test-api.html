@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Quit Smoking - MySQL Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .api-test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .api-test h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left: 5px solid #28a745;
+        }
+        .error {
+            border-left: 5px solid #dc3545;
+        }
+        .loading {
+            border-left: 5px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Test API Quit Smoking - MySQL Backend</h1>
+        <p>Kiểm tra các endpoint API của server MySQL</p>
+
+        <div class="api-test">
+            <h3>🏥 Health Check</h3>
+            <button class="test-button" onclick="testAPI('/health', 'health-result')">Test Health</button>
+            <div id="health-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>👥 Users API</h3>
+            <button class="test-button" onclick="testAPI('/api/users', 'users-result')">Get All Users</button>
+            <div id="users-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📝 Plans API</h3>
+            <button class="test-button" onclick="testAPI('/api/plans', 'plans-result')">Get All Plans</button>
+            <div id="plans-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📅 Appointments API</h3>
+            <button class="test-button" onclick="testAPI('/api/appointments', 'appointments-result')">Get All Appointments</button>
+            <div id="appointments-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📈 Progress API</h3>
+            <button class="test-button" onclick="testAPI('/api/progress', 'progress-result')">Get Progress Data</button>
+            <div id="progress-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>💳 Membership API</h3>
+            <button class="test-button" onclick="testAPI('/api/membership', 'membership-result')">Get Membership Info</button>
+            <div id="membership-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📰 Blogs API</h3>
+            <button class="test-button" onclick="testAPI('/api/blogs', 'blogs-result')">Get Blogs</button>
+            <div id="blogs-result" class="result"></div>
+        </div>        <div class="api-test">
+            <h3>🔐 Auth Test - Login</h3>
+            <button class="test-button" onclick="testLogin()">Test Login</button>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>👤 Auth Test - Current User</h3>
+            <button class="test-button" onclick="testAuthenticatedAPI('/api/auth/me', 'auth-me-result')">Get Current User</button>
+            <div id="auth-me-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📝 Quit Plans API</h3>
+            <button class="test-button" onclick="testAuthenticatedAPI('/api/plans', 'plans-result')">Get Plans</button>
+            <button class="test-button" onclick="testCreatePlan()">Create Plan</button>
+            <div id="plans-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📈 Progress API</h3>
+            <button class="test-button" onclick="testAuthenticatedAPI('/api/progress', 'progress-result')">Get Progress</button>
+            <button class="test-button" onclick="testCreateProgress()">Create Progress</button>
+            <div id="progress-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>💳 Packages API</h3>
+            <button class="test-button" onclick="testAPI('/api/packages', 'packages-result')">Get Packages</button>
+            <div id="packages-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📅 Bookings API</h3>
+            <button class="test-button" onclick="testAuthenticatedAPI('/api/bookings', 'bookings-result')">Get Bookings</button>
+            <button class="test-button" onclick="testCreateBooking()">Create Booking</button>
+            <div id="bookings-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>📰 Blogs API</h3>
+            <button class="test-button" onclick="testAPI('/api/blogs', 'blogs-result')">Get Blogs</button>
+            <button class="test-button" onclick="testCreateBlog()">Create Blog</button>
+            <div id="blogs-result" class="result"></div>
+        </div>
+
+        <div class="api-test">
+            <h3>🏆 Achievements API</h3>
+            <button class="test-button" onclick="testAPI('/api/achievements', 'achievements-result')">Get Achievements</button>
+            <div id="achievements-result" class="result"></div>
+        </div>
+    </div>    <script>
+        const baseURL = 'http://localhost:5000';
+        let authToken = '';
+
+        async function testAPI(endpoint, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Đang gửi request...';
+
+            try {
+                const response = await fetch(baseURL + endpoint);
+                const data = await response.json();
+                
+                resultDiv.className = response.ok ? 'result success' : 'result error';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Lỗi: ' + error.message;
+            }
+        }
+
+        async function testAuthenticatedAPI(endpoint, resultId, method = 'GET', body = null) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Đang gửi request...';
+
+            if (!authToken) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Vui lòng đăng nhập trước khi test API này';
+                return;
+            }
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(baseURL + endpoint, options);
+                const data = await response.json();
+                
+                resultDiv.className = response.ok ? 'result success' : 'result error';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Lỗi: ' + error.message;
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Đang thử đăng nhập...';
+
+            try {
+                const response = await fetch(baseURL + '/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@nosmoke.com',
+                        password: '12345'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.data && data.data.token) {
+                    authToken = data.data.token;
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = 'Đăng nhập thành công!\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Lỗi: ' + error.message;
+            }
+        }
+
+        async function testCreatePlan() {
+            const planData = {
+                title: 'Kế hoạch cai thuốc test',
+                reason: 'Vì sức khỏe',
+                startDate: '2025-06-19',
+                expectedQuitDate: '2025-07-19',
+                description: 'Kế hoạch cai thuốc trong 1 tháng'
+            };
+
+            await testAuthenticatedAPI('/api/plans', 'plans-result', 'POST', planData);
+        }
+
+        async function testCreateProgress() {
+            const progressData = {
+                planId: 1,
+                status: 'Good',
+                note: 'Hôm nay không hút thuốc',
+                cravingLevel: 3
+            };
+
+            await testAuthenticatedAPI('/api/progress', 'progress-result', 'POST', progressData);
+        }
+
+        async function testCreateBooking() {
+            const bookingData = {
+                coachUserId: 2,
+                bookingDate: '2025-06-25 10:00:00'
+            };
+
+            await testAuthenticatedAPI('/api/bookings', 'bookings-result', 'POST', bookingData);
+        }
+
+        async function testCreateBlog() {
+            const blogData = {
+                title: 'Tips cai thuốc hiệu quả',
+                content: 'Đây là những tips giúp bạn cai thuốc thành công...'
+            };
+
+            await testAuthenticatedAPI('/api/blogs', 'blogs-result', 'POST', blogData);
+        }
+
+        // Auto test health check khi trang load
+        window.onload = function() {
+            testAPI('/health', 'health-result');
+        }
+    </script>
+</body>
+</html>
