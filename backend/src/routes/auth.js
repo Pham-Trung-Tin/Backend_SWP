@@ -73,6 +73,16 @@ router.post('/resend-verification',
     authController.resendVerificationCode
 );
 
+router.post('/forgot-password',
+    authLimiter,
+    authController.forgotPassword
+);
+
+router.post('/reset-password',
+    authLimiter,
+    authController.resetPassword
+);
+
 // Protected routes
 router.get('/profile',
     authenticateToken,

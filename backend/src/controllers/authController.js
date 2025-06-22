@@ -553,5 +553,123 @@ export const logout = async (req, res) => {
     }
 };
 
+// Forgot Password
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return sendError(res, 'Email is required', 400);
+        }
+
+        // Check if user exists
+        const [users] = await pool.execute(
+            'SELECT id, username, email, full_name FROM users WHERE email = ? AND is_active = true',
+            [email]
+        );
+
+        if (users.length === 0) {
+            // Don't reveal if email exists or not for security
+            return sendSuccess(res, 'If email exists, reset link has been sent to your email');
+        }
+
+        const user = users[0];
+
+        // Generate reset token (6 digit code)
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store reset code in email_verifications table (reuse existing table)
+        await pool.execute(
+            `INSERT INTO email_verifications (email, verification_code, expires_at) 
+             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
+             ON DUPLICATE KEY UPDATE 
+             verification_code = VALUES(verification_code), 
+             expires_at = VALUES(expires_at),
+             verified = FALSE`,
+            [email, resetCode]
+        );
+
+        // Send reset email
+        try {
+            await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
+            console.log(`📧 Password reset email sent to ${email}`);
+        } catch (emailError) {
+            console.error('📧 Failed to send reset email:', emailError.message);
+            console.log(`⚠️ Development mode - Reset code: ${resetCode}`);
+        }
+
+        sendSuccess(res, 'Password reset code has been sent to your email', {
+            email: email,
+            message: 'Please check your email for the reset code',
+            resetCode: process.env.NODE_ENV === 'development' ? resetCode : undefined
+        });
+
+    } catch (error) {
+        console.error('❌ Forgot password error:', error);
+        sendError(res, 'Failed to process forgot password request', 500);
+    }
+};
+
+// Reset Password
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, resetCode, newPassword } = req.body;
+
+        if (!email || !resetCode || !newPassword) {
+            return sendError(res, 'Email, reset code, and new password are required', 400);
+        }
+
+        if (newPassword.length < 6) {
+            return sendError(res, 'Password must be at least 6 characters long', 400);
+        }
+
+        // Verify reset code
+        const [resetCodes] = await pool.execute(
+            `SELECT email FROM email_verifications 
+             WHERE email = ? AND verification_code = ? AND expires_at > NOW() AND verified = FALSE`,
+            [email, resetCode]
+        );
+
+        if (resetCodes.length === 0) {
+            return sendError(res, 'Invalid or expired reset code', 400);
+        }
+
+        // Check if user exists
+        const [users] = await pool.execute(
+            'SELECT id FROM users WHERE email = ? AND is_active = true',
+            [email]
+        );
+
+        if (users.length === 0) {
+            return sendError(res, 'User not found', 404);
+        }
+
+        const userId = users[0].id;
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        // Update user password
+        await pool.execute(
+            'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
+            [hashedPassword, userId]
+        );
+
+        // Mark reset code as used
+        await pool.execute(
+            'UPDATE email_verifications SET verified = TRUE WHERE email = ? AND verification_code = ?',
+            [email, resetCode]
+        );
+
+        sendSuccess(res, 'Password has been reset successfully', {
+            message: 'You can now login with your new password'
+        });
+
+    } catch (error) {
+        console.error('❌ Reset password error:', error);
+        sendError(res, 'Failed to reset password', 500);
+    }
+};
+
 // Export alias for convenience
 export const verify = verifyEmail;

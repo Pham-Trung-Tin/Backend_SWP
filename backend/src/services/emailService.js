@@ -141,6 +141,18 @@ class EmailService {
         }
     }
 
+    // Send password reset email
+    async sendPasswordResetEmail(email, fullName, resetCode) {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: '🔐 NoSmoke - Đặt lại mật khẩu',
+            html: this.getPasswordResetEmailTemplate(fullName, resetCode)
+        };
+
+        await this.transporter.sendMail(mailOptions);
+    }
+
     // Email template for verification
     getVerificationEmailTemplate(fullName, code) {
         return `
@@ -248,6 +260,68 @@ class EmailService {
                     
                     <div class="footer">
                         <p>&copy; 2025 NoSmoke App. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+    }
+
+    // Password reset email template
+    getPasswordResetEmailTemplate(fullName, resetCode) {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+                    .header { background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%); color: white; padding: 30px; text-align: center; }
+                    .content { padding: 30px; background: #f9f9f9; }
+                    .code-box { background: white; border: 2px solid #FF6B6B; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+                    .code { font-size: 32px; font-weight: bold; color: #FF6B6B; letter-spacing: 8px; }
+                    .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                    .footer { background: #333; color: white; padding: 20px; text-align: center; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🔐 Đặt lại mật khẩu</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <h3>Xin chào ${fullName}!</h3>
+                        <p>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản NoSmoke của bạn.</p>
+                        
+                        <div class="code-box">
+                            <p>Mã đặt lại mật khẩu của bạn:</p>
+                            <div class="code">${resetCode}</div>
+                        </div>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Lưu ý quan trọng:</strong>
+                            <ul>
+                                <li>Mã này có hiệu lực trong 15 phút</li>
+                                <li>Không chia sẻ mã này với ai khác</li>
+                                <li>Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này</li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>Cách sử dụng:</strong></p>
+                        <ol>
+                            <li>Mở ứng dụng NoSmoke</li>
+                            <li>Chọn "Quên mật khẩu"</li>
+                            <li>Nhập email và mã đặt lại ở trên</li>
+                            <li>Tạo mật khẩu mới</li>
+                        </ol>
+                        
+                        <p>Nếu bạn gặp khó khăn, vui lòng liên hệ với chúng tôi.</p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>&copy; 2025 NoSmoke App. All rights reserved.</p>
+                        <p>Email này được gửi tự động, vui lòng không trả lời.</p>
                     </div>
                 </div>
             </body>
