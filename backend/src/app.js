@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
 import ensureTablesExist from './ensureTables.js';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -65,8 +67,12 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Static files for uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
