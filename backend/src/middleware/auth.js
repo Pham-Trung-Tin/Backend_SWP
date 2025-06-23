@@ -22,9 +22,7 @@ export const authenticateToken = async (req, res, next) => {
 
         if (users.length === 0) {
             return sendError(res, 'User not found or account deactivated', 401);
-        }
-
-        // Add user info to request object
+        }        // Add user info to request object
         req.user = {
             id: users[0].id,
             username: users[0].username,
@@ -38,6 +36,9 @@ export const authenticateToken = async (req, res, next) => {
             isActive: users[0].is_active,
             createdAt: users[0].created_at
         };
+
+        // Also set userId for backward compatibility
+        req.userId = users[0].id;
 
         next();
     } catch (error) {
@@ -59,15 +60,13 @@ export const optionalAuth = async (req, res, next) => {
         const token = authHeader && authHeader.split(' ')[1];
 
         if (token) {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);            const [users] = await pool.execute(
+            const decoded = jwt.verify(token, process.env.JWT_SECRET); const [users] = await pool.execute(
                 `SELECT id, username, email, full_name, phone, date_of_birth, gender, 
                         role, email_verified, is_active, created_at 
                  FROM users 
                  WHERE id = ? AND is_active = true`,
                 [decoded.userId]
-            );
-
-            if (users.length > 0) {
+            ); if (users.length > 0) {
                 req.user = {
                     id: users[0].id,
                     username: users[0].username,
@@ -81,6 +80,9 @@ export const optionalAuth = async (req, res, next) => {
                     isActive: users[0].is_active,
                     createdAt: users[0].created_at
                 };
+
+                // Also set userId for backward compatibility
+                req.userId = users[0].id;
             }
         }
 

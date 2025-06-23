@@ -104,11 +104,26 @@ export const ensureTablesExist = async () => {
             )
         `);
 
+        // Create password_resets table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(100) NOT NULL,
+                reset_code VARCHAR(6) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 15 MINUTE),
+                is_used BOOLEAN DEFAULT FALSE,
+                INDEX idx_email_code (email, reset_code),
+                INDEX idx_expires_at (expires_at)
+            )
+        `);
+
         // Clean up expired records periodically
         setInterval(async () => {
             try {
                 await pool.execute('DELETE FROM pending_registrations WHERE expires_at < NOW()');
                 await pool.execute('DELETE FROM email_verifications WHERE expires_at < NOW()');
+                await pool.execute('DELETE FROM password_resets WHERE expires_at < NOW()');
             } catch (error) {
                 console.error('Error cleaning up expired records:', error);
             }
@@ -231,7 +246,6 @@ export const register = async (req, res) => {
             console.log(`⚠️ Development mode - Verification code: ${verificationCode}`);
         }
 
-        console.log('✅ Registration successful');
         sendSuccess(res, 'Registration pending. Verification code sent to your email.', {
             email: email,
             message: 'Please enter the 6-digit code sent to your email to complete registration',
@@ -354,7 +368,10 @@ export const verifyEmail = async (req, res) => {
         await pool.execute(
             'UPDATE users SET refresh_token = ? WHERE id = ?',
             [refreshToken, userId]
-        ); sendSuccess(res, 'Email verified and account created successfully', {
+        );
+
+        console.log('✅ Registration successful');
+        sendSuccess(res, 'Email verified and account created successfully', {
             user: {
                 id: userId,
                 username: pendingUser.username,
@@ -543,17 +560,7 @@ export const refreshToken = async (req, res) => {
     }
 };
 
-// Logout
-export const logout = async (req, res) => {
-    try {
-        sendSuccess(res, 'Logged out successfully');
-    } catch (error) {
-        console.error('❌ Logout error:', error);
-        sendError(res, 'Logout failed', 500);
-    }
-};
-
-// Forgot Password
+// Forgot Password - Send reset code to email
 export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -562,55 +569,49 @@ export const forgotPassword = async (req, res) => {
             return sendError(res, 'Email is required', 400);
         }
 
+        console.log('🔍 Processing forgot password for:', email);
+
         // Check if user exists
         const [users] = await pool.execute(
-            'SELECT id, username, email, full_name FROM users WHERE email = ? AND is_active = true',
+            'SELECT id, email, full_name FROM users WHERE email = ? AND is_active = TRUE',
             [email]
-        );
-
-        if (users.length === 0) {
-            // Don't reveal if email exists or not for security
-            return sendSuccess(res, 'If email exists, reset link has been sent to your email');
+        ); if (users.length === 0) {
+            // Return error if email doesn't exist
+            return sendError(res, 'Email này chưa được đăng ký tài khoản', 404);
         }
 
         const user = users[0];
 
-        // Generate reset token (6 digit code)
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate 6-digit reset code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();        // Store reset code in database
+        const expiredAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-        // Store reset code in email_verifications table (reuse existing table)
+        // Delete any existing reset codes for this email first
         await pool.execute(
-            `INSERT INTO email_verifications (email, verification_code, expires_at) 
-             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
-             ON DUPLICATE KEY UPDATE 
-             verification_code = VALUES(verification_code), 
-             expires_at = VALUES(expires_at),
-             verified = FALSE`,
-            [email, resetCode]
+            'DELETE FROM password_resets WHERE email = ?',
+            [email]
         );
 
-        // Send reset email
-        try {
-            await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
-            console.log(`📧 Password reset email sent to ${email}`);
-        } catch (emailError) {
-            console.error('📧 Failed to send reset email:', emailError.message);
-            console.log(`⚠️ Development mode - Reset code: ${resetCode}`);
-        }
+        // Insert new reset code
+        await pool.execute(
+            `INSERT INTO password_resets (email, reset_code, expires_at)
+             VALUES (?, ?, ?)`,
+            [email, resetCode, expiredAt]
+        );        // Send reset code via email
+        console.log('📧 Sending password reset email to:', email);
+        await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
 
-        sendSuccess(res, 'Password reset code has been sent to your email', {
-            email: email,
-            message: 'Please check your email for the reset code',
-            resetCode: process.env.NODE_ENV === 'development' ? resetCode : undefined
-        });
+        console.log('✅ Password reset code sent to:', email);
+        sendSuccess(res, 'Reset code has been sent to your email', null);
 
     } catch (error) {
         console.error('❌ Forgot password error:', error);
+        console.error('Error stack:', error.stack);
         sendError(res, 'Failed to process forgot password request', 500);
     }
 };
 
-// Reset Password
+// Reset Password - Verify code and set new password
 export const resetPassword = async (req, res) => {
     try {
         const { email, resetCode, newPassword } = req.body;
@@ -620,23 +621,28 @@ export const resetPassword = async (req, res) => {
         }
 
         if (newPassword.length < 6) {
-            return sendError(res, 'Password must be at least 6 characters long', 400);
+            return sendError(res, 'New password must be at least 6 characters long', 400);
         }
 
+        console.log('🔍 Processing password reset for:', email);
+
         // Verify reset code
-        const [resetCodes] = await pool.execute(
-            `SELECT email FROM email_verifications 
-             WHERE email = ? AND verification_code = ? AND expires_at > NOW() AND verified = FALSE`,
+        const [resetRecords] = await pool.execute(
+            `SELECT id FROM password_resets 
+             WHERE email = ? AND reset_code = ? 
+             AND expires_at > NOW() AND is_used = FALSE
+             ORDER BY created_at DESC
+             LIMIT 1`,
             [email, resetCode]
         );
 
-        if (resetCodes.length === 0) {
+        if (resetRecords.length === 0) {
             return sendError(res, 'Invalid or expired reset code', 400);
         }
 
-        // Check if user exists
+        // Check if user still exists and is active
         const [users] = await pool.execute(
-            'SELECT id FROM users WHERE email = ? AND is_active = true',
+            'SELECT id FROM users WHERE email = ? AND is_active = TRUE',
             [email]
         );
 
@@ -645,25 +651,46 @@ export const resetPassword = async (req, res) => {
         }
 
         const userId = users[0].id;
+        const resetRecordId = resetRecords[0].id;
 
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        const saltRounds = 12;
+        const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-        // Update user password
-        await pool.execute(
-            'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
-            [hashedPassword, userId]
-        );
+        // Start transaction
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        // Mark reset code as used
-        await pool.execute(
-            'UPDATE email_verifications SET verified = TRUE WHERE email = ? AND verification_code = ?',
-            [email, resetCode]
-        );
+        try {
+            // Update user password
+            await connection.execute(
+                'UPDATE users SET password_hash = ? WHERE id = ?',
+                [passwordHash, userId]
+            );
 
-        sendSuccess(res, 'Password has been reset successfully', {
-            message: 'You can now login with your new password'
-        });
+            // Mark reset code as used
+            await connection.execute(
+                'UPDATE password_resets SET is_used = TRUE WHERE id = ?',
+                [resetRecordId]
+            );
+
+            // Clear any existing refresh tokens for security
+            await connection.execute(
+                'UPDATE users SET refresh_token = NULL WHERE id = ?',
+                [userId]
+            );
+
+            await connection.commit();
+            console.log('✅ Password reset successfully for user:', userId);
+
+            sendSuccess(res, 'Password has been reset successfully. Please login with your new password.', null);
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
 
     } catch (error) {
         console.error('❌ Reset password error:', error);
@@ -671,5 +698,27 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-// Export alias for convenience
-export const verify = verifyEmail;
+// Logout - Clear refresh token
+export const logout = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Add validation to ensure userId exists
+        if (!userId) {
+            return sendError(res, 'User ID not found in token', 400);
+        }
+
+        // Clear refresh token from database
+        await pool.execute(
+            'UPDATE users SET refresh_token = NULL WHERE id = ?',
+            [userId]
+        );
+
+        console.log('✅ User logged out successfully:', userId);
+        sendSuccess(res, 'Logged out successfully', null);
+
+    } catch (error) {
+        console.error('❌ Logout error:', error);
+        sendError(res, 'Failed to logout', 500);
+    }
+};

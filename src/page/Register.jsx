@@ -19,11 +19,10 @@ export default function Register() {
 
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  // Chuyển hướng đến profile nếu đã đăng nhập
+  // Chuyển hướng đến home nếu đã đăng nhập
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/profile');
+      navigate('/');
     }
   }, [isAuthenticated, navigate]);
 
@@ -55,11 +54,10 @@ export default function Register() {
         role,
         ...(gender ? { gender } : {}),
         ...(dateOfBirth ? { dateOfBirth } : {}),
-      };
+      }; console.log('🔍 Sending userData:', userData); // Debug log
 
-      console.log('🔍 Sending userData:', userData); // Debug log
-
-      const result = await register(userData); console.log('📋 Register result:', result); // Debug log
+      const result = await register(userData);
+      console.log('📋 Register result:', result); // Debug log
 
       if (result.success) {
         if (result.needsVerification) {
@@ -71,8 +69,8 @@ export default function Register() {
             }
           });
         } else {
-          // Direct login (fallback)
-          navigate('/profile');
+          // This should not happen in normal flow, but handle gracefully
+          setError('Unexpected registration flow. Please try again or contact support.');
         }
       } else {
         setError(result.error || 'Đăng ký không thành công');

@@ -23,22 +23,22 @@ function BookAppointment() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const isRescheduling = searchParams.get('reschedule') === 'true';
-    
+
     if (isRescheduling) {
       // Get the appointment to reschedule from localStorage
       const appointmentToReschedule = JSON.parse(localStorage.getItem('appointmentToReschedule'));
-      
+
       if (appointmentToReschedule) {
         setIsRescheduling(true);
         setOriginalAppointment(appointmentToReschedule);
         setAppointmentId(appointmentToReschedule.id);
-        
+
         // Find and preselect the coach
         const coach = coaches.find(c => c.id === appointmentToReschedule.coachId);
         if (coach) {
           setSelectedCoach(coach);
           setStep(2); // Move to date selection step
-          
+
           // Set the current month to the appointment date month
           const appointmentDate = new Date(appointmentToReschedule.date);
           setCurrentMonth(new Date(
@@ -46,7 +46,7 @@ function BookAppointment() {
             appointmentDate.getMonth(),
             1
           ));
-          
+
           // Preselect the date
           setSelectedDate(appointmentDate);
         }
@@ -94,19 +94,19 @@ function BookAppointment() {
     const month = currentMonth.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
     const firstDayOfMonth = getFirstDayOfMonth(year, month);
-    
+
     const days = [];
-    
+
     // Add empty cells for days before the first day of month
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push(null);
     }
-    
+
     // Add days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(i);
     }
-    
+
     return days;
   };
 
@@ -134,7 +134,7 @@ function BookAppointment() {
 
   const handleSelectDate = (day) => {
     if (!day) return;
-    
+
     const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setSelectedDate(selectedDate);
     setStep(3);
@@ -142,11 +142,11 @@ function BookAppointment() {
 
   const handleSelectTime = (time) => {
     setSelectedTime(time);
-    
+
     // Sử dụng ID của lịch hẹn cũ nếu đang thay đổi lịch hẹn, ngược lại tạo ID mới
     const newAppointmentId = isRescheduling ? originalAppointment.id : Math.floor(Math.random() * 1000000);
     setAppointmentId(newAppointmentId);
-    
+
     // Tạo đối tượng lịch hẹn mới
     const appointment = {
       id: newAppointmentId,
@@ -159,16 +159,16 @@ function BookAppointment() {
       status: 'confirmed',
       createdAt: new Date().toISOString()
     };
-    
+
     // Lưu vào localStorage
     const existingAppointments = JSON.parse(localStorage.getItem('appointments')) || [];
-    
+
     if (isRescheduling) {
       // Nếu đang thay đổi lịch hẹn, xóa lịch hẹn cũ và thêm lịch hẹn mới
       const updatedAppointments = existingAppointments.filter(app => app.id !== originalAppointment.id);
       updatedAppointments.push(appointment);
       localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-      
+
       // Xóa thông tin lịch hẹn đang thay đổi từ localStorage
       localStorage.removeItem('appointmentToReschedule');
     } else {
@@ -176,16 +176,15 @@ function BookAppointment() {
       const updatedAppointments = [...existingAppointments, appointment];
       localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
     }
-      
+
     // Hiển thị thông báo thành công
     setShowSuccess(true);
-    
+
     // Lưu trạng thái tab trong localStorage để Profile page hiển thị tab lịch hẹn
     localStorage.setItem('activeProfileTab', 'appointments');
-    
-    // Sau 3 giây chuyển hướng đến trang hồ sơ
+    // Sau 3 giây chuyển hướng đến trang home
     setTimeout(() => {
-      navigate('/profile');
+      navigate('/');
     }, 3000);
   };
 
@@ -195,8 +194,8 @@ function BookAppointment() {
         <h2>Chọn Coach</h2>
         <div className="coaches-list">
           {coaches.map(coach => (
-            <div 
-              key={coach.id} 
+            <div
+              key={coach.id}
               className={`coach-card ${selectedCoach?.id === coach.id ? 'selected' : ''}`}
               onClick={() => handleSelectCoach(coach)}
             >
@@ -205,7 +204,7 @@ function BookAppointment() {
                 {coach.available && <div className="coach-status available"></div>}
               </div>
               <div className="coach-info">
-                <h3>{coach.name}</h3> 
+                <h3>{coach.name}</h3>
                 <p>{coach.role}</p>
                 <div className="coach-rating">
                   <span className="stars">{'★'.repeat(Math.floor(coach.rating))}{coach.rating % 1 > 0 ? '☆' : ''}</span>
@@ -222,7 +221,7 @@ function BookAppointment() {
   const renderDateSelection = () => {
     const days = generateCalendarDays();
     const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-    
+
     return (
       <div className="date-selection-container">
         <div className="selection-header">
@@ -252,10 +251,10 @@ function BookAppointment() {
             {dayNames.map(day => (
               <div key={day} className="day-header">{day}</div>
             ))}
-            
+
             {days.map((day, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={`calendar-day ${!day ? 'empty' : ''} ${day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth() && currentMonth.getFullYear() === new Date().getFullYear() ? 'today' : ''}`}
                 onClick={() => handleSelectDate(day)}
               >
@@ -293,8 +292,8 @@ function BookAppointment() {
           <p>Khung giờ còn trống:</p>
           <div className="time-slots">
             {timeSlots.map(time => (
-              <button 
-                key={time} 
+              <button
+                key={time}
                 className={`time-slot ${selectedTime === time ? 'selected' : ''}`}
                 onClick={() => handleSelectTime(time)}
               >
@@ -325,24 +324,24 @@ function BookAppointment() {
   return (
     <section className="appointment-section">
       <div className="container">        <div className="appointment-header">
-          <h1>
-            <FaCalendarAlt className="appointment-icon" />
-            <span>Đặt lịch hẹn với Coach</span>
-          </h1>
-        </div>
-        
+        <h1>
+          <FaCalendarAlt className="appointment-icon" />
+          <span>Đặt lịch hẹn với Coach</span>
+        </h1>
+      </div>
+
         {showSuccess ? renderSuccess() : (
           <RequireMembership allowedMemberships={['premium', 'pro']} showModal={true}>
             <div className="appointment-stepper">
-              <div 
-                className={`stepper-step ${step >= 1 ? 'active' : ''} ${selectedCoach ? 'clickable' : ''}`} 
+              <div
+                className={`stepper-step ${step >= 1 ? 'active' : ''} ${selectedCoach ? 'clickable' : ''}`}
                 onClick={() => selectedCoach && setStep(1)}
               >
                 <div className="step-number">1</div>
                 <div className="step-label">Chọn Coach</div>
               </div>
               <div className="stepper-line"></div>
-              <div 
+              <div
                 className={`stepper-step ${step >= 2 ? 'active' : ''} ${selectedDate ? 'clickable' : ''}`}
                 onClick={() => selectedDate && setStep(2)}
               >
@@ -350,7 +349,7 @@ function BookAppointment() {
                 <div className="step-label">Chọn ngày</div>
               </div>
               <div className="stepper-line"></div>
-              <div 
+              <div
                 className={`stepper-step ${step >= 3 ? 'active' : ''} ${selectedTime ? 'clickable' : ''}`}
                 onClick={() => selectedTime && setStep(3)}
               >

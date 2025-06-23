@@ -1,219 +1,285 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './ForgotPassword.css';
 
-const ForgotPassword = () => {
-  const [step, setStep] = useState(1); // 1: nhập email, 2: nhập mã code, 3: nhập mật khẩu mới
-  const [email, setEmail] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+// Base API URL - should match AuthContext
+const API_BASE_URL = 'http://localhost:5000/api';
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+export default function ForgotPassword() {
+    const [email, setEmail] = useState('');
+    const [step, setStep] = useState(1); // 1: nhập email, 2: nhập mã và mật khẩu mới
+    const [resetCode, setResetCode] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [cooldown, setCooldown] = useState(0); // Cooldown timer cho resend
 
-  // Bước 1: Gửi email
-  const handleSendEmail = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-    setError('');
+    const navigate = useNavigate();
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+    // Cooldown timer effect
+    useEffect(() => {
+        let timer;
+        if (cooldown > 0) {
+            timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+        }
+        return () => clearTimeout(timer);
+    }, [cooldown]);
 
-      const data = await response.json();
+    const handleSendCode = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+        setIsLoading(true);
 
-      if (response.ok) {
-        setMessage('Mã xác thực đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.');
-        setStep(2);
-      } else {
-        setError(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
-      }
-    } catch (error) {
-      console.error('Error sending reset email:', error);
-      setError('Không thể kết nối đến server. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
 
-  // Bước 2 & 3: Xác thực mã và đặt lại mật khẩu
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
-      return;
-    }
+            const data = await response.json(); if (data.success) {
+                setSuccess('Mã đặt lại mật khẩu đã được gửi về email của bạn');
+                setStep(2);
+                setCooldown(60); // Set 60 giây cooldown
+            } else {
+                setError(data.message || 'Có lỗi xảy ra');
+            }
+        } catch (err) {
+            setError('Có lỗi xảy ra, vui lòng thử lại');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
-      return;
-    }
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
 
-    setLoading(true);
-    setMessage('');
-    setError('');
+        if (newPassword !== confirmPassword) {
+            setError('Mật khẩu xác nhận không khớp');
+            return;
+        }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          resetCode,
-          newPassword,
-        }),
-      });
+        if (newPassword.length < 6) {
+            setError('Mật khẩu mới phải có ít nhất 6 ký tự');
+            return;
+        }
 
-      const data = await response.json();
+        setIsLoading(true);
 
-      if (response.ok) {
-        setMessage('Mật khẩu đã được đặt lại thành công! Bạn có thể đăng nhập với mật khẩu mới.');
-        setStep(3);
-      } else {
-        setError(data.message || 'Mã xác thực không đúng hoặc đã hết hạn.');
-      }
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      setError('Không thể kết nối đến server. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        try {
+            const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    resetCode,
+                    newPassword,
+                }),
+            });
 
-  const renderStep1 = () => (
-    <div className="forgot-password-card">
-      <h2>Quên mật khẩu</h2>
-      <p>Nhập địa chỉ email của bạn và chúng tôi sẽ gửi mã xác thực để đặt lại mật khẩu.</p>
-      
-      <form onSubmit={handleSendEmail}>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Nhập địa chỉ email của bạn"
-            required
-            disabled={loading}
-          />
+            const data = await response.json();
+
+            if (data.success) {
+                setSuccess('Đặt lại mật khẩu thành công! Đang chuyển đến trang đăng nhập...');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
+            } else {
+                setError(data.message || 'Có lỗi xảy ra');
+            }
+        } catch (err) {
+            setError('Có lỗi xảy ra, vui lòng thử lại');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    const handleBackToStep1 = () => {
+        setStep(1);
+        setResetCode('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setError('');
+        setSuccess('');
+        setCooldown(0);
+    };
+
+    const handleResendCode = async () => {
+        if (cooldown > 0) return; // Không cho phép gửi lại khi còn cooldown
+
+        setError('');
+        setSuccess('');
+        setIsLoading(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSuccess('Mã mới đã được gửi về email của bạn');
+                setCooldown(60); // Set lại 60 giây cooldown
+            } else {
+                setError(data.message || 'Có lỗi xảy ra khi gửi lại mã');
+            }
+        } catch (err) {
+            setError('Có lỗi xảy ra, vui lòng thử lại');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="forgot-password-page">
+            <div className="forgot-password-container">
+                <div className="forgot-password-card">
+                    <div className="forgot-password-header">
+                        <h1>🔐 Quên mật khẩu</h1>            <p>
+                            {step === 1
+                                ? 'Nhập email của bạn để nhận mã đặt lại mật khẩu'
+                                : `Nhập mã xác nhận đã gửi về ${email} và mật khẩu mới`
+                            }
+                        </p>
+                    </div>
+
+                    {error && <div className="error-message">{error}</div>}
+                    {success && <div className="success-message">{success}</div>}
+
+                    {step === 1 ? (
+                        <form onSubmit={handleSendCode} className="forgot-password-form">
+                            <div className="form-group">
+                                <label htmlFor="email">Email</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Nhập email của bạn"
+                                    required
+                                    disabled={isLoading}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="send-code-button"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? 'Đang gửi...' : 'Gửi mã xác nhận'}
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleResetPassword} className="reset-password-form">
+                            <div className="form-group">
+                                <label htmlFor="resetCode">Mã xác nhận (6 số)</label>
+                                <input
+                                    type="text"
+                                    id="resetCode"
+                                    value={resetCode}
+                                    onChange={(e) => setResetCode(e.target.value)}
+                                    placeholder="Nhập mã 6 số"
+                                    required
+                                    disabled={isLoading}
+                                    maxLength={6}
+                                />                <small>Kiểm tra email của bạn để lấy mã xác nhận</small>
+                                <div className="resend-code-section">
+                                    <button
+                                        type="button"
+                                        className="resend-code-button"
+                                        onClick={handleResendCode}
+                                        disabled={isLoading || cooldown > 0}
+                                    >
+                                        {cooldown > 0 ? `Gửi lại mã (${cooldown}s)` : 'Gửi lại mã'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="newPassword">Mật khẩu mới</label>
+                                <input
+                                    type="password"
+                                    id="newPassword"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="Nhập mật khẩu mới"
+                                    required
+                                    disabled={isLoading}
+                                    minLength={6}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="confirmPassword">Xác nhận mật khẩu mới</label>
+                                <input
+                                    type="password"
+                                    id="confirmPassword"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="Nhập lại mật khẩu mới"
+                                    required
+                                    disabled={isLoading}
+                                    minLength={6}
+                                />
+                            </div>
+
+                            <div className="form-buttons">
+                                <button
+                                    type="button"
+                                    className="back-button"
+                                    onClick={handleBackToStep1}
+                                    disabled={isLoading}
+                                >
+                                    ← Quay lại
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="reset-button"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    <div className="forgot-password-footer">
+                        <p>
+                            Nhớ lại mật khẩu? <Link to="/login" className="login-link">Đăng nhập</Link>
+                        </p>
+                        <p>
+                            Chưa có tài khoản? <Link to="/signup" className="signup-link">Đăng ký ngay</Link>
+                        </p>
+                    </div>
+                </div>
+
+                <div className="forgot-password-info">
+                    <h2>💡 Lưu ý quan trọng</h2>
+                    <ul className="tips-list">
+                        <li>Mã xác nhận có hiệu lực trong 15 phút</li>
+                        <li>Kiểm tra cả hộp thư spam nếu không thấy email</li>
+                        <li>Mỗi lần yêu cầu sẽ tạo mã mới và hủy mã cũ</li>
+                        <li>Sau khi đổi mật khẩu, bạn cần đăng nhập lại</li>
+                        <li>Mật khẩu mới phải có ít nhất 6 ký tự</li>
+                    </ul>
+                </div>
+            </div>
         </div>
-
-        {error && <div className="error-message">{error}</div>}
-        {message && <div className="success-message">{message}</div>}
-
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Đang gửi...' : 'Gửi mã xác thực'}
-        </button>
-      </form>
-
-      <div className="back-to-login">
-        <Link to="/login">← Quay lại đăng nhập</Link>
-      </div>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="forgot-password-card">
-      <h2>Nhập mã xác thực</h2>
-      <p>Chúng tôi đã gửi mã xác thực 6 số đến email <strong>{email}</strong></p>
-      
-      <form onSubmit={handleResetPassword}>
-        <div className="form-group">
-          <label htmlFor="resetCode">Mã xác thực</label>
-          <input
-            type="text"
-            id="resetCode"
-            value={resetCode}
-            onChange={(e) => setResetCode(e.target.value)}
-            placeholder="Nhập mã 6 số"
-            maxLength="6"
-            required
-            disabled={loading}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="newPassword">Mật khẩu mới</label>
-          <input
-            type="password"
-            id="newPassword"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)"
-            minLength="6"
-            required
-            disabled={loading}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Nhập lại mật khẩu mới"
-            minLength="6"
-            required
-            disabled={loading}
-          />
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
-        </button>
-      </form>
-
-      <div className="back-to-login">
-        <button 
-          onClick={() => setStep(1)} 
-          className="btn-secondary"
-          disabled={loading}
-        >
-          ← Quay lại nhập email
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderStep3 = () => (
-    <div className="forgot-password-card success">
-      <div className="success-icon">✓</div>
-      <h2>Đặt lại mật khẩu thành công!</h2>
-      <p>Mật khẩu của bạn đã được đặt lại thành công. Bạn có thể đăng nhập với mật khẩu mới.</p>
-      
-      <Link to="/login" className="btn-primary">
-        Đăng nhập ngay
-      </Link>
-    </div>
-  );
-
-  return (
-    <div className="forgot-password-container">
-      <div className="forgot-password-wrapper">
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-      </div>
-    </div>
-  );
-};
-
-export default ForgotPassword;
+    );
+}

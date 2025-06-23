@@ -11,26 +11,25 @@ export const useAuth = () => useContext(AuthContext);
 
 // Provider component
 export const AuthProvider = ({ children }) => {
-  // Khởi tạo trạng thái từ sessionStorage (giữ khi reload, mất khi đóng browser)
+  // Khởi tạo trạng thái từ localStorage hoặc sessionStorage
   const [user, setUser] = useState(() => {
-    const storedUser = sessionStorage.getItem('nosmoke_user') || localStorage.getItem('nosmoke_user');
+    // Kiểm tra localStorage trước (remember me), sau đó sessionStorage
+    const storedUser = localStorage.getItem('nosmoke_user') || sessionStorage.getItem('nosmoke_user');
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [token, setToken] = useState(() => {
-    return sessionStorage.getItem('nosmoke_token') || localStorage.getItem('nosmoke_token');
-  });
-  const [refreshToken, setRefreshToken] = useState(() => {
-    return localStorage.getItem('nosmoke_refresh_token');
+    // Kiểm tra localStorage trước (remember me), sau đó sessionStorage
+    return localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
   });
   const [rememberMe, setRememberMe] = useState(() => {
     return localStorage.getItem('nosmoke_remember') === 'true';
   });
   // Xóa localStorage cũ và sync với sessionStorage
   useEffect(() => {
-    // Không xóa localStorage nữa vì cần cho Remember Me
-    console.log('🔄 AuthContext initialized');
+    // Không xóa localStorage nữa vì cần cho remember me
+    console.log('🔧 AuthContext initialized with remember me support');
   }, []);
 
   // Lưu user và token vào storage khi thay đổi
@@ -38,13 +37,16 @@ export const AuthProvider = ({ children }) => {
     if (user) {
       if (rememberMe) {
         localStorage.setItem('nosmoke_user', JSON.stringify(user));
+        localStorage.setItem('nosmoke_remember', 'true');
       } else {
         sessionStorage.setItem('nosmoke_user', JSON.stringify(user));
         localStorage.removeItem('nosmoke_user');
+        localStorage.removeItem('nosmoke_remember');
       }
     } else {
       sessionStorage.removeItem('nosmoke_user');
       localStorage.removeItem('nosmoke_user');
+      localStorage.removeItem('nosmoke_remember');
     }
   }, [user, rememberMe]);
 
@@ -61,18 +63,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('nosmoke_token');
     }
   }, [token, rememberMe]);
-
-  useEffect(() => {
-    if (refreshToken && rememberMe) {
-      localStorage.setItem('nosmoke_refresh_token', refreshToken);
-    } else {
-      localStorage.removeItem('nosmoke_refresh_token');
-    }
-  }, [refreshToken, rememberMe]);
-
-  useEffect(() => {
-    localStorage.setItem('nosmoke_remember', rememberMe.toString());
-  }, [rememberMe]);
   // API helper function
   const apiCall = async (endpoint, options = {}) => {
     try {
@@ -214,7 +204,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
   // Hàm đăng nhập
-  const login = async (email, password, remember = false) => {
+  const login = async (email, password, rememberMeOption = false) => {
     setLoading(true);
     setError(null);
 
@@ -222,17 +212,15 @@ export const AuthProvider = ({ children }) => {
       const data = await apiCall('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
-      }); if (data.success) {
-        setRememberMe(remember);
+      });
+
+      if (data.success) {
+        // Cập nhật rememberMe trước khi set user và token
+        setRememberMe(rememberMeOption);
         setUser(data.data.user);
         setToken(data.data.token);
-        
-        // Lưu refresh token nếu có
-        if (data.data.refreshToken) {
-          setRefreshToken(data.data.refreshToken);
-        }
-        
-        console.log(`✅ User logged in${remember ? ' with remember me' : ' - session only'}`);
+
+        console.log(`✅ User logged in - ${rememberMeOption ? 'persistent across browser sessions' : 'session only'}`);
         return { success: true, user: data.data.user };
       } else {
         throw new Error(data.message);
@@ -253,21 +241,17 @@ export const AuthProvider = ({ children }) => {
         });
       }
     } catch (err) {
-      console.error('Logout error:', err);    } finally {
-      // Xóa tất cả dữ liệu đăng nhập
+      console.error('Logout error:', err);
+    } finally {
+      // Xóa hoàn toàn state và cả localStorage và sessionStorage
       setUser(null);
       setToken(null);
-      setRefreshToken(null);
       setRememberMe(false);
-      
-      // Xóa khỏi storage
       sessionStorage.removeItem('nosmoke_user');
       sessionStorage.removeItem('nosmoke_token');
       localStorage.removeItem('nosmoke_user');
       localStorage.removeItem('nosmoke_token');
-      localStorage.removeItem('nosmoke_refresh_token');
       localStorage.removeItem('nosmoke_remember');
-      
       console.log('🔐 User logged out - all session data cleared');
       return { success: true };
     }
@@ -343,65 +327,14 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: err.message };
     }
   };
+
   // Legacy functions for backward compatibility
-  const refreshMembership = refreshUser;
-
-  // Hàm refresh token tự động
-  const refreshAccessToken = async () => {
-    if (!refreshToken) {
-      console.log('❌ No refresh token available');
-      return false;
-    }
-
-    try {
-      console.log('🔄 Refreshing access token...');
-      const data = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken })
-      });
-
-      const result = await data.json();
-
-      if (result.success) {
-        setToken(result.data.token);
-        if (result.data.refreshToken) {
-          setRefreshToken(result.data.refreshToken);
-        }
-        console.log('✅ Access token refreshed successfully');
-        return true;
-      } else {
-        console.log('❌ Failed to refresh token:', result.message);
-        logout(); // Logout if refresh fails
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ Refresh token error:', error);
-      logout(); // Logout if refresh fails
-      return false;
-    }
-  };
-
-  // Auto refresh token khi khởi động app (nếu có remember me)
-  useEffect(() => {
-    const initializeAuth = async () => {
-      if (refreshToken && rememberMe && !token) {
-        console.log('🔄 Auto refreshing token on app startup...');
-        await refreshAccessToken();
-      }
-    };
-
-    initializeAuth();
-  }, []); // Chỉ chạy một lần khi component mount  // Giá trị context
+  const refreshMembership = refreshUser;  // Giá trị context
   const value = {
     user,
     loading,
     error,
     token,
-    refreshToken,
-    rememberMe,
     login,
     logout,
     register,
@@ -411,9 +344,7 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     refreshUser,
     refreshMembership,
-    refreshAccessToken,
     setUser,
-    setRememberMe,
     isAuthenticated: !!user && !!token
   };
 

@@ -9,15 +9,13 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get the redirect path from location state or default to profile
-  const from = location.state?.from || '/profile';
-  
-  // Redirect to profile if already logged in
+  // Get the redirect path from location state or default to home
+  const from = location.state?.from || '/';
+  // Redirect to home if already logged in
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from);
@@ -27,7 +25,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
+
     try {
       const result = await login(email, password, rememberMe);
       if (result.success) {
@@ -52,7 +50,7 @@ export default function Login() {
             <p>Chào mừng bạn quay trở lại với NoSmoke</p>
           </div>          <form onSubmit={handleSubmit} className="login-form">
             {error && <div className="error-message">{error}</div>}
-            
+
             <div className="form-group">
               <label htmlFor="email">Email</label>
               <input
@@ -93,8 +91,8 @@ export default function Login() {
               <Link to="/forgot-password" className="forgot-password">Quên mật khẩu?</Link>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="login-button"
               disabled={isLoading}
             >
@@ -104,7 +102,7 @@ export default function Login() {
             <p>Bạn chưa có tài khoản? <Link to="/signup" className="signup-link">Đăng ký ngay</Link></p>
           </div>
         </div>
-        
+
         <div className="login-info">
           <h2>Tại sao nên đăng nhập?</h2>
           <ul className="benefits-list">

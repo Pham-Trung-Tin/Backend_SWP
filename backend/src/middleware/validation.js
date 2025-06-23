@@ -146,6 +146,41 @@ export const validateResendVerification = [
         .withMessage('Please provide a valid email address')
 ];
 
+// Validation rules for forgot password
+export const validateForgotPassword = [
+    body('email')
+        .trim()
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please provide a valid email address')
+];
+
+// Validation rules for reset password
+export const validateResetPassword = [
+    body('email')
+        .trim()
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please provide a valid email address'),
+
+    body('resetCode')
+        .trim()
+        .isLength({ min: 6, max: 6 })
+        .matches(/^[0-9]{6}$/)
+        .withMessage('Reset code must be 6 digits'),
+
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('New password must be at least 6 characters long')
+];
+
+// Validation rules for refresh token
+export const validateRefreshToken = [
+    body('refreshToken')
+        .notEmpty()
+        .withMessage('Refresh token is required')
+];
+
 // Middleware to handle validation errors
 export const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
