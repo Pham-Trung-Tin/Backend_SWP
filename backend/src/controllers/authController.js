@@ -40,9 +40,7 @@ export const ensureTablesExist = async () => {
             if (!error.message.includes('Duplicate column name')) {
                 console.log('email_verified column error:', error.message);
             }
-        }
-
-        try {
+        }        try {
             await pool.execute(`
                 ALTER TABLE users 
                 ADD COLUMN is_active BOOLEAN DEFAULT TRUE
@@ -51,7 +49,9 @@ export const ensureTablesExist = async () => {
             if (!error.message.includes('Duplicate column name')) {
                 console.log('is_active column error:', error.message);
             }
-        } try {
+        }
+        
+        try {
             await pool.execute(`
                 ALTER TABLE users 
                 ADD COLUMN refresh_token TEXT
@@ -59,6 +59,17 @@ export const ensureTablesExist = async () => {
         } catch (error) {
             if (!error.message.includes('Duplicate column name')) {
                 console.log('refresh_token column error:', error.message);
+            }
+        }
+        
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN profile_image VARCHAR(255) DEFAULT '/uploads/avatars/default.png'
+            `);
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('profile_image column error:', error.message);
             }
         }
 
@@ -101,6 +112,19 @@ export const ensureTablesExist = async () => {
                 is_used BOOLEAN DEFAULT FALSE,
                 INDEX idx_email_code (email, verification_code),
                 INDEX idx_expires_at (expires_at)
+            )
+        `);        // Create user_smoking_status table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS user_smoking_status (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                UserID INT NOT NULL,
+                SmokingStatus ENUM('active', 'quitting', 'quit') NOT NULL DEFAULT 'active',
+                CigarettesPerDay INT,
+                YearsSmoked INT,
+                QuitDate DATE,
+                LastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (UserID) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user_id (UserID)
             )
         `);
 

@@ -147,6 +147,28 @@ export const validateResendVerification = [
 ];
 
 // Middleware to handle validation errors
+// Validation rules for smoking status update
+export const validateSmokingStatus = [
+    body('smokingStatus')
+        .isIn(['active', 'quitting', 'quit'])
+        .withMessage('Smoking status must be active, quitting, or quit'),
+        
+    body('cigarettesPerDay')
+        .optional()
+        .isInt({ min: 0, max: 100 })
+        .withMessage('Cigarettes per day must be a number between 0 and 100'),
+        
+    body('yearsSmoked')
+        .optional()
+        .isInt({ min: 0, max: 100 })
+        .withMessage('Years smoked must be a number between 0 and 100'),
+        
+    body('quitDate')
+        .optional()
+        .isISO8601()
+        .withMessage('Quit date must be a valid date')
+];
+
 export const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
