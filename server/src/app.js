@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
+import quitPlanRoutes from './routes/quitPlanRoutes.js';
 import ensureTablesExist from './ensureTables.js';
 
 // Load environment variables
@@ -49,6 +50,10 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/quit-plans', quitPlanRoutes);
+
 // Test database connection
 await testConnection();
 // Ensure all required tables exist on startup
@@ -64,9 +69,6 @@ app.get('/health', (req, res) => {
         version: '1.0.0'
     });
 });
-
-// API routes
-app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
