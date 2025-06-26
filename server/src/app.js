@@ -8,7 +8,7 @@ import userRoutes from './routes/users.js';
 import ensureTablesExist from './ensureTables.js';
 import path from 'path';
 
-// Load environment variables
+// Load environment variables --
 dotenv.config();
 
 const app = express();
