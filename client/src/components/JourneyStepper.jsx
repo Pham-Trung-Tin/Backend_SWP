@@ -39,11 +39,11 @@ export default function JourneyStepper() {
           // Lấy kế hoạch từ server 
           const userPlans = await getUserPlans(user.token);
           console.log('Kế hoạch từ server:', userPlans);
-          
+
           if (userPlans && userPlans.length > 0) {
             // Người dùng đã có kế hoạch trên server
             const latestPlan = userPlans[0]; // Lấy kế hoạch gần nhất
-            
+
             setFormData({
               cigarettesPerDay: latestPlan.initialCigarettes || 10,
               packPrice: 25000,
@@ -57,11 +57,11 @@ export default function JourneyStepper() {
                 totalWeeks: latestPlan.totalWeeks
               }
             });
-            
+
             setIsCompleted(true);
             setShowCompletionScreen(true);
             setCurrentStep(4);
-            
+
             // Xóa localStorage để tránh xung đột
             localStorage.removeItem('quitPlanCompletion');
             localStorage.removeItem('activePlan');
@@ -174,11 +174,11 @@ export default function JourneyStepper() {
         setLoading(true);
         // Lấy danh sách kế hoạch của người dùng
         const userPlans = await getUserPlans(user.token);
-        
+
         if (userPlans && userPlans.length > 0) {
           // Tìm kế hoạch đang chỉnh sửa (kế hoạch đầu tiên nếu không xác định được)
           const planId = userPlans[0].id;
-          
+
           // Cập nhật kế hoạch trên server
           const planData = {
             planName: completeSelectedPlan.name,
@@ -188,7 +188,7 @@ export default function JourneyStepper() {
             totalWeeks: completeSelectedPlan.totalWeeks,
             motivation: formData.reasonToQuit
           };
-          
+
           // Gọi API cập nhật
           await updateQuitPlan(planId, planData, user.token);
           console.log('Kế hoạch đã được cập nhật trên server');
@@ -203,7 +203,7 @@ export default function JourneyStepper() {
             totalWeeks: completeSelectedPlan.totalWeeks,
             motivation: formData.reasonToQuit
           };
-          
+
           await createQuitPlan(planData, user.token);
           console.log('Đã tạo kế hoạch mới trên server sau khi chỉnh sửa');
         }
@@ -346,7 +346,7 @@ export default function JourneyStepper() {
           setLoading(true);
           // Lấy danh sách kế hoạch
           const userPlans = await getUserPlans(user.token);
-          
+
           if (userPlans && userPlans.length > 0) {
             const planToDelete = userPlans[0];
             // Xóa kế hoạch trên server
