@@ -54,7 +54,7 @@ export const getUserPlans = async (token) => {
     }
 };
 
-export const updateQuitPlan = async (planId, updateData, token) => {
+export const updateQuitPlan = async (planId, planData, token) => {
     try {
         const response = await fetch(`${API_URL}/api/quit-plans/${planId}`, {
             method: 'PUT',
@@ -62,7 +62,7 @@ export const updateQuitPlan = async (planId, updateData, token) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(updateData)
+            body: JSON.stringify(planData)
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
@@ -74,6 +74,23 @@ export const updateQuitPlan = async (planId, updateData, token) => {
 };
 
 export const deleteQuitPlan = async (planId, token) => {
+    try {
+        const response = await fetch(`${API_URL}/api/quit-plans/${planId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data.data;
+    } catch (error) {
+        console.error('Error deleting quit plan:', error);
+        throw error;
+    }
+};
+
+export const deletePlan = async (planId, token) => {
     try {
         const response = await fetch(`${API_URL}/api/quit-plans/${planId}`, {
             method: 'DELETE',

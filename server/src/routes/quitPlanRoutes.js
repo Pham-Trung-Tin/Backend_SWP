@@ -1,5 +1,5 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import {
     createQuitPlan,
     getUserPlans,
@@ -12,21 +12,21 @@ import {
 const router = express.Router();
 
 // Create a new quit plan
-router.post('/', auth, createQuitPlan);
+router.post('/', authenticateToken, createQuitPlan);
 
 // Get all quit plans for a user
-router.get('/user', auth, getUserPlans);
+router.get('/user', authenticateToken, getUserPlans);
 
 // Get quit plan templates
 router.get('/templates', getPlanTemplates);
 
 // Get a specific quit plan
-router.get('/:id', auth, getPlanById);
+router.get('/:id', authenticateToken, getPlanById);
 
 // Update a quit plan
-router.put('/:id', auth, updatePlan);
+router.put('/:id', authenticateToken, updatePlan);
 
 // Delete a quit plan
-router.delete('/:id', auth, deletePlan);
+router.delete('/:id', authenticateToken, deletePlan);
 
 export default router;

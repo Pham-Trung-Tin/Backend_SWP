@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/JourneyStepper.css';
-import { getQuitPlanTemplates, createQuitPlan } from '../services/quitPlanService';
+import { getQuitPlanTemplates, createQuitPlan, getUserPlans, updateQuitPlan, deletePlan } from '../services/quitPlanService';
 import { useAuth } from '../context/AuthContext';
 
 export default function JourneyStepper() {
@@ -29,29 +29,60 @@ export default function JourneyStepper() {
     { id: 4, name: "Xác nhận" },
   ];
 
-  // Phục hồi kế hoạch từ localStorage khi component được gắn vào
+  // Chỉ kiểm tra và sử dụng kế hoạch từ server khi component được gắn vào
   useEffect(() => {
-    const storedCompletionData = localStorage.getItem('quitPlanCompletion');
-    const storedActivePlan = localStorage.getItem('activePlan');
+    const checkExistingPlans = async () => {
+      try {
+        // Chỉ tiếp tục nếu người dùng đã đăng nhập
+        if (user && user.token) {
+          setLoading(true);
+          // Lấy kế hoạch từ server 
+          const userPlans = await getUserPlans(user.token);
+          console.log('Kế hoạch từ server:', userPlans);
+          
+          if (userPlans && userPlans.length > 0) {
+            // Người dùng đã có kế hoạch trên server
+            const latestPlan = userPlans[0]; // Lấy kế hoạch gần nhất
+            
+            setFormData({
+              cigarettesPerDay: latestPlan.initialCigarettes || 10,
+              packPrice: 25000,
+              smokingYears: 5,
+              reasonToQuit: latestPlan.motivation || 'sức khỏe',
+              selectedPlan: {
+                id: latestPlan.id,
+                name: latestPlan.planName,
+                type: latestPlan.planType,
+                weeks: latestPlan.weeks,
+                totalWeeks: latestPlan.totalWeeks
+              }
+            });
+            
+            setIsCompleted(true);
+            setShowCompletionScreen(true);
+            setCurrentStep(4);
+            
+            // Xóa localStorage để tránh xung đột
+            localStorage.removeItem('quitPlanCompletion');
+            localStorage.removeItem('activePlan');
+          }
+          // Nếu user đăng nhập nhưng không có kế hoạch trên server, hiển thị form tạo mới
+        } else {
+          // User chưa đăng nhập, hiển thị form tạo mới
+          setCurrentStep(1);
+          setIsCompleted(false);
+          setShowCompletionScreen(false);
+        }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra kế hoạch hiện có:', error);
+        setError('Không thể tải kế hoạch, vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (storedCompletionData) {
-      const completionData = JSON.parse(storedCompletionData);
-      console.log('Khôi phục kế hoạch từ localStorage:', completionData);
-      setFormData(completionData.formData);
-      setIsCompleted(true);
-      setShowCompletionScreen(true);
-      setCurrentStep(4);
-    } else if (storedActivePlan) {
-      const activePlan = JSON.parse(storedActivePlan);
-      console.log('Khôi phục active plan từ localStorage:', activePlan);
-      setFormData((prevData) => ({
-        ...prevData,
-        selectedPlan: activePlan.id,
-        cigarettesPerDay: activePlan.initialCigarettes,
-      }));
-      setCurrentStep(2);
-    }
-  }, []);
+    checkExistingPlans();
+  }, [user]);
 
   const handleContinue = () => {
     if (currentStep < 4) {
@@ -98,7 +129,7 @@ export default function JourneyStepper() {
   };
 
   // Xử lý khi người dùng lưu kế hoạch sau khi chỉnh sửa
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     // Lấy kế hoạch đầy đủ dựa vào ID đã chọn
     let completeSelectedPlan = null;
 
@@ -134,41 +165,60 @@ export default function JourneyStepper() {
       return;
     }
 
-    // Lấy dữ liệu hiện tại từ localStorage để giữ nguyên thời gian tạo ban đầu
-    let originalCompletionDate = new Date().toISOString();
-    try {
-      const savedData = localStorage.getItem('quitPlanCompletion');
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        if (parsedData && parsedData.completionDate) {
-          originalCompletionDate = parsedData.completionDate;
-          console.log('Giữ nguyên thời gian tạo ban đầu:', originalCompletionDate);
+    // Không cần lấy dữ liệu từ localStorage nữa
+    const now = new Date().toISOString();
+
+    // Chỉ tiếp tục nếu người dùng đã đăng nhập
+    if (user && user.token) {
+      try {
+        setLoading(true);
+        // Lấy danh sách kế hoạch của người dùng
+        const userPlans = await getUserPlans(user.token);
+        
+        if (userPlans && userPlans.length > 0) {
+          // Tìm kế hoạch đang chỉnh sửa (kế hoạch đầu tiên nếu không xác định được)
+          const planId = userPlans[0].id;
+          
+          // Cập nhật kế hoạch trên server
+          const planData = {
+            planName: completeSelectedPlan.name,
+            planType: completeSelectedPlan.type,
+            initialCigarettes: formData.cigarettesPerDay,
+            weeks: completeSelectedPlan.weeks,
+            totalWeeks: completeSelectedPlan.totalWeeks,
+            motivation: formData.reasonToQuit
+          };
+          
+          // Gọi API cập nhật
+          await updateQuitPlan(planId, planData, user.token);
+          console.log('Kế hoạch đã được cập nhật trên server');
+        } else {
+          // Nếu chưa có kế hoạch trên server, tạo mới
+          const planData = {
+            planName: completeSelectedPlan.name,
+            planType: completeSelectedPlan.type,
+            startDate: new Date().toISOString().split('T')[0],
+            initialCigarettes: formData.cigarettesPerDay,
+            weeks: completeSelectedPlan.weeks,
+            totalWeeks: completeSelectedPlan.totalWeeks,
+            motivation: formData.reasonToQuit
+          };
+          
+          await createQuitPlan(planData, user.token);
+          console.log('Đã tạo kế hoạch mới trên server sau khi chỉnh sửa');
         }
+      } catch (error) {
+        console.error('Lỗi khi cập nhật kế hoạch lên server:', error);
+        alert('Có lỗi khi lưu kế hoạch. Vui lòng thử lại sau.');
+        return;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Lỗi khi đọc dữ liệu cũ:', error);
+    } else {
+      // Nếu chưa đăng nhập, yêu cầu đăng nhập
+      alert('Vui lòng đăng nhập để lưu kế hoạch cai thuốc của bạn.');
+      return;
     }
-
-    // Lưu thông tin đã chỉnh sửa vào localStorage
-    const completionData = {
-      completionDate: originalCompletionDate, // Giữ nguyên thời gian tạo ban đầu
-      userPlan: completeSelectedPlan,
-      formData: {
-        ...formData,
-        selectedPlan: completeSelectedPlan // Lưu object kế hoạch đầy đủ thay vì chỉ ID
-      },
-      lastEdited: new Date().toISOString() // Cập nhật thời gian chỉnh sửa
-    };
-    localStorage.setItem('quitPlanCompletion', JSON.stringify(completionData));
-
-    // Cập nhật kế hoạch đang hoạt động
-    const activePlan = {
-      ...completeSelectedPlan,
-      startDate: new Date().toISOString().split('T')[0],
-      initialCigarettes: formData.cigarettesPerDay,
-      lastEdited: new Date().toISOString()
-    };
-    localStorage.setItem('activePlan', JSON.stringify(activePlan));
 
     // Hiển thị thông báo thành công
     alert(`Đã cập nhật kế hoạch thành công! Thời gian dự kiến mới: ${completeSelectedPlan.totalWeeks} tuần.`);
@@ -195,36 +245,42 @@ export default function JourneyStepper() {
         return;
       }
 
-      // Create plan in backend
-      if (user) {
-        const planData = {
-          planName: formData.selectedPlan.name,
-          planType: formData.selectedPlan.type,
-          startDate: new Date().toISOString().split('T')[0],
-          initialCigarettes: formData.cigarettesPerDay,
-          weeks: formData.selectedPlan.weeks,
-          totalWeeks: formData.selectedPlan.totalWeeks
-        };
+      // Nếu người dùng đã đăng nhập, chỉ lưu kế hoạch lên server
+      if (user && user.token) {
+        setLoading(true);
+        try {
+          const planData = {
+            planName: formData.selectedPlan.name,
+            planType: formData.selectedPlan.type,
+            startDate: new Date().toISOString().split('T')[0],
+            initialCigarettes: formData.cigarettesPerDay,
+            weeks: formData.selectedPlan.weeks,
+            totalWeeks: formData.selectedPlan.totalWeeks,
+            motivation: formData.reasonToQuit
+          };
 
-        const savedPlan = await createQuitPlan(planData, user.token);
-        console.log('Plan saved to backend:', savedPlan);
+          const savedPlan = await createQuitPlan(planData, user.token);
+          console.log('Kế hoạch đã được lưu lên server:', savedPlan);
+          alert('Kế hoạch cai thuốc của bạn đã được lưu thành công!');
+        } catch (serverError) {
+          console.error('Lỗi khi lưu kế hoạch lên server:', serverError);
+          alert('Có lỗi khi lưu kế hoạch. Vui lòng thử lại sau.');
+          // Lỗi khi lưu trên server thì không tiếp tục quá trình
+          return;
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Yêu cầu người dùng đăng nhập để lưu kế hoạch
+        alert('Vui lòng đăng nhập để lưu kế hoạch cai thuốc của bạn.');
+        return;
       }
-
-      // Save to localStorage for offline access
-      const completionData = {
-        completionDate: new Date().toISOString(),
-        userPlan: formData.selectedPlan,
-        formData: formData
-      };
-
-      localStorage.setItem('quitPlanCompletion', JSON.stringify(completionData));
-      localStorage.setItem('activePlan', JSON.stringify(formData.selectedPlan));
 
       setIsCompleted(true);
       setShowCompletionScreen(true);
 
     } catch (error) {
-      console.error('Error saving plan:', error);
+      console.error('Lỗi khi lưu kế hoạch:', error);
       alert('Có lỗi khi lưu kế hoạch. Vui lòng thử lại sau.');
     }
   };
@@ -235,46 +291,34 @@ export default function JourneyStepper() {
       [field]: value
     });
   };
-  // Kiểm tra nếu có kế hoạch cai thuốc đã lưu trong localStorage
+  // Hiển thị thông báo chào mừng khi người dùng quay lại trang
   useEffect(() => {
-    const savedPlan = localStorage.getItem('quitPlanCompletion');
-    if (savedPlan) {
-      try {
-        const parsedPlan = JSON.parse(savedPlan);
-        // Khôi phục dữ liệu form từ localStorage
-        setFormData(parsedPlan.formData);
-        // Hiển thị màn hình hoàn thành
-        setIsCompleted(true);
-        setShowCompletionScreen(true);
-        setCurrentStep(4);
+    // Kiểm tra xem có phải lần đầu ghé thăm trong phiên làm việc này không
+    if (user) {
+      const lastVisit = sessionStorage.getItem('lastVisit');
+      if (!lastVisit) {
+        setShowWelcomeBack(true);
+        // Đánh dấu là đã ghé thăm trong phiên này
+        sessionStorage.setItem('lastVisit', Date.now().toString());
 
-        // Kiểm tra xem có phải lần đầu ghé thăm trong phiên làm việc này không
-        const lastVisit = sessionStorage.getItem('lastVisit');
-        if (!lastVisit) {
-          setShowWelcomeBack(true);
-          // Đánh dấu là đã ghé thăm trong phiên này
-          sessionStorage.setItem('lastVisit', Date.now().toString());
-
-          // Tự động ẩn thông báo sau 5 giây
-          setTimeout(() => {
-            setShowWelcomeBack(false);
-          }, 5000);
-        }
-
-        // Đánh dấu tất cả các bước là đã hoàn thành
+        // Tự động ẩn thông báo sau 5 giây
         setTimeout(() => {
-          document.querySelectorAll('.step-line').forEach((line) => {
-            line.classList.add('active');
-          });
-          document.querySelectorAll('.step-item').forEach((item) => {
-            item.classList.add('completed');
-          });
-        }, 100);
-      } catch (error) {
-        console.error('Lỗi khi khôi phục kế hoạch cai thuốc:', error);
+          setShowWelcomeBack(false);
+        }, 5000);
       }
     }
-  }, []);
+    // Nếu người dùng đã đăng nhập và có kế hoạch, đánh dấu tất cả các bước là đã hoàn thành
+    if (user && isCompleted) {
+      setTimeout(() => {
+        document.querySelectorAll('.step-line').forEach((line) => {
+          line.classList.add('active');
+        });
+        document.querySelectorAll('.step-item').forEach((item) => {
+          item.classList.add('completed');
+        });
+      }, 100);
+    }
+  }, [user, isCompleted]);
 
   // Xử lý input số
   const handleNumberInput = (field, e) => {
@@ -294,10 +338,29 @@ export default function JourneyStepper() {
   };
 
   // Xử lý khi người dùng muốn xóa kế hoạch đã lưu
-  const handleClearPlan = () => {
+  const handleClearPlan = async () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa kế hoạch cai thuốc? Hành động này không thể hoàn tác.')) {
-      localStorage.removeItem('quitPlanCompletion');
-      localStorage.removeItem('activePlan');
+      // Nếu đã đăng nhập, xóa kế hoạch trên server
+      if (user && user.token) {
+        try {
+          setLoading(true);
+          // Lấy danh sách kế hoạch
+          const userPlans = await getUserPlans(user.token);
+          
+          if (userPlans && userPlans.length > 0) {
+            const planToDelete = userPlans[0];
+            // Xóa kế hoạch trên server
+            await deletePlan(planToDelete.id, user.token);
+            console.log('Kế hoạch sẽ được xóa:', planToDelete.id);
+          }
+        } catch (error) {
+          console.error('Lỗi khi xóa kế hoạch:', error);
+          alert('Có lỗi khi xóa kế hoạch. Vui lòng thử lại sau.');
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
 
       // Reset lại trạng thái
       setFormData({
@@ -725,6 +788,8 @@ export default function JourneyStepper() {
       loadPlans();
     }
   }, [formData.cigarettesPerDay, currentStep]);
+
+  // Không cần đồng bộ localStorage nữa vì chúng ta chỉ sử dụng dữ liệu từ server
 
   // Render quit plan options
   const renderQuitPlanOptions = () => {

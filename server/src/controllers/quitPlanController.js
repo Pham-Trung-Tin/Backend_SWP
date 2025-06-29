@@ -111,6 +111,7 @@ const generatePlanTemplates = (cigarettesPerDay) => {
 // Create a new quit plan
 export const createQuitPlan = async (req, res) => {
     try {
+        console.log('💡 createQuitPlan - Request body:', JSON.stringify(req.body));
         const {
             planName,
             startDate,
@@ -123,6 +124,7 @@ export const createQuitPlan = async (req, res) => {
 
         // Validation
         if (!planName || !startDate || !initialCigarettes || !totalWeeks) {
+            console.log('❌ Missing required fields:', { planName, startDate, initialCigarettes, totalWeeks });
             return sendError(res, 'Missing required fields', 400);
         }
 
@@ -285,6 +287,7 @@ export const deletePlan = async (req, res) => {
 // Get quit plan templates
 export const getPlanTemplates = async (req, res) => {
     try {
+        console.log('💡 getPlanTemplates called - Query:', req.query);
         const cigarettesPerDay = parseInt(req.query.cigarettesPerDay) || 0;
 
         const generateTemplate = (type, weeks) => {
