@@ -916,64 +916,75 @@
   margin-bottom: 4px; /* Giảm margin-bottom */
 }
 
-/* Cải thiện hiển thị các trường thông tin */
-.info-field {
-  margin-bottom: 8px; /* Giảm margin-bottom */
-  background-color: #f9fafb;
-  padding: 8px 10px; /* Giảm padding */
-  border-radius: 5px; /* Giảm border-radius */
-  box-shadow: none;
-  border-left: 2px solid transparent;
-  transition: all 0.2s ease;
+/* Animation for feedback messages */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.info-field p {
-  margin: 0;
-  padding: 8px 0;
-  color: #444;
-  font-size: 15px;
-  font-weight: normal;
+.animate-feedback {
+  animation: fadeInUp 0.3s ease-out;
 }
 
-.info-field p:empty::before {
-  content: "Chưa cập nhật";
-  color: #999;
-  font-style: italic;
+/* Loading spinner animation */
+.loading-spinner {
+  animation: spin 1s linear infinite;
 }
 
-/* Cải thiện textarea trong phần lý do */
-.quit-reason-section textarea {
-  min-height: 100px;
-  background-color: #f9fafb;
-  border: 1px solid #e0e4e8;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading message style */
+.loading-message {
+  background-color: rgba(63, 81, 181, 0.1);
+  color: #303f9f;
+  border: 1px solid rgba(63, 81, 181, 0.3);
+  padding: 12px;
+  margin-bottom: 20px;
   border-radius: 6px;
-  padding: 10px;
-  width: 100%;
-  font-family: inherit;
-  resize: vertical;
-  transition: all 0.2s ease;
-}
-
-.quit-reason-section textarea:focus {
-  border-color: #2570e8;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 112, 232, 0.1);
-}
-
-/* Style cho phần text lý do khi không ở chế độ sửa */
-.quit-reason-text {
-  white-space: pre-line;
-  padding: 10px;
-  background-color: #f9fafb;
-  border-radius: 6px;
-  line-height: 1.5;
-}
-
-/* CSS cho trạng thái cai thuốc đã được gỡ bỏ */
-
-.avatar-container {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  width: 100%;
+  gap: 10px;
+}
+
+/* Form validation styling */
+.field-error input, 
+.field-error select, 
+.field-error textarea {
+  border-color: #f44336 !important;
+  background-color: rgba(244, 67, 54, 0.03);
+}
+
+.field-error-message {
+  color: #f44336;
+  font-size: 12px;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+.input-error {
+  border-color: #f44336 !important;
+}
+
+.required-field {
+  color: #f44336;
+  margin-left: 3px;
+}
+
+/* Disabled button styles */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

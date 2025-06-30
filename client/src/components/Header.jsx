@@ -10,6 +10,8 @@ export default function Header() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0); // Add this state for notification count
+  const [avatarClass, setAvatarClass] = useState('');
+  const prevAvatarRef = useRef('');
   const { user, logout } = useAuth();
 
   // Thêm useRef để theo dõi dropdown menu
@@ -63,6 +65,49 @@ export default function Header() {
     };
   }, [isUserMenuOpen]);
 
+  // Theo dõi thay đổi avatar để thêm hiệu ứng
+  useEffect(() => {
+    if (user?.profile_image && user.profile_image !== prevAvatarRef.current) {
+      console.log('Header - Avatar changed:', user.profile_image);
+      setAvatarClass('avatar-updated');
+      prevAvatarRef.current = user.profile_image;
+      
+      // Xóa class hiệu ứng sau khi hoàn thành
+      const timer = setTimeout(() => {
+        setAvatarClass('');
+      }, 600);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user?.profile_image]);
+  
+  // Lắng nghe sự kiện cập nhật avatar từ các component khác
+  useEffect(() => {
+    const handleAvatarUpdate = (event) => {
+      console.log('Header - Avatar update event received:', event.detail);
+      
+      // Force re-render khi có sự kiện avatar-updated
+      if (event.detail.avatarUrl) {
+        setAvatarClass('avatar-updated');
+        
+        // Xóa class hiệu ứng sau khi hoàn thành
+        const timer = setTimeout(() => {
+          setAvatarClass('');
+        }, 600);
+        
+        return () => clearTimeout(timer);
+      }
+    };
+    
+    // Đăng ký lắng nghe sự kiện
+    window.addEventListener('avatar-updated', handleAvatarUpdate);
+    
+    // Hủy đăng ký khi component unmount
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdate);
+    };
+  }, []);
+
   return (
     <header className="nosmoke-header">
       <div className="container">
@@ -82,7 +127,33 @@ export default function Header() {
                 <FaBell /> Thông báo
                 {notificationCount > 0 && <span className="notification-badge">{notificationCount}</span>}
               </Link>              <div className="user-menu-container" ref={userMenuRef}>                <button className="user-menu-button" onClick={toggleUserMenu}>
-                <span className="user-initial">{(user.fullName || user.name || 'U').charAt(0)}</span>
+                {user.profile_image ? (
+                  <div className="user-avatar-container">
+                    <img 
+                      key={user.profile_image} // Key helps React recognize when to re-render
+                      src={
+                        // Handle avatar URL correctly based on format
+                        user.profile_image && user.profile_image.startsWith('http') 
+                          ? user.profile_image 
+                          : `http://localhost:5000${user.profile_image || ''}`
+                      } 
+                      alt="Avatar" 
+                      className={`user-avatar ${avatarClass}`}
+                      onError={(e) => {
+                        console.error("Avatar couldn't load:", e.target.src);
+                        // Fallback to user initial
+                        e.target.onerror = null; // Prevent infinite loop
+                        e.target.style.display = 'none';
+                        const initialSpan = document.createElement('span');
+                        initialSpan.className = 'user-initial';
+                        initialSpan.textContent = (user.fullName || user.name || 'U').charAt(0);
+                        e.target.parentNode.appendChild(initialSpan);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span className={`user-initial ${avatarClass}`}>{(user.fullName || user.name || 'U').charAt(0)}</span>
+                )}
                 <span className="user-name">
                   {user.fullName || user.name || 'User'}
                   {/* Kiểm tra cả hai trường hợp để hiển thị nhãn thành viên */}

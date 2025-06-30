@@ -72,6 +72,45 @@ export const ensureTablesExist = async () => {
                 console.log('profile_image column error:', error.message);
             }
         }
+        
+        // Thêm cột age nếu chưa có
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN age INT NULL
+            `);
+            console.log('✅ Added age column to users table');
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('age column error:', error.message);
+            }
+        }
+        
+        // Thêm cột quit_reason nếu chưa có
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN quit_reason TEXT NULL
+            `);
+            console.log('✅ Added quit_reason column to users table');
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('quit_reason column error:', error.message);
+            }
+        }
+        
+        // Thêm cột address nếu chưa có
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN address VARCHAR(255) NULL
+            `);
+            console.log('✅ Added address column to users table');
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('address column error:', error.message);
+            }
+        }
 
         // Fix role column to ensure it has correct ENUM values
         try {
@@ -180,20 +219,43 @@ const generateRefreshToken = (userId) => {
 
 // Format user data for response (remove sensitive info)
 const formatUserResponse = (user) => {
-    return {
+    console.log('🔄 Formatting user data for response:', user);
+    
+    // Ghi log chi tiết cho các trường quan trọng để debug
+    console.log('Debug field details:');
+    console.log('- id:', user.id);
+    console.log('- full_name:', user.full_name);
+    console.log('- address:', user.address, typeof user.address);
+    console.log('- age:', user.age, typeof user.age);
+    console.log('- quit_reason:', user.quit_reason, typeof user.quit_reason);
+    
+    // Ensure all fields are mapped for frontend and backend compatibility
+    const formattedUser = {
         id: user.id,
         username: user.username,
         email: user.email,
         fullName: user.full_name,
+        full_name: user.full_name,
         phone: user.phone,
         dateOfBirth: user.date_of_birth,
+        date_of_birth: user.date_of_birth,
         gender: user.gender,
         role: user.role,
         emailVerified: user.email_verified,
         isActive: user.is_active,
+        profile_image: user.profile_image,
+        profileImage: user.profile_image,
+        // Xử lý đặc biệt cho các trường quan trọng
+        quit_reason: user.quit_reason,
+        quitReason: user.quit_reason,
+        age: user.age !== undefined ? user.age : null,
+        address: user.address,
         createdAt: user.created_at,
         updatedAt: user.updated_at
     };
+    
+    console.log('✅ Formatted user data:', formattedUser);
+    return formattedUser;
 };
 
 // Register User - Step 1: Create pending registration
@@ -290,37 +352,79 @@ export const register = async (req, res) => {
 // Login User
 export const login = async (req, res) => {
     try {
+        console.log('🔑 Login attempt for:', req.body.email);
         const { email, password } = req.body;
+        
+        // Đảm bảo truy vấn lấy tất cả các trường, bao gồm address, age, quit_reason
         const [users] = await pool.execute(
-            `SELECT * FROM users WHERE email = ?`,
+            `SELECT 
+                id, username, email, password_hash, full_name, phone, 
+                date_of_birth, gender, role, email_verified, is_active,
+                profile_image, refresh_token, created_at, updated_at,
+                address, age, quit_reason
+             FROM users 
+             WHERE email = ?`,
             [email]
         );
 
         if (users.length === 0) {
+            console.log('❌ User not found:', email);
             return sendError(res, 'Invalid email or password', 401);
         }
 
         const user = users[0];
+        console.log('👤 Found user:', { id: user.id, email: user.email });
 
         if (!user.is_active) {
+            console.log('❌ Account deactivated:', user.id);
             return sendError(res, 'Account is deactivated. Please contact support.', 401);
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isPasswordValid) {
+            console.log('❌ Invalid password for user:', user.id);
             return sendError(res, 'Invalid email or password', 401);
         }
 
+        // Tạo tokens
         const token = generateToken(user.id);
         const refreshToken = generateRefreshToken(user.id);
+        
+        // Cập nhật thời gian đăng nhập
         await pool.execute(
-            'UPDATE users SET updated_at = NOW() WHERE id = ?',
+            'UPDATE users SET updated_at = NOW(), refresh_token = ? WHERE id = ?',
+            [refreshToken, user.id]
+        );
+        
+        // Lấy dữ liệu mới nhất của người dùng với tất cả các trường
+        console.log('🔄 Fetching updated user data...');
+        const [updatedUsers] = await pool.execute(
+            `SELECT 
+                id, username, email, password_hash, full_name, phone, 
+                date_of_birth, gender, role, email_verified, is_active,
+                profile_image, refresh_token, created_at, updated_at,
+                address, age, quit_reason
+             FROM users 
+             WHERE id = ?`,
             [user.id]
         );
-
+        
+        const updatedUser = updatedUsers[0];
+        console.log('📊 User data for response:', {
+            id: updatedUser.id,
+            name: updatedUser.full_name,
+            quit_reason: updatedUser.quit_reason,
+            age: updatedUser.age,
+            profile_image: updatedUser.profile_image
+        });
+        
+        // Format và trả về dữ liệu
+        const formattedUser = formatUserResponse(updatedUser);
+        console.log('✅ Login successful for user:', updatedUser.id);
+        
         sendSuccess(res, 'Login successful', {
-            user: formatUserResponse(user),
+            user: formattedUser,
             token,
             refreshToken
         });
@@ -360,8 +464,8 @@ export const verifyEmail = async (req, res) => {
         // Move data from pending_registrations to users table
         const [result] = await pool.execute(
             `INSERT INTO users 
-             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW())`,
+             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at, age, address, quit_reason) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW(), ?, ?, ?)`,
             [
                 pendingUser.username,
                 pendingUser.email,
@@ -370,7 +474,10 @@ export const verifyEmail = async (req, res) => {
                 pendingUser.phone,
                 pendingUser.date_of_birth,
                 pendingUser.gender,
-                pendingUser.role || 'user'
+                pendingUser.role || 'user',
+                null, // age
+                null, // address
+                null  // quit_reason
             ]
         );
 
@@ -465,16 +572,36 @@ export const resendVerificationCode = async (req, res) => {
 export const getProfile = async (req, res) => {
     try {
         const userId = req.user.id;
+        console.log('🔍 Getting profile for user ID:', userId);
+        
+        // Lấy thông tin chi tiết của người dùng với tất cả các trường
         const [users] = await pool.execute(
-            'SELECT * FROM users WHERE id = ?',
+            `SELECT 
+                id, username, email, password_hash, full_name, phone, 
+                date_of_birth, gender, role, email_verified, is_active,
+                profile_image, refresh_token, created_at, updated_at,
+                address, age, quit_reason
+             FROM users 
+             WHERE id = ?`,
             [userId]
         );
 
         if (users.length === 0) {
+            console.log('❌ User not found:', userId);
             return sendError(res, 'User not found', 404);
         }
-
-        sendSuccess(res, 'User profile fetched successfully', formatUserResponse(users[0]));
+        
+        const user = users[0];
+        console.log('✅ User profile found:', {
+            id: user.id,
+            name: user.full_name,
+            quit_reason: user.quit_reason,
+            age: user.age
+        });
+        
+        // Format dữ liệu trước khi trả về
+        const formattedUser = formatUserResponse(user);
+        sendSuccess(res, 'User profile fetched successfully', formattedUser);
     } catch (error) {
         console.error('❌ Get profile error:', error);
         sendError(res, 'Failed to fetch profile', 500);
@@ -484,14 +611,36 @@ export const getProfile = async (req, res) => {
 // Update User Profile
 export const updateProfile = async (req, res) => {
     try {
+        console.log('📝 Update profile request:', req.body);
         const userId = req.user.id;
         const {
             fullName,
             phone,
             dateOfBirth,
             gender,
-            role
+            role,
+            // Thêm các trường mới
+            address,
+            age,
+            quitReason,
+            quit_reason
         } = req.body;
+        
+        // Format age thành số nếu có
+        let formattedAge = null;
+        if (age !== undefined && age !== null && age !== '') {
+            formattedAge = parseInt(age);
+            if (isNaN(formattedAge)) formattedAge = null;
+        }
+        
+        // Xử lý quit_reason - ưu tiên quitReason nếu có cả hai
+        const finalQuitReason = quitReason !== undefined ? quitReason : quit_reason;
+        
+        console.log('🔄 Prepared update data:', {
+            fullName, phone, dateOfBirth, gender, role,
+            address, age: formattedAge, quitReason: finalQuitReason
+        });
+        
         await pool.execute(
             `UPDATE users SET 
                 full_name = ?, 
@@ -499,12 +648,44 @@ export const updateProfile = async (req, res) => {
                 date_of_birth = ?, 
                 gender = ?, 
                 role = ?,
+                address = ?,
+                age = ?,
+                quit_reason = ?,
                 updated_at = NOW() 
              WHERE id = ?`,
-            [fullName, phone || null, dateOfBirth || null, gender || null, role || 'user', userId]
+            [
+                fullName, 
+                phone || null, 
+                dateOfBirth || null, 
+                gender || null, 
+                role || 'user', 
+                address || null,
+                formattedAge,
+                finalQuitReason,
+                userId
+            ]
         );
+        
+        // Fetch updated user data to return
+        const [updatedUsers] = await pool.execute(
+            `SELECT 
+                id, username, email, full_name, phone, 
+                date_of_birth, gender, role, email_verified, is_active,
+                profile_image, created_at, updated_at,
+                address, age, quit_reason
+             FROM users 
+             WHERE id = ?`,
+            [userId]
+        );
+        
+        if (updatedUsers.length === 0) {
+            return sendError(res, 'User not found after update', 404);
+        }
+        
+        const formattedUser = formatUserResponse(updatedUsers[0]);
+        console.log('✅ Profile updated successfully:', formattedUser);
 
-        sendSuccess(res, 'Profile updated successfully');
+        sendSuccess(res, 'Profile updated successfully', formattedUser);
     } catch (error) {
         console.error('❌ Update profile error:', error);
         sendError(res, 'Failed to update profile', 500);

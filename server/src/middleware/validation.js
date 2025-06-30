@@ -76,7 +76,20 @@ export const validateLogin = [
 
 // Validation rules for profile update
 export const validateProfileUpdate = [
+    // Hỗ trợ cả name và fullName để tương thích với frontend
+    body('name')
+        .optional()
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('Name must be between 2 and 100 characters'),
+        
     body('fullName')
+        .optional()
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('Full name must be between 2 and 100 characters'),
+        
+    body('full_name')
         .optional()
         .trim()
         .isLength({ min: 2, max: 100 })
@@ -87,7 +100,13 @@ export const validateProfileUpdate = [
         .matches(/^[0-9]{10,11}$/)
         .withMessage('Phone number must be 10-11 digits'),
 
+    // Hỗ trợ cả camelCase và snake_case
     body('dateOfBirth')
+        .optional()
+        .isISO8601()
+        .withMessage('Date of birth must be a valid date'),
+        
+    body('date_of_birth')
         .optional()
         .isISO8601()
         .withMessage('Date of birth must be a valid date'),
@@ -97,10 +116,35 @@ export const validateProfileUpdate = [
         .isIn(['male', 'female', 'other'])
         .withMessage('Gender must be male, female, or other'),
 
+    body('address')
+        .optional()
+        .trim()
+        .isLength({ max: 255 })
+        .withMessage('Address cannot be longer than 255 characters'),
+
     body('avatarUrl')
         .optional()
         .isURL()
-        .withMessage('Avatar URL must be a valid URL')
+        .withMessage('Avatar URL must be a valid URL'),
+        
+    // Thêm validation cho age
+    body('age')
+        .optional()
+        .isInt({ min: 0, max: 120 })
+        .withMessage('Age must be a number between 0 and 120'),
+        
+    // Thêm validation cho quit_reason (cả camelCase và snake_case)
+    body('quitReason')
+        .optional()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage('Quit reason cannot be longer than 500 characters'),
+        
+    body('quit_reason')
+        .optional()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage('Quit reason cannot be longer than 500 characters')
 ];
 
 // Validation rules for password change
