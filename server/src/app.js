@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import quitPlanRoutes from './routes/quitPlanRoutes.js';
+import progressRoutes from './routes/progressRoutes.js';
 import ensureTablesExist from './ensureTables.js';
 
 // Load environment variables
@@ -59,6 +60,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/quit-plans', quitPlanRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Test database connection
 await testConnection();

@@ -12,7 +12,7 @@ export default function JourneyStepper() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { user } = useAuth();
+  const { user, token, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     cigarettesPerDay: 10,
@@ -34,27 +34,47 @@ export default function JourneyStepper() {
     const checkExistingPlans = async () => {
       try {
         // Chỉ tiếp tục nếu người dùng đã đăng nhập
-        if (user && user.token) {
+        if (user && token) {
           setLoading(true);
+          setError(null); // Clear any previous errors
+
+          console.log('=== DEBUG: Checking existing plans ===');
+          console.log('User:', user);
+          console.log('Token available:', !!token);
+
           // Lấy kế hoạch từ server 
-          const userPlans = await getUserPlans(user.token);
-          console.log('Kế hoạch từ server:', userPlans);
+          const userPlans = await getUserPlans(token);
+          console.log('Plans from server:', userPlans);
 
           if (userPlans && userPlans.length > 0) {
             // Người dùng đã có kế hoạch trên server
             const latestPlan = userPlans[0]; // Lấy kế hoạch gần nhất
+            console.log('Latest plan:', latestPlan);
+
+            // Parse weeks from JSON if it's a string
+            let weeks = [];
+            if (latestPlan.weeks) {
+              try {
+                weeks = typeof latestPlan.weeks === 'string'
+                  ? JSON.parse(latestPlan.weeks)
+                  : latestPlan.weeks;
+              } catch (parseError) {
+                console.warn('Error parsing weeks data:', parseError);
+                weeks = [];
+              }
+            }
 
             setFormData({
-              cigarettesPerDay: latestPlan.initialCigarettes || 10,
+              cigarettesPerDay: latestPlan.initial_cigarettes || latestPlan.initialCigarettes || 10,
               packPrice: 25000,
               smokingYears: 5,
-              reasonToQuit: latestPlan.motivation || 'sức khỏe',
+              reasonToQuit: latestPlan.goal || latestPlan.motivation || 'sức khỏe',
               selectedPlan: {
                 id: latestPlan.id,
-                name: latestPlan.planName,
-                type: latestPlan.planType,
-                weeks: latestPlan.weeks,
-                totalWeeks: latestPlan.totalWeeks
+                name: latestPlan.plan_name || latestPlan.planName,
+                type: latestPlan.strategy || latestPlan.planType || 'gradual',
+                weeks: weeks,
+                totalWeeks: latestPlan.total_weeks || latestPlan.totalWeeks
               }
             });
 
@@ -65,24 +85,48 @@ export default function JourneyStepper() {
             // Xóa localStorage để tránh xung đột
             localStorage.removeItem('quitPlanCompletion');
             localStorage.removeItem('activePlan');
+
+            console.log('Successfully loaded existing plan');
+          } else {
+            console.log('No existing plans found, showing create form');
+            // Nếu user đăng nhập nhưng không có kế hoạch trên server, hiển thị form tạo mới
+            setCurrentStep(1);
+            setIsCompleted(false);
+            setShowCompletionScreen(false);
           }
-          // Nếu user đăng nhập nhưng không có kế hoạch trên server, hiển thị form tạo mới
         } else {
+          console.log('User not authenticated, showing create form');
           // User chưa đăng nhập, hiển thị form tạo mới
           setCurrentStep(1);
           setIsCompleted(false);
           setShowCompletionScreen(false);
         }
       } catch (error) {
-        console.error('Lỗi khi kiểm tra kế hoạch hiện có:', error);
-        setError('Không thể tải kế hoạch, vui lòng thử lại sau.');
+        console.error('Error checking existing plans:', error);
+
+        // Handle different types of errors
+        let errorMessage = 'Không thể tải kế hoạch, vui lòng thử lại sau.';
+
+        if (error.message.includes('đăng nhập')) {
+          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+          // You might want to trigger a logout here
+        } else if (error.message.includes('kết nối')) {
+          errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+        }
+
+        setError(errorMessage);
+
+        // Fall back to showing the create form
+        setCurrentStep(1);
+        setIsCompleted(false);
+        setShowCompletionScreen(false);
       } finally {
         setLoading(false);
       }
     };
 
     checkExistingPlans();
-  }, [user]);
+  }, [user, token]);
 
   const handleContinue = () => {
     if (currentStep < 4) {
@@ -169,42 +213,63 @@ export default function JourneyStepper() {
     const now = new Date().toISOString();
 
     // Chỉ tiếp tục nếu người dùng đã đăng nhập
-    if (user && user.token) {
+    if (user && token) {
       try {
         setLoading(true);
         // Lấy danh sách kế hoạch của người dùng
-        const userPlans = await getUserPlans(user.token);
+        const userPlans = await getUserPlans(token);
 
         if (userPlans && userPlans.length > 0) {
           // Tìm kế hoạch đang chỉnh sửa (kế hoạch đầu tiên nếu không xác định được)
           const planId = userPlans[0].id;
 
+          // Generate weeks array if it doesn't exist
+          const weeks = completeSelectedPlan.weeks && completeSelectedPlan.weeks.length > 0
+            ? completeSelectedPlan.weeks
+            : Array.from({ length: completeSelectedPlan.totalWeeks }, (_, i) => ({
+              week: i + 1,
+              target: Math.max(0, Math.round(formData.cigarettesPerDay * (1 - ((i + 1) / completeSelectedPlan.totalWeeks))))
+            }));
+
           // Cập nhật kế hoạch trên server
           const planData = {
             planName: completeSelectedPlan.name,
             planType: completeSelectedPlan.type,
+            startDate: new Date().toISOString().split('T')[0], // Make sure startDate is included
             initialCigarettes: formData.cigarettesPerDay,
-            weeks: completeSelectedPlan.weeks,
+            strategy: completeSelectedPlan.type || 'gradual',
+            goal: formData.reasonToQuit || 'health',
+            weeks: weeks,
             totalWeeks: completeSelectedPlan.totalWeeks,
             motivation: formData.reasonToQuit
           };
 
           // Gọi API cập nhật
-          await updateQuitPlan(planId, planData, user.token);
+          await updateQuitPlan(planId, planData, token);
           console.log('Kế hoạch đã được cập nhật trên server');
         } else {
+          // Generate weeks array if it doesn't exist
+          const weeks = completeSelectedPlan.weeks && completeSelectedPlan.weeks.length > 0
+            ? completeSelectedPlan.weeks
+            : Array.from({ length: completeSelectedPlan.totalWeeks }, (_, i) => ({
+              week: i + 1,
+              target: Math.max(0, Math.round(formData.cigarettesPerDay * (1 - ((i + 1) / completeSelectedPlan.totalWeeks))))
+            }));
+
           // Nếu chưa có kế hoạch trên server, tạo mới
           const planData = {
             planName: completeSelectedPlan.name,
             planType: completeSelectedPlan.type,
             startDate: new Date().toISOString().split('T')[0],
             initialCigarettes: formData.cigarettesPerDay,
-            weeks: completeSelectedPlan.weeks,
+            strategy: completeSelectedPlan.type || 'gradual',
+            goal: formData.reasonToQuit || 'health',
+            weeks: weeks,
             totalWeeks: completeSelectedPlan.totalWeeks,
             motivation: formData.reasonToQuit
           };
 
-          await createQuitPlan(planData, user.token);
+          await createQuitPlan(planData, token);
           console.log('Đã tạo kế hoạch mới trên server sau khi chỉnh sửa');
         }
       } catch (error) {
@@ -240,48 +305,142 @@ export default function JourneyStepper() {
     });
   }; const handleSubmit = async () => {
     try {
+      // Enhanced debugging and validation
+      console.log('=== FRONTEND DEBUG - handleSubmit ===');
+      console.log('formData.selectedPlan:', formData.selectedPlan);
+      console.log('formData.cigarettesPerDay:', formData.cigarettesPerDay);
+      console.log('formData.reasonToQuit:', formData.reasonToQuit);
+
+      // Validate required fields
       if (!formData.selectedPlan) {
+        console.error('Error: No plan selected');
         alert('Vui lòng chọn một kế hoạch.');
         return;
       }
 
-      // Nếu người dùng đã đăng nhập, chỉ lưu kế hoạch lên server
-      if (user && user.token) {
-        setLoading(true);
-        try {
-          const planData = {
-            planName: formData.selectedPlan.name,
-            planType: formData.selectedPlan.type,
-            startDate: new Date().toISOString().split('T')[0],
-            initialCigarettes: formData.cigarettesPerDay,
-            weeks: formData.selectedPlan.weeks,
-            totalWeeks: formData.selectedPlan.totalWeeks,
-            motivation: formData.reasonToQuit
-          };
+      // Ensure selectedPlan is a complete object
+      let completeSelectedPlan = formData.selectedPlan;
 
-          const savedPlan = await createQuitPlan(planData, user.token);
-          console.log('Kế hoạch đã được lưu lên server:', savedPlan);
-          alert('Kế hoạch cai thuốc của bạn đã được lưu thành công!');
-        } catch (serverError) {
-          console.error('Lỗi khi lưu kế hoạch lên server:', serverError);
-          alert('Có lỗi khi lưu kế hoạch. Vui lòng thử lại sau.');
-          // Lỗi khi lưu trên server thì không tiếp tục quá trình
-          return;
-        } finally {
-          setLoading(false);
+      // If selectedPlan is just an ID or incomplete, get the full plan
+      if (typeof formData.selectedPlan === 'number' || !formData.selectedPlan.name || !formData.selectedPlan.totalWeeks) {
+        console.log('Selected plan is incomplete, reconstructing...');
+
+        let plans = [];
+        if (formData.cigarettesPerDay < 10) {
+          plans = generateLightSmokerPlans();
+        } else if (formData.cigarettesPerDay <= 20) {
+          plans = generateModerateSmokerPlans();
+        } else {
+          plans = generateHeavySmokerPlans();
         }
-      } else {
-        // Yêu cầu người dùng đăng nhập để lưu kế hoạch
+
+        const selectedPlanId = typeof formData.selectedPlan === 'object'
+          ? formData.selectedPlan.id
+          : formData.selectedPlan;
+
+        completeSelectedPlan = plans.find(plan => plan.id === selectedPlanId);
+
+        if (!completeSelectedPlan) {
+          console.error('Error: Could not find complete plan data');
+          alert('Kế hoạch được chọn không hợp lệ. Vui lòng chọn lại.');
+          return;
+        }
+      }
+
+      // Final validation of complete plan
+      if (!completeSelectedPlan.name || !completeSelectedPlan.totalWeeks) {
+        console.error('Error: Selected plan missing required fields:', completeSelectedPlan);
+        alert('Kế hoạch được chọn không hợp lệ. Vui lòng chọn lại.');
+        return;
+      }
+
+      console.log('Complete selected plan:', completeSelectedPlan);
+
+      // Check authentication
+      if (!user || !token) {
         alert('Vui lòng đăng nhập để lưu kế hoạch cai thuốc của bạn.');
         return;
       }
 
-      setIsCompleted(true);
-      setShowCompletionScreen(true);
+      console.log('User authenticated, proceeding to save plan...');
+      setLoading(true);
+
+      try {
+        // Generate weeks array with proper validation
+        let weeks = [];
+        if (completeSelectedPlan.weeks && Array.isArray(completeSelectedPlan.weeks) && completeSelectedPlan.weeks.length > 0) {
+          weeks = completeSelectedPlan.weeks.map(week => ({
+            week: week.week || week.target || 1,
+            target: week.target !== undefined ? week.target : week.amount || 0
+          }));
+        } else {
+          // Generate default weeks array
+          weeks = Array.from({ length: completeSelectedPlan.totalWeeks }, (_, i) => ({
+            week: i + 1,
+            target: Math.max(0, Math.round(formData.cigarettesPerDay * (1 - ((i + 1) / completeSelectedPlan.totalWeeks))))
+          }));
+        }
+
+        // Prepare plan data with proper validation
+        const planData = {
+          planName: completeSelectedPlan.name,
+          planType: completeSelectedPlan.type || 'gradual',
+          startDate: new Date().toISOString().split('T')[0],
+          initialCigarettes: parseInt(formData.cigarettesPerDay) || 10,
+          strategy: completeSelectedPlan.type || 'gradual',
+          goal: formData.reasonToQuit || 'health',
+          weeks: weeks,
+          totalWeeks: parseInt(completeSelectedPlan.totalWeeks) || weeks.length,
+          motivation: formData.reasonToQuit,
+          tips: completeSelectedPlan.tips || [],
+          milestones: completeSelectedPlan.milestones || []
+        };
+
+        // Additional validation
+        if (!planData.planName || planData.planName.trim() === '') {
+          throw new Error('Plan name is empty');
+        }
+        if (!planData.totalWeeks || planData.totalWeeks < 1) {
+          throw new Error('Invalid total weeks');
+        }
+        if (!planData.initialCigarettes || planData.initialCigarettes < 1) {
+          throw new Error('Invalid initial cigarettes count');
+        }
+
+        console.log('Final planData to send:', planData);
+
+        const savedPlan = await createQuitPlan(planData, token);
+        console.log('Plan saved successfully:', savedPlan);
+
+        alert('Kế hoạch cai thuốc của bạn đã được lưu thành công!');
+
+        // Update formData with saved plan info
+        setFormData(prevData => ({
+          ...prevData,
+          selectedPlan: {
+            id: savedPlan.id || completeSelectedPlan.id,
+            name: completeSelectedPlan.name,
+            type: completeSelectedPlan.type,
+            weeks: weeks,
+            totalWeeks: completeSelectedPlan.totalWeeks
+          }
+        }));
+
+        setIsCompleted(true);
+        setShowCompletionScreen(true);
+
+      } catch (serverError) {
+        console.error('Server error details:', serverError);
+        alert(`Có lỗi khi lưu kế hoạch: ${serverError.message}. Vui lòng thử lại sau.`);
+        return;
+      } finally {
+        setLoading(false);
+      }
 
     } catch (error) {
-      console.error('Lỗi khi lưu kế hoạch:', error);
-      alert('Có lỗi khi lưu kế hoạch. Vui lòng thử lại sau.');
+      console.error('General error in handleSubmit:', error);
+      alert('Có lỗi không mong muốn xảy ra. Vui lòng thử lại sau.');
+      setLoading(false);
     }
   };
 
@@ -341,16 +500,16 @@ export default function JourneyStepper() {
   const handleClearPlan = async () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa kế hoạch cai thuốc? Hành động này không thể hoàn tác.')) {
       // Nếu đã đăng nhập, xóa kế hoạch trên server
-      if (user && user.token) {
+      if (user && token) {
         try {
           setLoading(true);
           // Lấy danh sách kế hoạch
-          const userPlans = await getUserPlans(user.token);
+          const userPlans = await getUserPlans(token);
 
           if (userPlans && userPlans.length > 0) {
             const planToDelete = userPlans[0];
             // Xóa kế hoạch trên server
-            await deletePlan(planToDelete.id, user.token);
+            await deletePlan(planToDelete.id, token);
             console.log('Kế hoạch sẽ được xóa:', planToDelete.id);
           }
         } catch (error) {
@@ -503,41 +662,66 @@ export default function JourneyStepper() {
     const plan1 = {
       id: 1,
       name: "Kế hoạch nhanh",
+      type: "quick",
       totalWeeks: 4,
       weeklyReductionRate: 0.30, // Giảm 30% mỗi tuần
       description: "Cai thuốc trong 4 tuần",
       subtitle: "Phù hợp cho người có ý chí mạnh",
       color: "#28a745",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Quyết tâm cao sẽ giúp bạn vượt qua khó khăn ban đầu",
+        "Tập thể dục nhẹ khi cảm thấy thèm thuốc",
+        "Tự thưởng cho bản thân sau mỗi tuần thành công"
+      ],
+      milestones: [
+        { week: 1, achievement: "Giảm được 30% lượng thuốc" },
+        { week: 2, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 3, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 4, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Kế hoạch 2: 6 tuần - giảm từ từ hơn (25%)
     const plan2 = {
       id: 2,
       name: "Kế hoạch từ từ",
+      type: "gradual",
       totalWeeks: 6,
       weeklyReductionRate: 0.25, // Giảm 25% mỗi tuần
       description: "Cai thuốc trong 6 tuần",
       subtitle: "Phù hợp cho người muốn từ từ",
       color: "#17a2b8",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Giảm từ từ giúp cơ thể thích nghi tốt hơn",
+        "Tránh xa những nơi và hoàn cảnh thường hút thuốc",
+        "Ghi nhật ký cảm xúc và tiến trình mỗi ngày",
+        "Chia sẻ mục tiêu với gia đình để được hỗ trợ"
+      ],
+      milestones: [
+        { week: 2, achievement: "Giảm được 25% lượng thuốc" },
+        { week: 3, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 5, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 6, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Tạo timeline cho từng kế hoạch
     [plan1, plan2].forEach(plan => {
       let currentAmount = cigarettesPerDay;
 
-      for (let i = 1; i <= plan.totalWeeks && currentAmount > 0; i++) {
+      for (let i = 1; i <= plan.totalWeeks; i++) {
         let weeklyReduction = Math.max(1, Math.round(currentAmount * plan.weeklyReductionRate));
-        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Đảm bảo đạt mục tiêu 0 vào tuần cuối
         if (i === plan.totalWeeks) {
-          weeklyReduction = currentAmount;
-          currentAmount = 0;
-        } else {
-          currentAmount = newAmount;
+          weeklyReduction = currentAmount; // Giảm hết trong tuần cuối
         }
+
+        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Xác định giai đoạn
         let phase;
@@ -551,10 +735,13 @@ export default function JourneyStepper() {
 
         plan.weeks.push({
           week: i,
-          amount: currentAmount,
+          target: newAmount, // Use target instead of amount for consistency
           reduction: weeklyReduction,
           phase: phase
         });
+
+        // Update currentAmount for next iteration
+        currentAmount = newAmount;
       }
     });
 
@@ -569,41 +756,68 @@ export default function JourneyStepper() {
     const plan1 = {
       id: 1,
       name: "Kế hoạch nhanh",
+      type: "quick",
       totalWeeks: 6,
       weeklyReductionRate: 0.20, // Giảm 20% mỗi tuần
       description: "Cai thuốc trong 6 tuần",
       subtitle: "Phù hợp cho người quyết tâm cao",
       color: "#ffc107",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Quyết tâm cao sẽ giúp bạn vượt qua khó khăn ban đầu",
+        "Tập thể dục nhẹ khi cảm thấy thèm thuốc",
+        "Tìm hoạt động thay thế ngay lập tức khi thèm thuốc",
+        "Tự thưởng cho bản thân sau mỗi tuần thành công"
+      ],
+      milestones: [
+        { week: 2, achievement: "Giảm được 25% lượng thuốc" },
+        { week: 3, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 5, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 6, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Kế hoạch 2: 8 tuần - giảm từ từ hơn (15%)
     const plan2 = {
       id: 2,
       name: "Kế hoạch từ từ",
+      type: "gradual",
       totalWeeks: 8,
       weeklyReductionRate: 0.15, // Giảm 15% mỗi tuần
       description: "Cai thuốc trong 8 tuần",
       subtitle: "Phù hợp cho cách tiếp cận ổn định",
       color: "#17a2b8",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Giảm từ từ giúp cơ thể thích nghi tốt hơn",
+        "Tránh xa những nơi và hoàn cảnh thường hút thuốc",
+        "Nhai kẹo cao su hoặc ăn trái cây khi thèm",
+        "Ghi nhật ký cảm xúc và tiến trình mỗi ngày",
+        "Chia sẻ mục tiêu với gia đình để được hỗ trợ"
+      ],
+      milestones: [
+        { week: 2, achievement: "Giảm được 25% lượng thuốc" },
+        { week: 4, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 6, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 8, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Tạo timeline cho từng kế hoạch
     [plan1, plan2].forEach(plan => {
       let currentAmount = cigarettesPerDay;
 
-      for (let i = 1; i <= plan.totalWeeks && currentAmount > 0; i++) {
+      for (let i = 1; i <= plan.totalWeeks; i++) {
         let weeklyReduction = Math.max(1, Math.round(currentAmount * plan.weeklyReductionRate));
-        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Đảm bảo đạt mục tiêu 0 vào tuần cuối
         if (i === plan.totalWeeks) {
-          weeklyReduction = currentAmount;
-          currentAmount = 0;
-        } else {
-          currentAmount = newAmount;
+          weeklyReduction = currentAmount; // Giảm hết trong tuần cuối
         }
+
+        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Xác định giai đoạn
         let phase;
@@ -617,10 +831,13 @@ export default function JourneyStepper() {
 
         plan.weeks.push({
           week: i,
-          amount: currentAmount,
+          target: newAmount, // Use target instead of amount for consistency
           reduction: weeklyReduction,
           phase: phase
         });
+
+        // Update currentAmount for next iteration
+        currentAmount = newAmount;
       }
     });
 
@@ -635,41 +852,70 @@ export default function JourneyStepper() {
     const plan1 = {
       id: 1,
       name: "Kế hoạch nhanh",
+      type: "quick",
       totalWeeks: 8,
       weeklyReductionRate: 0.15, // Giảm 15% mỗi tuần
       description: "Cai thuốc trong 8 tuần",
       subtitle: "Phù hợp cho người có ý chí mạnh mẽ",
       color: "#fd7e14",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Quyết tâm cao sẽ giúp bạn vượt qua khó khăn ban đầu",
+        "Tập thể dục nhẹ khi cảm thấy thèm thuốc",
+        "Tìm hoạt động thay thế ngay lập tức khi thèm thuốc",
+        "Tự thưởng cho bản thân sau mỗi tuần thành công",
+        "Tránh xa những nơi và hoàn cảnh thường hút thuốc"
+      ],
+      milestones: [
+        { week: 2, achievement: "Giảm được 25% lượng thuốc" },
+        { week: 4, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 6, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 8, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Kế hoạch 2: 12 tuần - giảm từ từ hơn (10%)
     const plan2 = {
       id: 2,
       name: "Kế hoạch từ từ",
+      type: "gradual",
       totalWeeks: 12,
       weeklyReductionRate: 0.10, // Giảm 10% mỗi tuần
       description: "Cai thuốc trong 12 tuần",
       subtitle: "Phù hợp cho cách tiếp cận thận trọng",
       color: "#dc3545",
-      weeks: []
+      weeks: [],
+      tips: [
+        "Uống nhiều nước để giải độc cơ thể",
+        "Giảm từ từ giúp cơ thể thích nghi tốt hơn",
+        "Tránh xa những nơi và hoàn cảnh thường hút thuốc",
+        "Nhai kẹo cao su hoặc ăn trái cây khi thèm",
+        "Ghi nhật ký cảm xúc và tiến trình mỗi ngày",
+        "Chia sẻ mục tiêu với gia đình để được hỗ trợ",
+        "Tập meditation hoặc yoga để giảm stress"
+      ],
+      milestones: [
+        { week: 3, achievement: "Giảm được 25% lượng thuốc" },
+        { week: 6, achievement: "Giảm được 50% lượng thuốc - hơi thở bắt đầu tươi hơn" },
+        { week: 9, achievement: "Giảm được 75% lượng thuốc - vị giác cải thiện" },
+        { week: 12, achievement: "🎉 Hoàn toàn cai thuốc thành công!" }
+      ]
     };
 
     // Tạo timeline cho từng kế hoạch
     [plan1, plan2].forEach(plan => {
       let currentAmount = cigarettesPerDay;
 
-      for (let i = 1; i <= plan.totalWeeks && currentAmount > 0; i++) {
+      for (let i = 1; i <= plan.totalWeeks; i++) {
         let weeklyReduction = Math.max(1, Math.round(currentAmount * plan.weeklyReductionRate));
-        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Đảm bảo đạt mục tiêu 0 vào tuần cuối
         if (i === plan.totalWeeks) {
-          weeklyReduction = currentAmount;
-          currentAmount = 0;
-        } else {
-          currentAmount = newAmount;
+          weeklyReduction = currentAmount; // Giảm hết trong tuần cuối
         }
+
+        const newAmount = Math.max(0, currentAmount - weeklyReduction);
 
         // Xác định giai đoạn
         let phase;
@@ -683,10 +929,13 @@ export default function JourneyStepper() {
 
         plan.weeks.push({
           week: i,
-          amount: currentAmount,
+          target: newAmount, // Use target instead of amount for consistency
           reduction: weeklyReduction,
           phase: phase
         });
+
+        // Update currentAmount for next iteration
+        currentAmount = newAmount;
       }
     });
 
@@ -834,8 +1083,52 @@ export default function JourneyStepper() {
     );
   };
 
+  // Debug function to test plan creation
+  const debugPlanSelection = () => {
+    console.log('=== DEBUG PLAN SELECTION ===');
+    console.log('Current cigarettesPerDay:', formData.cigarettesPerDay);
+
+    let testPlans = [];
+    if (formData.cigarettesPerDay < 10) {
+      testPlans = generateLightSmokerPlans();
+    } else if (formData.cigarettesPerDay <= 20) {
+      testPlans = generateModerateSmokerPlans();
+    } else {
+      testPlans = generateHeavySmokerPlans();
+    }
+
+    console.log('Generated plans:', testPlans);
+    console.log('Current selectedPlan:', formData.selectedPlan);
+
+    // Test selecting the first plan
+    if (testPlans.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        selectedPlan: testPlans[0]
+      }));
+      console.log('Auto-selected first plan:', testPlans[0]);
+    }
+  };
+
   return (
     <div className="journey-container">
+      {/* Debug button - remove this later */}
+      <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 9999 }}>
+        <button
+          onClick={debugPlanSelection}
+          style={{
+            backgroundColor: '#ff6b6b',
+            color: 'white',
+            padding: '10px',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          DEBUG: Select Plan
+        </button>
+      </div>
+
       {showWelcomeBack && (
         <div className="welcome-back-notification">
           <div className="notification-content">
