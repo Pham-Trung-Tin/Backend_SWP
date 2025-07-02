@@ -185,18 +185,37 @@ export const getUserPlans = async (token) => {
 
 export const updateQuitPlan = async (planId, planData, token) => {
     try {
-        console.log('Updating quit plan with ID:', planId);
-        console.log('Original plan data:', planData);
+        console.log('=== DEBUG: Updating quit plan ===');
+        console.log('1. Plan ID:', planId);
+        console.log('2. Original plan data:', JSON.stringify(planData, null, 2));
+
+        // Enhanced validation
+        if (!planData.planName || planData.planName.trim() === '') {
+            throw new Error('Plan name is required and cannot be empty');
+        }
+        if (!planData.initialCigarettes || isNaN(planData.initialCigarettes) || planData.initialCigarettes <= 0) {
+            throw new Error('Initial cigarettes must be a positive number');
+        }
+        if (!planData.totalWeeks || isNaN(planData.totalWeeks) || planData.totalWeeks <= 0) {
+            throw new Error('Total weeks must be a positive number');
+        }
+
+        // Ensure weeks array is properly formatted
+        const formattedWeeks = planData.weeks.map((week, index) => ({
+            week: index + 1,
+            target: week.target || week.amount || 0,
+            reduction: week.reduction || 0,
+            phase: week.phase || 'unknown'
+        }));
 
         // Convert frontend field names to match backend expectations exactly
         const backendPlanData = {
-            plan_name: planData.planName,
-            start_date: planData.startDate,
-            initial_cigarettes: planData.initialCigarettes,
-            strategy: planData.strategy,
-            goal: planData.goal,
-            weeks: planData.weeks,
-            total_weeks: planData.totalWeeks
+            planName: planData.planName.trim(),
+            initialCigarettes: parseInt(planData.initialCigarettes),
+            strategy: planData.strategy || 'gradual',
+            goal: planData.goal || 'health',
+            weeks: formattedWeeks,
+            totalWeeks: parseInt(planData.totalWeeks)
         };
 
         console.log('Transformed plan data for backend:', backendPlanData);
@@ -239,4 +258,29 @@ export const deleteQuitPlan = async (planId, token) => {
 // Using the same function for both deleteQuitPlan and deletePlan
 export const deletePlan = async (planId, token) => {
     return deleteQuitPlan(planId, token);
+};
+
+// Get a specific quit plan by ID
+export const getQuitPlan = async (planId, token) => {
+    try {
+        console.log('Getting plan with ID:', planId);
+        const response = await fetch(`${API_URL}/api/quit-plans/${planId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching quit plan:', error);
+        throw error;
+    }
+};
+
+// Get plan templates - alias for getQuitPlanTemplates
+export const getPlanTemplates = async (cigarettesPerDay) => {
+    return getQuitPlanTemplates(cigarettesPerDay);
 };

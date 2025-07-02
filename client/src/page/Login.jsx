@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import './Login.css';
+import '../styles/Login.css';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -8,25 +8,35 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get the redirect path from location state or default to home
   const from = location.state?.from || '/';
-  
-  // Removed auto-redirect on mount to prevent issues with page reload
-  // Users will only be redirected when they actively submit the login form
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to home page
+    if (isAuthenticated) {
+      navigate(from);
+    }
+  }, [isAuthenticated, navigate, from]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
-    
+
     try {
       const result = await login(email, password, rememberMe);
+
       if (result.success) {
+        setSuccess('Đăng nhập thành công! Đang chuyển hướng...');
+
         // Redirect based on user role
         if (result.user && result.user.role === 'coach') {
           navigate('/coach');
@@ -34,7 +44,7 @@ export default function Login() {
           navigate(from);
         }
       } else {
-        setError(result.error || 'Đăng nhập không thành công');
+        setError(result.error || 'Email hoặc mật khẩu không đúng');
       }
     } catch (err) {
       setError('Có lỗi xảy ra, vui lòng thử lại');
@@ -51,9 +61,12 @@ export default function Login() {
           <div className="login-header">
             <h1>Đăng nhập</h1>
             <p>Chào mừng bạn quay trở lại với NoSmoke</p>
-          </div>          <form onSubmit={handleSubmit} className="login-form">
+          </div>
+
+          <form onSubmit={handleSubmit} className="login-form">
             {error && <div className="error-message">{error}</div>}
-            
+            {success && <div className="success-message">{success}</div>}
+
             <div className="form-group">
               <label htmlFor="email">Email</label>
               <input
@@ -94,18 +107,20 @@ export default function Login() {
               <Link to="/forgot-password" className="forgot-password">Quên mật khẩu?</Link>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="login-button"
               disabled={isLoading}
             >
               {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
-          </form>          <div className="login-footer">
+          </form>
+
+          <div className="login-footer">
             <p>Bạn chưa có tài khoản? <Link to="/signup" className="signup-link">Đăng ký ngay</Link></p>
           </div>
         </div>
-        
+
         <div className="login-info">
           <h2>Tại sao nên đăng nhập?</h2>
           <ul className="benefits-list">

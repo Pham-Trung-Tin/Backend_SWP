@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import './EmailVerification.css';
+import '../styles/EmailVerification.css';
 
 export default function EmailVerification() {
     const [verificationCode, setVerificationCode] = useState('');
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [resendCooldown, setResendCooldown] = useState(0);
 
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function EmailVerification() {
             setEmail(location.state.email);
         } else {
             // If no email provided, redirect to register
-            navigate('/register');
+            navigate('/signup');
         }
     }, [location, navigate]);
 
@@ -35,6 +36,7 @@ export default function EmailVerification() {
     }, [resendCooldown]); const handleVerify = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
 
         if (verificationCode.length !== 6) {
             setError('Mã xác nhận phải có 6 chữ số');
@@ -42,20 +44,19 @@ export default function EmailVerification() {
         }
 
         setIsLoading(true);
-        console.log(`🔐 Đang xác thực email ${email} với mã: ${verificationCode}`);
 
         try {
             const result = await verifyEmail(email, verificationCode);
-            console.log('🔐 Kết quả xác thực:', result); if (result.success) {
-                // Show success message and redirect to home
-                alert('Xác nhận email thành công! Chào mừng bạn đến với NoSmoke!');
-                navigate('/'); // Chuyển về trang chủ thay vì login
+
+            if (result.success) {
+                setSuccess('Xác nhận email thành công! Đang chuyển hướng đến trang đăng nhập...');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
             } else {
-                console.error('🔐 Xác thực thất bại:', result.error);
                 setError(result.error || 'Mã xác nhận không đúng. Vui lòng kiểm tra và thử lại.');
             }
         } catch (err) {
-            console.error('🔐 Lỗi xác thực:', err);
             setError(`Có lỗi xảy ra: ${err.message || 'Không xác định được lỗi'}`);
         } finally {
             setIsLoading(false);
@@ -64,11 +65,14 @@ export default function EmailVerification() {
         if (resendCooldown > 0) return;
 
         setError('');
-        setIsLoading(true); try {
+        setSuccess('');
+        setIsLoading(true);
+
+        try {
             const result = await resendVerificationCode(email);
 
             if (result.success) {
-                alert('Mã xác nhận mới đã được gửi đến email của bạn');
+                setSuccess('Mã xác nhận mới đã được gửi đến email của bạn');
                 setResendCooldown(60); // 60 seconds cooldown
                 setVerificationCode(''); // Clear current code
             } else {
@@ -84,7 +88,6 @@ export default function EmailVerification() {
         const value = e.target.value.replace(/\D/g, ''); // Only allow digits
         if (value.length <= 6) {
             setVerificationCode(value);
-            console.log(`📟 Mã xác thực đã nhập: ${value}`);
         }
     };
 
@@ -103,6 +106,7 @@ export default function EmailVerification() {
 
                     <form onSubmit={handleVerify} className="verification-form">
                         {error && <div className="error-message">{error}</div>}
+                        {success && <div className="success-message">{success}</div>}
 
                         <div className="form-group">
                             <label htmlFor="verificationCode">Mã xác nhận</label>
@@ -159,7 +163,7 @@ export default function EmailVerification() {
                             <button
                                 type="button"
                                 className="back-btn"
-                                onClick={() => navigate('/register')}
+                                onClick={() => navigate('/signup')}
                             >
                                 ← Quay lại đăng ký
                             </button>

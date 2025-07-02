@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import './ForgotPassword.css';
+import '../styles/ForgotPassword.css';
 
 // Base API URL - should match AuthContext
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -34,7 +34,7 @@ export default function ForgotPassword() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -42,7 +42,9 @@ export default function ForgotPassword() {
                 body: JSON.stringify({ email }),
             });
 
-            const data = await response.json(); if (data.success) {
+            const data = await response.json();
+
+            if (data.success) {
                 setSuccess('Mã đặt lại mật khẩu đã được gửi về email của bạn');
                 setStep(2);
                 setCooldown(60); // Set 60 giây cooldown
@@ -75,7 +77,7 @@ export default function ForgotPassword() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+            const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -104,6 +106,7 @@ export default function ForgotPassword() {
             setIsLoading(false);
         }
     };
+
     const handleBackToStep1 = () => {
         setStep(1);
         setResetCode('');
@@ -151,7 +154,8 @@ export default function ForgotPassword() {
             <div className="forgot-password-container">
                 <div className="forgot-password-card">
                     <div className="forgot-password-header">
-                        <h1>🔐 Quên mật khẩu</h1>            <p>
+                        <h1>🔐 Quên mật khẩu</h1>
+                        <p>
                             {step === 1
                                 ? 'Nhập email của bạn để nhận mã đặt lại mật khẩu'
                                 : `Nhập mã xác nhận đã gửi về ${email} và mật khẩu mới`
@@ -198,7 +202,8 @@ export default function ForgotPassword() {
                                     required
                                     disabled={isLoading}
                                     maxLength={6}
-                                />                <small>Kiểm tra email của bạn để lấy mã xác nhận</small>
+                                />
+                                <small>Kiểm tra email của bạn để lấy mã xác nhận</small>
                                 <div className="resend-code-section">
                                     <button
                                         type="button"

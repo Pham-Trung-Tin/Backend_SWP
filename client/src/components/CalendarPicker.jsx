@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaCalendarAlt, FaArrowLeft, FaArrowRight, FaCheck, FaExclamationTriangle } from 'react-icons/fa';
-import './CalendarPicker.css';
+import '../styles/CalendarPicker.css';
 
 const CalendarPicker = ({ onDateSelect, currentPlan, actualProgress = [] }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date());

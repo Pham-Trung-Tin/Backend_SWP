@@ -6,13 +6,14 @@ import CommunityPost from "../components/CommunityPost.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { calculateDaysWithoutSmoking, generateAchievements } from "../utils/achievementUtils.js";
 import { getSavedPosts, savePosts, toggleLikePost, prepareShareContent } from "../utils/communityUtils.js";
-import "./Blog.css";
+import "../styles/Blog.css";
 import "../styles/Toast.css";
 
-export default function Blog() {  const { user } = useAuth();
+export default function Blog() {
+  const { user } = useAuth();
   const [communityPosts, setCommunityPosts] = useState([]);
   const [toasts, setToasts] = useState([]);
-  
+
   // Quản lý toast notification
   const showToast = (message, type = 'success', duration = 3000) => {
     const id = Date.now() + Math.random();
@@ -23,7 +24,7 @@ export default function Blog() {  const { user } = useAuth();
   const removeToast = (id) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
-    // Lấy thông tin huy hiệu sử dụng utility function đồng bộ
+  // Lấy thông tin huy hiệu sử dụng utility function đồng bộ
   const getUserAchievements = () => {
     // Lấy activePlan từ localStorage (giống như trong Profile.jsx)
     let activePlan = null;
@@ -41,32 +42,32 @@ export default function Blog() {  const { user } = useAuth();
     } catch (error) {
       console.error('Lỗi khi đọc kế hoạch cai thuốc trong Blog:', error);
     }
-    
+
     // Nếu không có kế hoạch cai thuốc, không có huy hiệu nào
     if (!activePlan || !activePlan.startDate) {
       console.log('Không có kế hoạch cai thuốc hợp lệ để tính huy hiệu');
       return [];
     }
-    
+
     // Tính số ngày cai thuốc sử dụng utility function
     const daysWithoutSmoking = calculateDaysWithoutSmoking(activePlan, user);
-    
+
     // Nếu chưa đủ một ngày thì không có huy hiệu nào
     if (daysWithoutSmoking <= 0) {
       console.log('Chưa đủ 1 ngày cai thuốc (daysWithoutSmoking =', daysWithoutSmoking, ') → không có huy hiệu');
       return [];
     }
-    
+
     // Tạo danh sách huy hiệu sử dụng utility function
     const allAchievements = generateAchievements(daysWithoutSmoking);
-    
+
     // Lọc và chỉ trả về những huy hiệu thực sự đã hoàn thành
     const completedAchievements = allAchievements.filter(achievement => achievement.completed === true);
     console.log('Tìm thấy', completedAchievements.length, 'huy hiệu đã hoàn thành');
-    
+
     return completedAchievements;
   };
-  
+
   // Load bài viết từ localStorage khi component mount
   useEffect(() => {
     const savedPosts = getSavedPosts();
@@ -111,7 +112,7 @@ export default function Blog() {  const { user } = useAuth();
       savePosts(initialPosts);
     }
   }, []);
-    // Xử lý khi người dùng tạo bài viết mới
+  // Xử lý khi người dùng tạo bài viết mới
   const handlePostCreated = (newPost) => {
     const updatedPosts = [newPost, ...communityPosts];
     setCommunityPosts(updatedPosts);
@@ -133,7 +134,7 @@ export default function Blog() {  const { user } = useAuth();
     // Hiện tại chỉ log, sau này có thể mở modal bình luận
     showToast('Tính năng bình luận sẽ sớm được cập nhật!', 'info');
   };
-  
+
   // Xử lý khi người dùng xóa bài viết của họ
   const handleDelete = (postId) => {
     const updatedPosts = communityPosts.filter(post => post.id !== postId);
@@ -152,12 +153,12 @@ export default function Blog() {  const { user } = useAuth();
         title: 'Chia sẻ từ cộng đồng NoSmoke',
         text: shareContent,
       })
-      .then(() => {
-        showToast('Đã chia sẻ thành công!', 'success');
-      })
-      .catch((error) => {
-        console.log('Lỗi khi chia sẻ:', error);
-      });
+        .then(() => {
+          showToast('Đã chia sẻ thành công!', 'success');
+        })
+        .catch((error) => {
+          console.log('Lỗi khi chia sẻ:', error);
+        });
     } else {
       try {
         navigator.clipboard.writeText(shareContent);
@@ -280,7 +281,7 @@ export default function Blog() {  const { user } = useAuth();
       comments: "63",
       category: "tips",
       url: "/blog/dinh-duong-cai-thuoc",
-    },  ];
+    },];
 
   // Component bài viết thông thường
   const BlogPostCard = ({ post }) => (
@@ -325,7 +326,7 @@ export default function Blog() {  const { user } = useAuth();
       support: "Hỗ trợ cai thuốc",
     };
     return categories[category] || "Chung";
-  }  return (
+  } return (
     <div className="blog-page">
       <div className="container blog-container">
         {/* Bài viết mới nhất */}
@@ -351,7 +352,7 @@ export default function Blog() {  const { user } = useAuth();
           <h2 className="section-title">Chia sẻ từ cộng đồng</h2>
           <div className="community-box">            {/* Component tạo bài viết */}
             {user ? (
-              <CommunityPostCreator 
+              <CommunityPostCreator
                 achievements={getUserAchievements()}
                 onPostCreated={handlePostCreated}
               />
@@ -378,7 +379,7 @@ export default function Blog() {  const { user } = useAuth();
                   />
                 ))
               ) : (
-                <EmptyState 
+                <EmptyState
                   title="Chưa có bài viết nào trong cộng đồng"
                   description="Hãy là người đầu tiên chia sẻ câu chuyện cai thuốc lá của bạn!"
                   actionText="Tạo bài viết đầu tiên"

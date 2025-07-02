@@ -1,304 +1,262 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-// Tạo context cho xác thực
+// Define API base URL
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Create the context
 const AuthContext = createContext(null);
 
-// Hook tùy chỉnh để sử dụng AuthContext
-export const useAuth = () => useContext(AuthContext);
-
-// Hardcoded coach accounts
-const COACH_ACCOUNTS = [
-  {
-    id: 1,
-    name: 'Nguyên Văn A',
-    email: 'coach1@nosmoke.com',
-    password: 'coach123',
-    role: 'coach',
-    specialization: 'Coach cai thuốc chuyên nghiệp',
-    rating: 4.8,
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
-  },
-  {
-    id: 2,
-    name: 'Trần Thị B',
-    email: 'coach2@nosmoke.com',
-    password: 'coach123',
-    role: 'coach',
-    specialization: 'Chuyên gia tâm lý',
-    rating: 4.9,
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
-  },
-  {
-    id: 3,
-    name: 'Phạm Minh C',
-    email: 'coach3@nosmoke.com',
-    password: 'coach123',
-    role: 'coach',
-    specialization: 'Bác sĩ phục hồi chức năng',
-    rating: 4.7,
-    avatar: 'https://randomuser.me/api/portraits/men/64.jpg'
+// Custom hook for using the auth context
+function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-];
+  return context;
+}
+
+// Export named exports
+export { AuthContext, useAuth };
 
 // Provider component
 export const AuthProvider = ({ children }) => {
-  // Khởi tạo trạng thái từ localStorage (nếu có)
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem('nosmoke_user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
-  
+  // State hooks
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState(null);
+  const [token, setToken] = useState(null);
+  const [refreshToken, setRefreshToken] = useState(null);
 
-  // Lưu user vào localStorage khi thay đổi
+  // Debug Effect
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('nosmoke_user', JSON.stringify(user));
-    }
-  }, [user]);
+    console.log('AuthContext Debug:', {
+      user: user ? { id: user.id, email: user.email } : null,
+      token: token ? 'Present' : 'Null',
+      loading,
+      initializing,
+      isAuthenticated: !!user && !!token
+    });
+  }, [user, token, loading, initializing]);
 
-  // Hàm kiểm tra tài khoản đã tồn tại
-  const checkUserExists = (email) => {
-    const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-    return users.some(user => user.email === email);
+  // Auto-restore session
+  useEffect(() => {
+    const restoreSession = () => {
+      console.log('AuthContext: Attempting to restore session...');
+
+      // Check storage for credentials
+      const storedUser = localStorage.getItem('nosmoke_user') || sessionStorage.getItem('nosmoke_user');
+      const storedToken = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+      const storedRefreshToken = localStorage.getItem('nosmoke_refresh_token') || sessionStorage.getItem('nosmoke_refresh_token');
+
+      console.log('AuthContext: Stored data found:', {
+        hasUser: !!storedUser,
+        hasToken: !!storedToken,
+        hasRefreshToken: !!storedRefreshToken
+      });
+
+      if (storedUser && storedToken) {
+        try {
+          const userData = JSON.parse(storedUser);
+          console.log('AuthContext: Restoring session for user:', userData.email);
+
+          setUser(userData);
+          setToken(storedToken);
+          if (storedRefreshToken) {
+            setRefreshToken(storedRefreshToken);
+          }
+
+          console.log('AuthContext: Session restored successfully');
+        } catch (error) {
+          console.error('AuthContext: Error restoring session:', error);
+          clearAllStoredData();
+        }
+      } else {
+        console.log('AuthContext: No stored credentials found');
+      }
+
+      setInitializing(false);
+    };
+
+    restoreSession();
+  }, []);
+
+  // Helper function to clear all stored data
+  const clearAllStoredData = () => {
+    localStorage.removeItem('nosmoke_token');
+    localStorage.removeItem('nosmoke_refresh_token');
+    localStorage.removeItem('nosmoke_user');
+    sessionStorage.removeItem('nosmoke_token');
+    sessionStorage.removeItem('nosmoke_refresh_token');
+    sessionStorage.removeItem('nosmoke_user');
+    setUser(null);
+    setToken(null);
+    setRefreshToken(null);
   };
 
-  // Hàm đăng ký tài khoản mới
+  // Helper for API headers
+  const setAuthHeader = (token) => ({
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  });
+
+  // Token refresh function
+  const refreshAccessToken = async () => {
+    if (!refreshToken) throw new Error('No refresh token available');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+
+      const { token: newToken, refreshToken: newRefreshToken } = data.data;
+
+      localStorage.setItem('nosmoke_token', newToken);
+      localStorage.setItem('nosmoke_refresh_token', newRefreshToken);
+
+      setToken(newToken);
+      setRefreshToken(newRefreshToken);
+
+      return newToken;
+    } catch (error) {
+      clearAllStoredData();
+      throw error;
+    }
+  };
+
+  // Login function
+  const login = async (email, password, rememberMe = false) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('Login attempt:', { email, rememberMe });
+
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Invalid credentials');
+      }
+
+      const { token: newToken, refreshToken: newRefreshToken, user: userData } = data.data;
+      const storage = rememberMe ? localStorage : sessionStorage;
+
+      // Save to selected storage
+      storage.setItem('nosmoke_token', newToken);
+      storage.setItem('nosmoke_refresh_token', newRefreshToken);
+      storage.setItem('nosmoke_user', JSON.stringify(userData));
+
+      setToken(newToken);
+      setRefreshToken(newRefreshToken);
+      setUser(userData);
+
+      console.log('Login successful:', { email: userData.email });
+      return { success: true, user: userData };
+
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed');
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Logout function
+  const logout = async () => {
+    setLoading(true);
+
+    try {
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: setAuthHeader(token),
+          body: JSON.stringify({ refreshToken }),
+        });
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      clearAllStoredData();
+      setLoading(false);
+    }
+
+    return { success: true };
+  };
+
+  // Register function
   const register = async (userData) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Mô phỏng độ trễ của API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Kiểm tra email đã tồn tại chưa
-      if (checkUserExists(userData.email)) {
-        throw new Error('Email này đã được đăng ký');
-      }
-      
-      // Lấy danh sách người dùng từ localStorage
-      const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-      
-      // Tạo user mới với ID ngẫu nhiên
-      const newUser = {
-        ...userData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
+      // Generate username from email
+      const generateUsername = (email) => {
+        const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+        const timestamp = Date.now().toString().slice(-4);
+        return `${baseUsername}${timestamp}`.substring(0, 50);
       };
-      
-      // Thêm user mới vào danh sách
-      users.push(newUser);
-      
-      // Lưu danh sách user cập nhật vào localStorage
-      localStorage.setItem('nosmoke_users', JSON.stringify(users));
-      
-      // Không lưu mật khẩu vào user session
-      const { password, ...userWithoutPassword } = newUser;
-      
-      // Đặt user hiện tại
-      setUser(userWithoutPassword);
-      setLoading(false);
-      
-      return { success: true, user: userWithoutPassword };
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-      return { success: false, error: err.message };
-    }
-  };
 
-  // Hàm đăng nhập
-  const login = async (email, password, rememberMe) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Mô phỏng API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Lấy danh sách user từ localStorage
-      const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-      
-      // Tìm user với email và password tương ứng
-      const foundUser = users.find(user => user.email === email && user.password === password);
-        if (foundUser) {
-        // Không lưu mật khẩu vào user session
-        const { password, ...userWithoutPassword } = foundUser;
-          // Đảm bảo user có trường membership và đó là một giá trị hợp lệ
-        if (!userWithoutPassword.membership || !['free', 'premium', 'pro'].includes(userWithoutPassword.membership)) {
-          userWithoutPassword.membership = 'free';
-          
-          // Cập nhật lại danh sách users
-          const updatedUsers = users.map(user => 
-            user.email === email ? { ...user, membership: 'free' } : user
-          );
-          localStorage.setItem('nosmoke_users', JSON.stringify(updatedUsers));
-        }
-        
-        // Lưu vào localStorage để đảm bảo tính nhất quán
-        localStorage.setItem('nosmoke_user', JSON.stringify(userWithoutPassword));
-        
-        setUser(userWithoutPassword);
-        setLoading(false);
-        return { success: true, user: userWithoutPassword };
-      } else {
-        // Kiểm tra trong danh sách coach hardcoded
-        const foundCoach = COACH_ACCOUNTS.find(coach => coach.email === email && coach.password === password);
-        if (foundCoach) {
-          // Không lưu mật khẩu vào coach session
-          const { password, ...coachWithoutPassword } = foundCoach;
-          
-          // Đặt user là coach và lưu vào localStorage
-          const coachUser = { ...coachWithoutPassword, role: 'coach' };
-          setUser(coachUser);
-          localStorage.setItem('nosmoke_user', JSON.stringify(coachUser));
-          setLoading(false);
-          
-          // Redirect coach đến dashboard ngay lập tức
-          window.location.href = '/coach';
-          
-          return { success: true, user: coachUser };
-        }
-        
-        throw new Error('Email hoặc mật khẩu không đúng');
-      }
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-      return { success: false, error: err.message };
-    }
-  };
+      const requestBody = {
+        username: generateUsername(userData.email),
+        email: userData.email,
+        password: userData.password,
+        confirmPassword: userData.password,
+        fullName: userData.full_name,
+        phone: userData.phone || ''
+      };
 
-  // Hàm đăng xuất
-  const logout = () => {
-    setUser(null);
-    // Xóa thông tin user khỏi localStorage
-    localStorage.removeItem('nosmoke_user');
-    return { success: true };
-  };
-    // Đảm bảo rằng membership luôn là một giá trị hợp lệ
-  useEffect(() => {
-    if (user) {
-      let needUpdate = false;
-      let updates = {};
-      
-      // Kiểm tra và đảm bảo membership hợp lệ
-      if (!user.membership || !['free', 'premium', 'pro'].includes(user.membership)) {
-        // Nếu membership không hợp lệ, kiểm tra membershipType
-        if (user.membershipType && ['free', 'premium', 'pro'].includes(user.membershipType)) {
-          updates.membership = user.membershipType;
-        } else {
-          updates.membership = 'free';
-        }
-        needUpdate = true;
-      }
-      
-      // Kiểm tra và đảm bảo membershipType hợp lệ và đồng bộ với membership
-      if (!user.membershipType || user.membershipType !== user.membership) {
-        updates.membershipType = user.membership || 'free';
-        needUpdate = true;
-      }
-      
-      // Cập nhật nếu cần
-      if (needUpdate) {
-        console.log('Đồng bộ dữ liệu membership:', updates);
-        setUser({...user, ...updates});
-      }
-    }
-    
-    // Kiểm tra nếu cần refresh membership
-    if (user && window.sessionStorage && window.sessionStorage.getItem('membership_refresh_needed') === 'true') {
-      refreshMembership();
-      window.sessionStorage.removeItem('membership_refresh_needed');
-    }
-  }, [user]);
-  
-  // Hàm refresh thông tin membership từ localStorage
-  const refreshMembership = () => {
-    if (!user) return { success: false, error: 'Không có người dùng để cập nhật' };
-    
-    try {
-      // Lấy thông tin user từ localStorage
-      const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-      const storedUser = users.find(u => u.id === user.id);
-      
-      if (storedUser && storedUser.membership !== user.membership) {
-        // Cập nhật thông tin membership nếu có sự khác biệt
-        setUser({ ...user, membership: storedUser.membership });
-        return { success: true, user: { ...user, membership: storedUser.membership } };
-      }
-      
-      return { success: true, user };
-    } catch (err) {
-      console.error('Lỗi khi refresh membership:', err);
-      return { success: false, error: err.message };
-    }
-  };
-    // Hàm cập nhật thông tin người dùng
-  const updateUser = (updatedData) => {
-    if (!user) return { success: false, error: 'Không có người dùng để cập nhật' };
-    
-    try {
-      // Lấy danh sách người dùng từ localStorage
-      const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-        // Đảm bảo membership hợp lệ nếu đang cập nhật membership
-      if (updatedData.hasOwnProperty('membership') && 
-          !['free', 'premium', 'pro'].includes(updatedData.membership)) {
-        updatedData.membership = 'free';
-      }
-      
-      // Đảm bảo đồng bộ giữa membership và membershipType
-      if (updatedData.hasOwnProperty('membership') && !updatedData.hasOwnProperty('membershipType')) {
-        updatedData.membershipType = updatedData.membership;
-        console.log('Tự động đồng bộ membershipType:', updatedData.membershipType);
-      }
-      
-      if (updatedData.hasOwnProperty('membershipType') && !updatedData.hasOwnProperty('membership')) {
-        updatedData.membership = updatedData.membershipType;
-        console.log('Tự động đồng bộ membership:', updatedData.membership);
-      }
-      
-      // Tìm và cập nhật người dùng
-      const updatedUsers = users.map(u => {
-        if (u.id === user.id) {
-          return { ...u, ...updatedData };
-        }
-        return u;
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
       });
-      
-      // Lưu danh sách cập nhật vào localStorage
-      localStorage.setItem('nosmoke_users', JSON.stringify(updatedUsers));
-      
-      // Cập nhật user hiện tại trong state
-      const updatedUser = { ...user, ...updatedData };
-      setUser(updatedUser);
-      
-      // Cập nhật user trong localStorage cho phiên hiện tại
-      localStorage.setItem('nosmoke_user', JSON.stringify(updatedUser));
-      
-      return { success: true, user: updatedUser };
+
+      const data = await response.json();
+
+      if (!data.success) {
+        const errorMessage = data.message ||
+          (data.errors && data.errors.join(', ')) ||
+          'Registration failed';
+        throw new Error(errorMessage);
+      }
+
+      return { success: true, email: userData.email };
+
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   };
-  // Giá trị context
+
+  // Value object for context
   const value = {
     user,
     loading,
     error,
+    token,
+    initializing,
+    isAuthenticated: !!user && !!token,
     login,
     logout,
     register,
-    updateUser,
-    refreshMembership,
+    refreshAccessToken,
     setUser,
-    isAuthenticated: !!user
+    clearAllStoredData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export default AuthContext;

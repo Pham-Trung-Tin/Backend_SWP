@@ -12,6 +12,8 @@ import TestPage from "./page/TestPage.jsx"; // Thêm trang test đơn giản
 import Blog from "./page/Blog.jsx"; // Import component Blog
 import Login from "./page/Login.jsx"; // Import component Login
 import Register from "./page/Register.jsx"; // Import component Register
+import ForgotPassword from "./page/ForgotPassword.jsx"; // Import component ForgotPassword
+import EmailVerification from "./page/EmailVerification.jsx"; // Import component EmailVerification
 import MembershipPackage from "./page/MembershipPackage.jsx"; // Import component MembershipPackage
 import BookAppointment from "./page/BookAppointment.jsx"; // Import component BookAppointment
 import ProtectedRoute from "./components/ProtectedRoute.jsx"; // Import ProtectedRoute
@@ -22,6 +24,7 @@ import UserProfile from "./page/User.jsx"; // Import UserProfile component
 import CoachLayout from "./components/CoachLayout.jsx"; // Import CoachLayout
 import CoachDashboard from "./page/coach/CoachDashboard.jsx"; // Import CoachDashboard
 import CoachBookings from "./page/coach/CoachBookings.jsx"; // Import CoachBookings
+import QuitPlanTester from "./components/QuitPlanTester.jsx"; // Import QuitPlanTester
 import { AuthProvider } from "./context/AuthContext.jsx"; // Import AuthProvider
 import { MembershipProvider } from "./context/MembershipContext.jsx"; // Import MembershipProvider
 import "./style.css";
@@ -116,6 +119,16 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <TestPage />
+      </Layout>
+    ),
+  },
+  {
+    path: "/api-test",
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <QuitPlanTester />
+        </ProtectedRoute>
       </Layout>
     ),
   },
@@ -248,6 +261,22 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <Register />
+      </Layout>
+    ),
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <Layout>
+        <ForgotPassword />
+      </Layout>
+    ),
+  },
+  {
+    path: "/verify-email",
+    element: (
+      <Layout>
+        <EmailVerification />
       </Layout>
     ),
   },

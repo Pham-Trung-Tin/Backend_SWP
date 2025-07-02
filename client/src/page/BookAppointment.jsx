@@ -3,7 +3,7 @@ import { FaCalendarAlt, FaArrowLeft, FaArrowRight, FaCheck } from 'react-icons/f
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import RequireMembership from '../components/RequireMembership';
-import './BookAppointment.css';
+import '../styles/BookAppointment.css';
 
 function BookAppointment() {
   const [step, setStep] = useState(1); // 1: Choose coach, 2: Select date, 3: Select time
@@ -143,7 +143,7 @@ function BookAppointment() {
     // Sử dụng ID của lịch hẹn cũ nếu đang thay đổi lịch hẹn, ngược lại tạo ID mới
     const newAppointmentId = isRescheduling ? originalAppointment.id : Math.floor(Math.random() * 1000000);
     setAppointmentId(newAppointmentId);
-    
+
     // Tạo đối tượng lịch hẹn mới
     const appointment = {
       id: newAppointmentId,
@@ -181,10 +181,10 @@ function BookAppointment() {
     // Cập nhật thông tin coach cho user
     if (user && !user.assignedCoachId) {
       const updatedUser = { ...user, assignedCoachId: selectedCoach.id, assignedCoachName: selectedCoach.name };
-      
+
       // Cập nhật user trong localStorage
       const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
-      const updatedUsers = users.map(u => 
+      const updatedUsers = users.map(u =>
         u.id === user.id ? { ...u, assignedCoachId: selectedCoach.id, assignedCoachName: selectedCoach.name } : u
       );
       localStorage.setItem('nosmoke_users', JSON.stringify(updatedUsers));
@@ -295,7 +295,7 @@ function BookAppointment() {
             ))}
           </div>
         </div>
-        
+
         <button onClick={() => setStep(1)} className="back-button">
           <FaArrowLeft /> Quay lại
         </button>
@@ -336,7 +336,7 @@ function BookAppointment() {
           <small className="time-helper-text">Giờ làm việc: 8:00 - 22:00</small>
         </div>
         </div>
-        
+
         <button onClick={() => setStep(2)} className="back-button">
           <FaArrowLeft /> Quay lại
         </button>

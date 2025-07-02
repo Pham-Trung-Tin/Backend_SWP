@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaComments, FaUser } from 'react-icons/fa';
-import './Chat.css';
+import '../styles/Chat.css';
 
 function Chat() {
   const [chatInfo, setChatInfo] = useState(null);
@@ -32,9 +32,9 @@ function Chat() {
         {chatInfo ? (
           <div className="chat-info-card">
             <div className="coach-info-section">
-              <img 
-                src={chatInfo.coachAvatar} 
-                alt={chatInfo.coachName} 
+              <img
+                src={chatInfo.coachAvatar}
+                alt={chatInfo.coachName}
                 className="coach-avatar-large"
               />
               <div className="coach-details-section">
@@ -42,13 +42,13 @@ function Chat() {
                 <p>{chatInfo.coachRole}</p>
               </div>
             </div>
-            
+
             <div className="chat-actions">
               <div className="info-message">
                 <FaUser />
                 <p>Đây là trang chat navigation. Bạn có thể tích hợp với hệ thống chat thực tế ở đây.</p>
               </div>
-              
+
               <div className="appointment-ref">
                 <p>Appointment ID: #{chatInfo.appointmentId}</p>
               </div>

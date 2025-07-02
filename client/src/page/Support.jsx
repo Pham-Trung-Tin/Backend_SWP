@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FaPhone, 
-  FaComments, 
-  FaVideo, 
-  FaCalendarAlt, 
-  FaClock, 
-  FaUsers, 
-  FaHeart, 
+import {
+  FaPhone,
+  FaComments,
+  FaVideo,
+  FaCalendarAlt,
+  FaClock,
+  FaUsers,
+  FaHeart,
   FaQuestionCircle,
   FaCheckCircle,
   FaExclamationTriangle,
@@ -15,7 +15,7 @@ import {
   FaChevronDown,
   FaChevronUp
 } from 'react-icons/fa';
-import './Support.css';
+import '../styles/Support.css';
 
 export default function Support() {
   const [activeTab, setActiveTab] = useState('hotline');
@@ -125,7 +125,7 @@ export default function Support() {
           <div className="hero-content">
             <h1>Hỗ Trợ Cai Thuốc 24/7</h1>
             <p>Chúng tôi luôn sẵn sàng đồng hành cùng bạn trong hành trình cai thuốc</p>
-            
+
             <div className="hero-phone">
               <div className="phone-highlight">
                 <FaPhone className="phone-icon" />
@@ -163,27 +163,27 @@ export default function Support() {
       <section className="support-methods">
         <div className="container">
           <h2>Các Hình Thức Hỗ Trợ</h2>
-          
+
           <div className="support-tabs">
-            <button 
+            <button
               className={`tab-button ${activeTab === 'hotline' ? 'active' : ''}`}
               onClick={() => setActiveTab('hotline')}
             >
               <FaHeadset /> Hotline 1800-1098
             </button>
-            <button 
+            <button
               className={`tab-button ${activeTab === 'contact' ? 'active' : ''}`}
               onClick={() => setActiveTab('contact')}
             >
               <FaComments /> Liên Hệ Khác
             </button>
-            <button 
+            <button
               className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
               onClick={() => setActiveTab('faq')}
             >
               <FaQuestionCircle /> Câu Hỏi Thường Gặp
             </button>
-            <button 
+            <button
               className={`tab-button ${activeTab === 'stories' ? 'active' : ''}`}
               onClick={() => setActiveTab('stories')}
             >
@@ -207,7 +207,7 @@ export default function Support() {
                         <span>Đang hoạt động</span>
                       </div>
                     </div>
-                    
+
                     <div className="hotline-features">
                       <div className="feature">
                         <FaClock className="feature-icon" />
@@ -270,20 +270,20 @@ export default function Support() {
                       <method.icon className="method-icon" />
                       <h3>{method.title}</h3>
                       <p>{method.description}</p>
-                      
+
                       {method.number && (
                         <div className="method-contact">
                           <a href={`tel:${method.number}`} className="contact-number">{method.number}</a>
                           <span className="contact-hours">{method.hours}</span>
                         </div>
                       )}
-                      
+
                       {method.availability && (
                         <div className="method-availability">
                           <span>Hoạt động: {method.availability}</span>
                         </div>
                       )}
-                      
+
                       {method.action && (
                         <button className="method-action">{method.action}</button>
                       )}
@@ -298,7 +298,7 @@ export default function Support() {
                 <div className="faq-list">
                   {faqs.map((faq, index) => (
                     <div key={index} className="faq-item">
-                      <button 
+                      <button
                         className="faq-question"
                         onClick={() => toggleFaq(index)}
                       >
@@ -313,7 +313,7 @@ export default function Support() {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="faq-contact">
                   <h3>Không tìm thấy câu trả lời?</h3>
                   <p>Hãy gọi trực tiếp để được hỗ trợ chi tiết</p>
@@ -350,7 +350,7 @@ export default function Support() {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="stories-cta">
                   <h3>Bạn cũng có thể thành công như họ!</h3>
                   <p>Hãy bắt đầu hành trình cai thuốc của bạn ngay hôm nay</p>
@@ -370,7 +370,7 @@ export default function Support() {
           <div className="cta-content">
             <h2>Sẵn Sàng Bắt Đầu Hành Trình Cai Thuốc?</h2>
             <p>Đừng để thuốc lá tiếp tục ảnh hưởng đến sức khỏe và cuộc sống của bạn</p>
-            
+
             <div className="cta-actions">
               <a href="tel:18001098" className="cta-btn primary">
                 <FaPhone /> Gọi Ngay 1800-1098
@@ -379,7 +379,7 @@ export default function Support() {
                 <FaCalendarAlt /> Tạo Kế Hoạch Cai Thuốc
               </Link>
             </div>
-            
+
             <div className="cta-note">
               <p>
                 <FaCheckCircle className="check-icon" />

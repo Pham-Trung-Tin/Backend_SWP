@@ -19,15 +19,15 @@ import {
   FaMapMarkerAlt,
   FaTransgender,
   FaLock,
-  FaEdit,  FaSave,
+  FaEdit, FaSave,
   FaImage,
   FaCheck,
   FaClipboardList,
   FaArrowRight,
 } from "react-icons/fa";
 
-import "./Profile.css";
-import "./membership.css";
+import "../styles/Profile.css";
+import "../styles/membership.css";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import AppointmentList from "../components/AppointmentList";
@@ -54,13 +54,13 @@ function PlanEditModal({ isOpen, onClose, currentPlan, activePlan, onSave }) {
     } else {
       document.body.classList.remove('modal-open');
     }
-    
+
     // Cleanup khi component unmount
     return () => {
       document.body.classList.remove('modal-open');
     };
   }, [isOpen]);
-  
+
   const [planData, setPlanData] = useState({
     strategy: activePlan?.strategy || currentPlan.strategy || "Cai thuốc hoàn toàn và duy trì lâu dài",
     startDate: (() => {
@@ -71,7 +71,7 @@ function PlanEditModal({ isOpen, onClose, currentPlan, activePlan, onSave }) {
             return date.toISOString().split("T")[0];
           }
         }
-        
+
         if (currentPlan?.startDate) {
           // Kiểm tra nếu startDate là định dạng DD/MM/YYYY
           if (typeof currentPlan.startDate === 'string' && currentPlan.startDate.includes('/')) {
@@ -88,7 +88,7 @@ function PlanEditModal({ isOpen, onClose, currentPlan, activePlan, onSave }) {
             }
           }
         }
-        
+
         // Mặc định trả về ngày hiện tại nếu không có ngày hợp lệ khác
         return new Date().toISOString().split("T")[0];
       } catch (error) {
@@ -193,7 +193,7 @@ export default function ProfilePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const notificationCount = 0; // nếu bạn có biến này thì replace theo đúng giá trị  
-  
+
   // Handle logout with navigation
   const handleLogout = () => {
     logout();
@@ -205,30 +205,30 @@ export default function ProfilePage() {
       setActiveTab(savedTab);
       // Clear the saved tab after using it
       localStorage.removeItem('activeProfileTab');
-      
+
       // Scroll to the top of the content area
       const profileContent = document.querySelector('.profile-content');
       if (profileContent) {
         window.scrollTo({ top: profileContent.offsetTop, behavior: 'smooth' });
       }
     }
-    
+
     // Check for hash in URL to navigate to specific section
     if (window.location.hash) {
       const hash = window.location.hash.substring(1); // remove the # symbol
       if (hash === 'achievements' || hash === 'profile' || hash === 'appointments' || hash === 'journal' || hash === 'membership' || hash === 'health') {
         setActiveTab(hash === 'health' ? 'profile' : hash);
-        
+
         // Scroll to the top of the content area
         window.scrollTo({ top: 0, behavior: 'auto' });
-        
+
         // Use setTimeout to ensure the DOM has updated after the tab change
         setTimeout(() => {
           const profileContent = document.querySelector('.profile-content');
           if (profileContent) {
             window.scrollTo({ top: profileContent.offsetTop, behavior: 'auto' });
           }
-          
+
           // If it's the health section, scroll to that section
           if (hash === 'health') {
             setTimeout(() => {
@@ -240,10 +240,11 @@ export default function ProfilePage() {
           }
         }, 100);
       }
-    }  }, []);
-  
+    }
+  }, []);
+
   const [activePlan, setActivePlan] = useState(null);
-    useEffect(() => {
+  useEffect(() => {
     // Tải kế hoạch cai thuốc từ localStorage
     try {
       // Kiểm tra kế hoạch đã hoàn thành
@@ -259,11 +260,12 @@ export default function ProfilePage() {
       if (savedPlan) {
         const parsedPlan = JSON.parse(savedPlan);
         setActivePlan(parsedPlan);
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error('Lỗi khi đọc kế hoạch cai thuốc:', error);
     }
   }, []);
-  
+
   // Tính toán các giá trị - chuyển xuống dưới useEffect để đảm bảo activePlan đã được cập nhật
   const calculateSavings = () => {
     if (!user) return { days: 0, money: 0, cigarettes: 0 };
@@ -274,7 +276,7 @@ export default function ProfilePage() {
       // Dùng optional chaining để tránh lỗi khi activePlan là null
       if (activePlan?.startDate) {
         startDate = new Date(activePlan.startDate);
-        
+
         // Kiểm tra ngày có hợp lệ không
         if (isNaN(startDate.getTime())) {
           console.warn("Ngày bắt đầu từ activePlan không hợp lệ:", activePlan.startDate);
@@ -293,18 +295,18 @@ export default function ProfilePage() {
       console.error("Lỗi khi xử lý ngày bắt đầu:", error);
       startDate = new Date();
     }
-    
+
     const now = new Date();
     const days = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
 
     // Số điếu thuốc mỗi ngày từ kế hoạch hoặc từ thông tin người dùng
-    const cigarettesPerDay = activePlan?.initialCigarettes || 
-                            (activePlan?.weeks && activePlan.weeks[0]?.amount) || 
-                            user?.cigarettesPerDay || 20;
-    
-    const costPerDay = user?.costPerPack && user?.cigarettesPerPack ? 
+    const cigarettesPerDay = activePlan?.initialCigarettes ||
+      (activePlan?.weeks && activePlan.weeks[0]?.amount) ||
+      user?.cigarettesPerDay || 20;
+
+    const costPerDay = user?.costPerPack && user?.cigarettesPerPack ?
       (user.costPerPack / user.cigarettesPerPack) * cigarettesPerDay : 30000;
-    
+
     const moneySaved = days * costPerDay;
     const cigarettesSaved = days * cigarettesPerDay;
 
@@ -321,20 +323,20 @@ export default function ProfilePage() {
   const formatDate = (dateString) => {
     try {
       if (!dateString) return "01/05/2023"; // Default date
-      
+
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
         console.warn("Ngày không hợp lệ:", dateString);
         return "01/05/2023";
       }
-      
+
       return date.toLocaleDateString("vi-VN");
     } catch (error) {
       console.error("Lỗi khi định dạng ngày:", error);
       return "01/05/2023";
     }
   };
-  
+
   // Dữ liệu người dùng mẫu - chỉ sử dụng cho các giá trị không có trong user
   const userData = {
     ...user,
@@ -413,8 +415,8 @@ export default function ProfilePage() {
         date:
           savings.days >= 1
             ? new Date(
-                new Date(user?.startDate).getTime() + 86400000
-              ).toLocaleDateString("vi-VN")
+              new Date(user?.startDate).getTime() + 86400000
+            ).toLocaleDateString("vi-VN")
             : "",
         icon: "⭐",
       },
@@ -424,8 +426,8 @@ export default function ProfilePage() {
         date:
           savings.days >= 7
             ? new Date(
-                new Date(user?.startDate).getTime() + 7 * 86400000
-              ).toLocaleDateString("vi-VN")
+              new Date(user?.startDate).getTime() + 7 * 86400000
+            ).toLocaleDateString("vi-VN")
             : "",
         icon: "🏅",
       },
@@ -435,8 +437,8 @@ export default function ProfilePage() {
         date:
           savings.days >= 14
             ? new Date(
-                new Date(user?.startDate).getTime() + 14 * 86400000
-              ).toLocaleDateString("vi-VN")
+              new Date(user?.startDate).getTime() + 14 * 86400000
+            ).toLocaleDateString("vi-VN")
             : "",
         icon: "🏆",
       },
@@ -446,8 +448,8 @@ export default function ProfilePage() {
         date:
           savings.days >= 30
             ? new Date(
-                new Date(user?.startDate).getTime() + 30 * 86400000
-              ).toLocaleDateString("vi-VN")
+              new Date(user?.startDate).getTime() + 30 * 86400000
+            ).toLocaleDateString("vi-VN")
             : "",
         icon: "👑",
       },
@@ -492,7 +494,7 @@ export default function ProfilePage() {
           currentPlanData = JSON.parse(savedPlan);
         }
       }
-      
+
       // Kiểm tra và chuẩn hóa định dạng ngày tháng
       let validStartDate = planData.startDate;
       try {
@@ -509,7 +511,7 @@ export default function ProfilePage() {
         console.error("Lỗi khi xử lý ngày:", error);
         validStartDate = new Date().toISOString();
       }
-      
+
       // Cập nhật thông tin mới vào kế hoạch
       if (currentPlanData) {
         const updatedPlan = {
@@ -518,7 +520,7 @@ export default function ProfilePage() {
           goal: planData.goal,
           startDate: validStartDate
         };
-        
+
         // Lưu lại vào localStorage
         if (completionData) {
           const updatedCompletion = JSON.parse(completionData);
@@ -527,7 +529,7 @@ export default function ProfilePage() {
         } else {
           localStorage.setItem('activePlan', JSON.stringify(updatedPlan));
         }
-        
+
         // Cập nhật state
         setActivePlan(updatedPlan);
         alert("Đã lưu cập nhật kế hoạch thành công!");
@@ -604,11 +606,10 @@ export default function ProfilePage() {
           >
             <FaCalendarAlt /> Lịch hẹn Coach
           </Link>
-            <Link
+          <Link
             to="#"
-            className={`nav-item ${
-              activeTab === "achievements" ? "active" : ""
-            }`}
+            className={`nav-item ${activeTab === "achievements" ? "active" : ""
+              }`}
             onClick={() => {
               setActiveTab("achievements");
               // Scroll to the top of the content area
@@ -634,7 +635,7 @@ export default function ProfilePage() {
             <div className="section-header">
               <h1>Hồ sơ</h1>
             </div>
-            
+
             <div className="profile-sections">
               {/* Thông tin cá nhân - sử dụng component UserProfile */}
               <div className="profile-main-content">
@@ -642,16 +643,16 @@ export default function ProfilePage() {
                 <div className="action-buttons-container">
                 </div>
               </div>
-              
+
               <div className="profile-collapsible-sections">
                 {/* Sử dụng CollapsibleSection cho Hồ sơ sức khỏe */}
-                <CollapsibleSection 
-                  title="Hồ sơ sức khỏe" 
+                <CollapsibleSection
+                  title="Hồ sơ sức khỏe"
                   icon={<FaHeartbeat />}
                   defaultOpen={false}
                   className="health-collapsible"
                 >
-                  <HealthProfile 
+                  <HealthProfile
                     healthData={{
                       stats: {
                         smokingHistory: `${userData.yearsOfSmoking} năm`,
@@ -667,14 +668,14 @@ export default function ProfilePage() {
                     }}
                   />
                 </CollapsibleSection>
-                
+
                 {/* Sử dụng CollapsibleSection cho Kế hoạch cai thuốc */}
-                <CollapsibleSection 
-                  title="Kế hoạch cai thuốc" 
+                <CollapsibleSection
+                  title="Kế hoạch cai thuốc"
                   icon={<FaClipboardList />}
                   defaultOpen={false}
                   className="plan-collapsible"
-                >                  <ProfilePlan 
+                >                  <ProfilePlan
                     planData={{
                       strategy: activePlan?.strategy || "Cai thuốc hoàn toàn và duy trì lâu dài",
                       startDate: userData.startDate || new Date().toLocaleDateString('vi-VN'),
@@ -704,8 +705,8 @@ export default function ProfilePage() {
                         </span>
                       </div>
                       <p className="membership-description">
-                        {userData.membershipType === "premium" 
-                          ? "Bạn đang sử dụng gói Premium với đầy đủ tính năng hỗ trợ." 
+                        {userData.membershipType === "premium"
+                          ? "Bạn đang sử dụng gói Premium với đầy đủ tính năng hỗ trợ."
                           : "Bạn đang sử dụng gói Pro với đầy đủ tính năng hàng năm."}
                       </p>
                     </div>
@@ -738,7 +739,7 @@ export default function ProfilePage() {
                     <p>Tạo kế hoạch cai thuốc phù hợp với bạn</p>
                   </div>
                 </div>
-                
+
                 {userData.membershipType && userData.membershipType !== 'free' ? (
                   <>
                     <div className="feature-item">
@@ -789,7 +790,7 @@ export default function ProfilePage() {
                   </>
                 )}
               </div>
-              
+
               {!userData.membershipType || userData.membershipType === 'free' ? (
                 <div className="membership-upgrade">
                   <h3>Nâng cấp để sử dụng đầy đủ tính năng</h3>
@@ -820,8 +821,8 @@ export default function ProfilePage() {
               }}
               currentPlan={activePlan}
             />
-          </div>        )}
-        
+          </div>)}
+
         {/* Modal chỉnh sửa kế hoạch */}
         <PlanEditModal
           isOpen={isPlanEditOpen}

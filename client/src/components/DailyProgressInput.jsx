@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './DailyProgressInput.css';
+import '../styles/DailyProgressInput.css';
 
 const DailyProgressInput = ({ onSubmit, todayTarget = 0 }) => {
     const [actualCigarettes, setActualCigarettes] = useState('');

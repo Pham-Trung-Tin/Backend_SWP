@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './Settings.css';
+import '../styles/Settings.css';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -35,8 +35,8 @@ export default function SettingsPage() {
               <p>Nhận thông báo qua email về tiến trình cai thuốc</p>
             </div>
             <label className="switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={settings.emailNotifications}
                 onChange={(e) => handleSettingsChange('emailNotifications', e.target.checked)}
               />
@@ -52,8 +52,8 @@ export default function SettingsPage() {
               <p>Nhận báo cáo tiến trình hàng tuần qua email</p>
             </div>
             <label className="switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={settings.weeklyReport}
                 onChange={(e) => handleSettingsChange('weeklyReport', e.target.checked)}
               />
@@ -70,8 +70,8 @@ export default function SettingsPage() {
               <p>Chuyển sang giao diện tối để bảo vệ mắt</p>
             </div>
             <label className="switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={settings.darkMode}
                 onChange={(e) => handleSettingsChange('darkMode', e.target.checked)}
               />
@@ -84,7 +84,7 @@ export default function SettingsPage() {
               <h3>Ngôn ngữ</h3>
               <p>Chọn ngôn ngữ hiển thị</p>
             </div>
-            <select 
+            <select
               value={settings.language}
               onChange={(e) => handleSettingsChange('language', e.target.value)}
               className="settings-select"
@@ -102,7 +102,7 @@ export default function SettingsPage() {
               <h3>Chế độ hiển thị hồ sơ</h3>
               <p>Kiểm soát ai có thể xem hồ sơ của bạn</p>
             </div>
-            <select 
+            <select
               value={settings.privacy}
               onChange={(e) => handleSettingsChange('privacy', e.target.value)}
               className="settings-select"

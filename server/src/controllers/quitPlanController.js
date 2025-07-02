@@ -353,12 +353,17 @@ export const updatePlan = async (req, res) => {
         }
 
         const planName = req.body.planName || req.body.plan_name;
-        const startDate = req.body.startDate || req.body.start_date;
+        let startDate = req.body.startDate || req.body.start_date;
         const initialCigarettes = req.body.initialCigarettes || req.body.initial_cigarettes;
         const strategy = req.body.strategy || req.body.planType || 'gradual';
         const goal = req.body.goal || req.body.motivation || 'health';
         let weeks = req.body.weeks || [];
         const totalWeeks = req.body.totalWeeks || req.body.total_weeks || weeks.length || 8;
+
+        // Validate and set default startDate if not provided or invalid
+        if (!startDate || isNaN(new Date(startDate).getTime())) {
+            startDate = new Date().toISOString().split('T')[0];
+        }
 
         // Calculate end date
         const startDateObj = new Date(startDate);

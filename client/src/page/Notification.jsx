@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import './Notification.css';
+import '../styles/Notification.css';
 
 const Notification = () => {
   const { user } = useAuth();
-  
+
   // Calculate days since registration
-  const daysSinceRegistration = user?.startDate ? 
+  const daysSinceRegistration = user?.startDate ?
     Math.floor((new Date() - new Date(user.startDate)) / (1000 * 60 * 60 * 24)) : 1;
-  
+
   // Sample notification data for new user (1 day account)
   const [notifications, setNotifications] = useState([
     {
@@ -92,10 +92,10 @@ const Notification = () => {
 
   // Handle mark as read
   const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true } 
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === id
+          ? { ...notification, read: true }
           : notification
       )
     );
@@ -103,7 +103,7 @@ const Notification = () => {
 
   // Handle mark all as read
   const markAllAsRead = () => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(notification => ({ ...notification, read: true }))
     );
   };
@@ -116,12 +116,12 @@ const Notification = () => {
           Đánh dấu tất cả đã đọc
         </button>
       </div>
-      
+
       {/* Recent notifications section */}
       <div className="notification-list">
         {notifications.map((notification) => (
-          <div 
-            key={notification.id} 
+          <div
+            key={notification.id}
             className={`notification-item ${notification.read ? '' : 'unread'}`}
           >
             <div className="notification-icon">{notification.icon}</div>
@@ -132,7 +132,7 @@ const Notification = () => {
               </div>
               <p>{notification.description}</p>
             </div>
-            <button 
+            <button
               className={`notification-status ${notification.read ? 'read' : 'unread'}`}
               onClick={() => markAsRead(notification.id)}
             >
@@ -141,7 +141,7 @@ const Notification = () => {
           </div>
         ))}
       </div>
-      
+
       {/* New user specific guidance */}
       <div className="new-user-guidance">
         <h2 className="section-title">
@@ -156,13 +156,13 @@ const Notification = () => {
           </ul>
         </div>
       </div>
-      
+
       {/* Notification preferences section */}
       <div className="notification-preferences">
         <h2 className="section-title">
           <span className="icon">🔔</span> Tùy chọn nhận thông báo
         </h2>
-        
+
         <div className="preference-list">
           <div className="preference-item">
             <div className="preference-info">
@@ -170,68 +170,68 @@ const Notification = () => {
               <span className="preference-text">Nhắc nhở hàng ngày</span>
             </div>
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={notificationSettings.dailyReminder}
                 onChange={() => handleSettingToggle('dailyReminder')}
               />
               <span className="toggle-slider"></span>
             </label>
           </div>
-          
+
           <div className="preference-item">
             <div className="preference-info">
               <span className="preference-icon">📊</span>
               <span className="preference-text">Cập nhật tiến trình cai thuốc</span>
             </div>
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={notificationSettings.progressUpdate}
                 onChange={() => handleSettingToggle('progressUpdate')}
               />
               <span className="toggle-slider"></span>
             </label>
           </div>
-          
+
           <div className="preference-item">
             <div className="preference-info">
               <span className="preference-icon">⭕</span>
               <span className="preference-text">Nhắc tái lập mục tiêu</span>
             </div>
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={notificationSettings.goalReminder}
                 onChange={() => handleSettingToggle('goalReminder')}
               />
               <span className="toggle-slider"></span>
             </label>
           </div>
-          
+
           <div className="preference-item">
             <div className="preference-info">
               <span className="preference-icon">👨‍⚕️</span>
               <span className="preference-text">Thông báo từ cố vấn</span>
             </div>
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={notificationSettings.counselorNotification}
                 onChange={() => handleSettingToggle('counselorNotification')}
               />
               <span className="toggle-slider"></span>
             </label>
           </div>
-          
+
           <div className="preference-item">
             <div className="preference-info">
               <span className="preference-icon">📰</span>
               <span className="preference-text">Tin tức, blog hữu ích</span>
             </div>
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={notificationSettings.blogUpdate}
                 onChange={() => handleSettingToggle('blogUpdate')}
               />
@@ -240,19 +240,19 @@ const Notification = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Notification delivery methods section */}
       <div className="delivery-methods">
         <h2 className="section-title">
           <span className="icon">📱</span> Thiết lập phương thức nhận
         </h2>
-        
+
         <div className="method-list">
           <div className="method-item">
             <div className="method-info">
-              <input 
-                type="checkbox" 
-                id="app-method" 
+              <input
+                type="checkbox"
+                id="app-method"
                 checked={deliveryMethods.app}
                 onChange={() => handleDeliveryToggle('app')}
               />
@@ -262,12 +262,12 @@ const Notification = () => {
               </label>
             </div>
           </div>
-          
+
           <div className="method-item">
             <div className="method-info">
-              <input 
-                type="checkbox" 
-                id="email-method" 
+              <input
+                type="checkbox"
+                id="email-method"
                 checked={deliveryMethods.email}
                 onChange={() => handleDeliveryToggle('email')}
               />
@@ -277,12 +277,12 @@ const Notification = () => {
               </label>
             </div>
           </div>
-          
+
           <div className="method-item">
             <div className="method-info">
-              <input 
-                type="checkbox" 
-                id="sms-method" 
+              <input
+                type="checkbox"
+                id="sms-method"
                 checked={deliveryMethods.sms}
                 onChange={() => handleDeliveryToggle('sms')}
               />
