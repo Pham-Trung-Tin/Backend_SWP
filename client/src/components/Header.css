@@ -58,6 +58,11 @@
 
 .user-menu-container {
   position: relative;
+  z-index: 9999;
+}
+
+.user-menu-container.menu-open {
+  z-index: 10000;
 }
 
 .user-menu-button {
@@ -66,29 +71,64 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 6px 12px;
   margin-left: 15px;
+  border-radius: 50px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.user-menu-button:hover {
+  background-color: rgba(37, 112, 232, 0.05);
+  transform: translateY(-1px);
 }
 
 .user-initial {
-  width: 32px;
-  height: 32px;
-  background-color: #2570e8;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #2570e8, #1a5cbf);
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  margin-right: 8px;
+  margin-right: 10px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(37, 112, 232, 0.2);
+  transition: all 0.2s ease;
+}
+
+.user-menu-button:hover .user-initial {
+  box-shadow: 0 4px 12px rgba(37, 112, 232, 0.3);
+  transform: scale(1.05);
+}
+
+.user-avatar-header {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 10px;
+  border: 2px solid rgba(37, 112, 232, 0.2);
+  transition: all 0.2s ease;
+}
+
+.user-menu-button:hover .user-avatar-header {
+  border-color: #2570e8;
+  box-shadow: 0 4px 12px rgba(37, 112, 232, 0.2);
+  transform: scale(1.05);
 }
 
 .user-name {
-  color: #333;
+  color: #374151;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 /* Enhanced Membership Label Styles */
@@ -164,67 +204,107 @@
   position: absolute;
   top: 45px;
   right: 0;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  width: 200px;
-  z-index: 1000; /* Higher z-index to ensure it's above other elements */
+  background-color: rgb(255, 255, 255);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 220px;
+  z-index: 1000;
   overflow: hidden;
-  animation: fadeIn 0.2s ease-out;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  animation: slideIn 0.3s ease-out;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  will-change: transform, opacity;
+  transform-origin: top right;
 }
 
-@keyframes fadeIn {
+@keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-15px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  color: #333;
+  padding: 14px 18px;
+  color: #374151 !important;
   text-decoration: none;
   font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.dropdown-item:hover {
-  background-color: #f5f8ff;
-  color: #2570e8;
-}
-
-.dropdown-item:active {
-  background-color: #e5eeff;
-}
-
-.dropdown-item i {
-  margin-right: 10px;
-  color: #2570e8;
-  width: 16px;
-  text-align: center;
-}
-
-.logout-btn {
-  border-top: 1px solid #eee;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
   background: none;
   width: 100%;
   text-align: left;
-  cursor: pointer;
-  font-family: inherit;
+  position: relative;
 }
 
-.logout-btn i {
-  color: #e53e3e;
+.dropdown-item:hover {
+  background-color: #f8fafc;
+  color: #2570e8 !important;
+  transform: translateX(2px);
+}
+
+.dropdown-item:active {
+  background-color: #e2e8f0;
+  transform: translateX(0);
+}
+
+.dropdown-item i {
+  margin-right: 12px;
+  color: #6b7280;
+  width: 18px;
+  text-align: center;
+  font-size: 16px;
+  transition: color 0.2s ease;
+}
+
+.dropdown-item:hover i {
+  color: #2570e8;
+}
+
+.dropdown-item.logout-btn {
+  border-top: 1px solid #ebe5e5;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  background: transparent !important;
+  width: 100%;
+  text-align: left !important; /* Căn trái text */
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+  padding-top: 14px !important;
+  color: #dc2626 !important; /* Chữ màu đỏ */
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: flex-start !important; /* Căn trái các phần tử */
+  align-items: center !important; /* Căn giữa theo chiều dọc */
+}
+
+.dropdown-item.logout-btn:hover {
+  background-color: #dc2626 !important; /* Nền đỏ khi hover */
+  color: white !important; /* Chữ trắng khi hover */
+  transform: none !important; /* Ghi đè transform từ .dropdown-item:hover */
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25) !important; /* Thêm shadow khi hover */
+}
+
+.dropdown-item.logout-btn i {
+  color: #dc2626 !important; /* Icon màu đỏ */
+  transition: all 0.3s ease;
+  margin-right: 8px !important; /* Khoảng cách giữa icon và chữ */
+  font-size: 17px !important; /* Tăng kích thước icon một chút */
+}
+
+.dropdown-item.logout-btn:hover i {
+  color: white !important; /* Icon màu trắng khi hover */
 }
 
 .signup-btn {
@@ -264,4 +344,91 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
+}
+
+/* Đảm bảo dropdown menu hiển thị tốt trên tất cả các trang */
+.user-menu-container {
+  position: relative;
+  z-index: 9999;
+}
+
+.user-menu-container.menu-open {
+  z-index: 10000;
+}
+
+/* Đảm bảo header luôn có z-index cao */
+.nosmoke-header {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Responsive design cho dropdown */
+@media (max-width: 768px) {
+  .user-dropdown-menu {
+    width: 200px;
+    right: -10px;
+  }
+  
+  .dropdown-item {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .user-menu-button {
+    padding: 4px 8px;
+  }
+  
+  .user-initial,
+  .user-avatar-header {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .user-name {
+    font-size: 13px;
+  }
+}
+
+/* Thêm hiệu ứng cho dropdown khi mở */
+.user-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 20px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid white;
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* Đảm bảo dropdown không bị che bởi các element khác */
+.user-dropdown-menu {
+  will-change: transform, opacity;
+  transform-origin: top right;
+}
+
+/* Cải thiện màu sắc cho các icon */
+.dropdown-item i.fas.fa-tachometer-alt,
+.dropdown-item i.fas.fa-calendar-alt,
+.dropdown-item i.fas.fa-user,
+.dropdown-item i.fas.fa-cog {
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.dropdown-item:hover i.fas.fa-tachometer-alt,
+.dropdown-item:hover i.fas.fa-calendar-alt,
+.dropdown-item:hover i.fas.fa-user,
+.dropdown-item:hover i.fas.fa-cog {
+  color: #2570e8;
+}
+
+.dropdown-item i.fas.fa-sign-out-alt {
+  color: #dc2626 !important; /* Icon màu đỏ giống với text */
+}
+
+.dropdown-item.logout-btn:hover i.fas.fa-sign-out-alt {
+  color: white !important; /* Icon màu trắng khi hover */
 }

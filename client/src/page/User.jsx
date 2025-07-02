@@ -75,7 +75,7 @@ const UserProfile = ({ isStandalone = false }) => {
       if (result && result.success) {
         setSuccessMessage("Thông tin đã được cập nhật thành công.");
         setIsEditing(false);
-
+        
         // Clear success message after 3 seconds
         setTimeout(() => {
           setSuccessMessage("");
@@ -92,7 +92,7 @@ const UserProfile = ({ isStandalone = false }) => {
   // If no user data is available, show loading state
   if (!user) {
     return <div className="loading-container">Đang tải...</div>;
-  } return (
+  }  return (
     <div className="user-profile-container">
       <div className="user-profile-header">
         <h1>Thông tin cá nhân</h1>
@@ -123,46 +123,46 @@ const UserProfile = ({ isStandalone = false }) => {
           <FaTimes /> {errorMessage}
         </div>
       )}        <div className="avatar-info-layout">        <div className="avatar-section">
-        <div className="avatar-container">
-          {userData.avatar ? (
-            <img
-              src={userData.avatar}
-              alt="Ảnh đại diện"
-              className="user-avatar"
-            />
-          ) : (
-            <div className="user-avatar-placeholder">
-              <FaUserAlt />
-            </div>
-          )}
-
-          {isEditing && (
-            <div className="avatar-edit">
-              <label htmlFor="avatar-input" className="avatar-edit-button">
-                <FaImage />
-              </label>
-              <input
-                type="file"
-                id="avatar-input"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                style={{ display: "none" }}
+          <div className="avatar-container">
+            {userData.avatar ? (
+              <img 
+                src={userData.avatar} 
+                alt="Ảnh đại diện" 
+                className="user-avatar" 
               />
+            ) : (
+              <div className="user-avatar-placeholder">
+                <FaUserAlt />
+              </div>
+            )}
+            
+            {isEditing && (
+              <div className="avatar-edit">
+                <label htmlFor="avatar-input" className="avatar-edit-button">
+                  <FaImage />
+                </label>
+                <input
+                  type="file"
+                  id="avatar-input"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+            )}
+              {/* Hiển thị ID người dùng dưới avatar */}
+            <div className="user-id">
+              ID: {userData._id || userData.id || "N/A"}
             </div>
-          )}
-          {/* Hiển thị ID người dùng dưới avatar */}
-          <div className="user-id">
-            ID: {userData._id || userData.id || "N/A"}
+            
+            {userData.membershipType && userData.membershipType !== 'free' && (
+              <div className={`membership-badge ${userData.membershipType}`}>
+                <FaCrown /> {userData.membershipType === 'premium' ? 'Premium' : 'Pro'}
+              </div>
+            )}
           </div>
-
-          {userData.membershipType && userData.membershipType !== 'free' && (
-            <div className={`membership-badge ${userData.membershipType}`}>
-              <FaCrown /> {userData.membershipType === 'premium' ? 'Premium' : 'Pro'}
-            </div>
-          )}
         </div>
-      </div>
-
+        
         <div className="info-section">
           {/* Thông tin cơ bản */}
           <div className="profile-section basic-info">
@@ -198,9 +198,9 @@ const UserProfile = ({ isStandalone = false }) => {
             </div>            <div className="info-field">
               <label><FaTransgender /> Giới tính</label>
               {isEditing ? (
-                <select
-                  name="gender"
-                  value={userData.gender || ""}
+                <select 
+                  name="gender" 
+                  value={userData.gender || ""} 
                   onChange={handleChange}
                 >
                   <option value="">-- Chọn giới tính --</option>
@@ -209,22 +209,11 @@ const UserProfile = ({ isStandalone = false }) => {
                   <option value="other">Khác</option>
                 </select>
               ) : (
-                <p>{userData.gender === "male" ? "Nam" : userData.gender === "female" ? "Nữ" : userData.gender === "other" ? "Khác" : "Chưa cập nhật"}</p>
-              )}
-            </div>
-
-            <div className="info-field">
-              <label><FaCalendarAlt /> Ngày sinh</label>
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={userData.dateOfBirth || ""}
-                  onChange={handleChange}
-                  placeholder="Chọn ngày sinh"
-                />
-              ) : (
-                <p>{userData.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString("vi-VN") : "Chưa cập nhật"}</p>
+                <p>
+                  {userData.gender === "male" ? "Nam" : 
+                   userData.gender === "female" ? "Nữ" : 
+                   userData.gender === "other" ? "Khác" : "Chưa cập nhật"}
+                </p>
               )}
             </div>
           </div>
@@ -232,7 +221,7 @@ const UserProfile = ({ isStandalone = false }) => {
           {/* Thông tin liên hệ */}
           <div className="profile-section contact-section">
             <h2>Thông tin liên hệ</h2>
-
+            
             <div className="info-field">
               <label><FaMapMarkerAlt /> Địa chỉ</label>
               {isEditing ? (
@@ -247,7 +236,7 @@ const UserProfile = ({ isStandalone = false }) => {
                 <p>{userData.address || "Chưa cập nhật"}</p>
               )}
             </div>
-
+            
             <div className="info-field">
               <label><FaEnvelope /> Email</label>
               <p><strong>{userData.email}</strong></p>
@@ -273,7 +262,7 @@ const UserProfile = ({ isStandalone = false }) => {
           {/* Bảo mật */}
           <div className="profile-section security-section">
             <h2>Bảo mật</h2>
-
+            
             <div className="info-field">
               <label><FaLock /> Mật khẩu</label>
               {isEditing ? (
@@ -289,11 +278,11 @@ const UserProfile = ({ isStandalone = false }) => {
               )}
             </div>
           </div>
-
+          
           {/* Lý do cai thuốc */}
           <div className="profile-section quit-reason-section">
             <h2>Lý do cai thuốc</h2>
-
+            
             <div className="info-field quit-reason-field">
               {isEditing ? (
                 <textarea

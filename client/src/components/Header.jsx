@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaBell } from 'react-icons/fa';
 import { useState, useEffect, useRef } from 'react';
 import LoginModal from './LoginModal';
@@ -6,15 +6,15 @@ import { useAuth } from '../context/AuthContext';
 import { formatMembershipName } from '../utils/membershipUtils';
 import './Header.css';
 
-export default function Header() {
+export default function Header() {  const navigate = useNavigate();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0); // Add this state for notification count
   const { user, logout } = useAuth();
-
+  
   // Thêm useRef để theo dõi dropdown menu
   const userMenuRef = useRef(null);
-  // Debug user membership và đảm bảo nhất quán
+    // Debug user membership và đảm bảo nhất quán
   useEffect(() => {
     if (user) {
       console.log('Header - User Membership:', user.membership);
@@ -33,9 +33,7 @@ export default function Header() {
   const handleLoginClick = (e) => {
     e.preventDefault();
     setIsLoginModalOpen(true);
-  };
-
-  const handleLogout = () => {
+  };  const handleLogout = () => {
     logout();
     setIsUserMenuOpen(false);
   };
@@ -56,7 +54,7 @@ export default function Header() {
     if (isUserMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
+    
     // Cleanup function
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -81,34 +79,63 @@ export default function Header() {
               <Link to="/notifications" className="nav-item notification-nav-item">
                 <FaBell /> Thông báo
                 {notificationCount > 0 && <span className="notification-badge">{notificationCount}</span>}
-              </Link>              <div className="user-menu-container" ref={userMenuRef}>                <button className="user-menu-button" onClick={toggleUserMenu}>
-                <span className="user-initial">{(user.fullName || user.name || 'U').charAt(0)}</span>
-                <span className="user-name">
-                  {user.fullName || user.name || 'User'}
-                  {/* Kiểm tra cả hai trường hợp để hiển thị nhãn thành viên */}
-                  {(user.membership && user.membership !== 'free') ? (
-                    <span className={`membership-label ${user.membership}`}>
-                      {formatMembershipName(user.membership)}
-                    </span>
-                  ) : (user.membershipType && user.membershipType !== 'free') && (
-                    <span className={`membership-label ${user.membershipType}`}>
-                      {formatMembershipName(user.membershipType)}
-                    </span>
+              </Link>              <div className={`user-menu-container ${isUserMenuOpen ? 'menu-open' : ''}`} ref={userMenuRef}>                <button className="user-menu-button" onClick={toggleUserMenu}>
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="user-avatar-header" />
+                  ) : (
+                    <span className="user-initial">{user.name.charAt(0)}</span>
                   )}
-                </span>
-              </button>                {isUserMenuOpen && (
-                <div className="user-dropdown-menu">
-                  <Link to="/profile" className="dropdown-item" onClick={() => setIsUserMenuOpen(false)}>
-                    <i className="fas fa-user"></i> Hồ sơ cá nhân
-                  </Link>
-                  <Link to="/settings" className="dropdown-item" onClick={() => setIsUserMenuOpen(false)}>
-                    <i className="fas fa-cog"></i> Cài đặt
-                  </Link>
-                  <button onClick={handleLogout} className="dropdown-item logout-btn">
-                    <i className="fas fa-sign-out-alt"></i> Đăng xuất
-                  </button>
-                </div>
-              )}
+                  <span className="user-name">                    
+                    {user.name}
+                    {/* Kiểm tra cả hai trường hợp để hiển thị nhãn thành viên */}
+                    {(user.membership && user.membership !== 'free') ? (
+                      <span className={`membership-label ${user.membership}`}>
+                        {formatMembershipName(user.membership)}
+                      </span>
+                    ) : (user.membershipType && user.membershipType !== 'free') && (
+                      <span className={`membership-label ${user.membershipType}`}>
+                        {formatMembershipName(user.membershipType)}
+                      </span>
+                    )}
+                  </span>
+                </button>                {isUserMenuOpen && (
+                  <div className="user-dropdown-menu">
+                    {user.role === 'coach' ? (
+                      <>
+                        <button className="dropdown-item" onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigate('/coach');
+                        }}>
+                          <i className="fas fa-tachometer-alt"></i> Dashboard
+                        </button>
+                        <button className="dropdown-item" onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigate('/coach/bookings');
+                        }}>
+                          <i className="fas fa-calendar-alt"></i> Quản lý Booking
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="dropdown-item" onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigate('/profile');
+                        }}>
+                          <i className="fas fa-user"></i> Hồ sơ cá nhân
+                        </button>
+                        <button className="dropdown-item" onClick={() => {
+                          setIsUserMenuOpen(false);
+                          navigate('/settings');
+                        }}>
+                          <i className="fas fa-cog"></i> Cài đặt
+                        </button>
+                      </>
+                    )}
+                    <button onClick={handleLogout} className="dropdown-item logout-btn">
+                      <i className="fas fa-sign-out-alt"></i> Đăng xuất
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           ) : (

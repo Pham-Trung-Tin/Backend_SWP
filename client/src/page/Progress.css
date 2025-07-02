@@ -721,32 +721,32 @@
   .stats-cards {
     grid-template-columns: 1fr;
   }
-
+  
   .metric-item {
     flex-direction: column;
     align-items: flex-start;
   }
-
+  
   .metric-name {
     width: 100%;
     margin-bottom: 10px;
   }
-
+  
   .progress-bar-container {
     width: 100%;
     margin: 5px 0;
   }
-
+  
   .plan-summary {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-
+  
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
-
+  
   .plan-info-section,
   .progress-stats {
     padding: 1.5rem;
@@ -758,11 +758,11 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .stat-value {
     font-size: 1.5rem;
   }
-
+  
   .plan-info-section h2,
   .progress-stats h2 {
     font-size: 1.2rem;
