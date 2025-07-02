@@ -80,19 +80,14 @@ export default function Header() {
               <Link to="/notifications" className="nav-item notification-nav-item">
                 <FaBell /> Thông báo
                 {notificationCount > 0 && <span className="notification-badge">{notificationCount}</span>}
-              </Link>              <div className={`user-menu-container ${isUserMenuOpen ? 'menu-open' : ''}`} ref={userMenuRef}>                <button className="user-menu-button" onClick={toggleUserMenu}>                  {user.avatar ? (
-                <img src={user.avatar} alt={user.full_name || user.name} className="user-avatar-header" />
-              ) : (
-                <span className="user-initial">
-                  {(user.full_name && typeof user.full_name === 'string')
-                    ? user.full_name.charAt(0)
-                    : (user.name && typeof user.name === 'string')
-                      ? user.name.charAt(0)
-                      : 'U'}
-                </span>
-              )}
+              </Link>              <div className={`user-menu-container ${isUserMenuOpen ? 'menu-open' : ''}`} ref={userMenuRef}>                <button className="user-menu-button" onClick={toggleUserMenu}>
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-header" />
+                ) : (
+                  <span className="user-initial">{user.name ? user.name.charAt(0) : 'U'}</span>
+                )}
                 <span className="user-name">
-                  {user.full_name || user.name || 'User'}
+                  {user.name || 'User'}
                   {/* Kiểm tra cả hai trường hợp để hiển thị nhãn thành viên */}
                   {(user.membership && user.membership !== 'free') ? (
                     <span className={`membership-label ${user.membership}`}>

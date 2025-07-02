@@ -1,0 +1,340 @@
+/* Email Verification Page Styles */
+.email-verification-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.verification-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.verification-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.verification-header {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.email-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateY(0);
+    }
+
+    40% {
+        transform: translateY(-10px);
+    }
+
+    60% {
+        transform: translateY(-5px);
+    }
+}
+
+.verification-header h1 {
+    margin: 0 0 15px 0;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.verification-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.email-address {
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.verification-form {
+    padding: 40px 30px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.verification-input {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 8px;
+    font-weight: 600;
+    color: #4CAF50;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.verification-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.verification-input::placeholder {
+    color: #bbb;
+    letter-spacing: 2px;
+    font-size: 16px;
+}
+
+.input-hint {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+}
+
+.verify-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 25px;
+}
+
+.verify-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+.verify-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.resend-section {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.resend-section p {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.resend-btn {
+    background: transparent;
+    color: #4CAF50;
+    border: 2px solid #4CAF50;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.resend-btn:hover:not(:disabled) {
+    background: #4CAF50;
+    color: white;
+}
+
+.resend-btn:disabled {
+    color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+.verification-tips {
+    background: #e3f2fd;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border-left: 4px solid #2196F3;
+}
+
+.verification-tips h4 {
+    margin: 0 0 15px 0;
+    color: #1976D2;
+    font-size: 1rem;
+}
+
+.verification-tips ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.verification-tips li {
+    margin-bottom: 8px;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.back-to-register {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.back-btn {
+    background: transparent;
+    color: #666;
+    border: none;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+}
+
+.back-btn:hover {
+    color: #4CAF50;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    border-left: 4px solid #f44336;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Success Animation */
+.verification-input.success {
+    border-color: #4CAF50;
+    background: #e8f5e9;
+    animation: successPulse 0.6s ease-in-out;
+}
+
+@keyframes successPulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .email-verification-page {
+        padding: 10px;
+    }
+
+    .verification-header {
+        padding: 30px 20px;
+    }
+
+    .verification-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .email-icon {
+        font-size: 40px;
+    }
+
+    .verification-form {
+        padding: 30px 20px;
+    }
+
+    .verification-input {
+        font-size: 20px;
+        letter-spacing: 6px;
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .verification-input {
+        font-size: 18px;
+        letter-spacing: 4px;
+    }
+
+    .verification-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .email-address {
+        font-size: 1rem !important;
+        padding: 6px 12px;
+    }
+}
