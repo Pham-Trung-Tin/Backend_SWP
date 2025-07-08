@@ -1,0 +1,144 @@
+.quit-plan-display {
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.plan-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.completion-badge {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #e6f7e6;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #2e7d32;
+}
+
+.completion-icon {
+  margin-right: 5px;
+}
+
+.plan-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.plan-detail-item {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.detail-icon {
+  margin-right: 10px;
+  color: #2570e8;
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #333;
+}
+
+.plan-strategy, .plan-goal {
+  margin-bottom: 15px;
+}
+
+.plan-strategy h4, .plan-goal h4, .plan-progress h4 {
+  color: #555;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.plan-strategy p, .plan-goal p {
+  margin: 0;
+  color: #444;
+  line-height: 1.4;
+}
+
+.weeks-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.week-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f0f7ff;
+  border-radius: 5px;
+}
+
+.week-number {
+  font-weight: 500;
+  margin-right: 10px;
+  min-width: 70px;
+}
+
+.cigarette-count {
+  color: #333;
+  margin-right: 15px;
+}
+
+.week-phase {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.plan-duration {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f0f7ff;
+  border-left: 3px solid #2570e8;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.no-plan-message, .loading-plan-message, .error-plan-message {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.error-plan-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e74c3c;
+}

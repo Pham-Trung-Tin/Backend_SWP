@@ -1,0 +1,215 @@
+/* Footer styles */
+footer {
+  background-color: #1e2c55;
+  color: white;
+  padding: 50px 0 20px;
+  font-family: 'Nunito', sans-serif;
+  position: relative;
+  z-index: 0;
+}
+
+footer a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+footer a:hover {
+  color: #ccc;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.footer-col {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 20px;
+}
+
+.footer-col h4 {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-col li {
+  margin-bottom: 10px;
+}
+
+.footer-col.quitline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.footer-col.quitline img {
+  max-width: 180px;
+  margin-bottom: 15px;
+}
+
+.social-icons {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.social-icons a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 35px;
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.social-icons a:hover {
+  background-color: rgba(255,255,255,0.3);
+}
+
+.footer-middle {
+  border-top: 1px solid rgba(255,255,255,0.2);
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding: 30px 0;
+  margin-bottom: 30px;
+}
+
+.footer-middle p {
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.aboriginal-flags {
+  display: flex;
+  gap: 20px;
+  justify-content: flex-start;
+  margin: 20px 0;
+}
+
+.aboriginal-flags img {
+  height: 40px;
+}
+
+.footer-sponsors {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.footer-sponsors p {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.sponsor-logos {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.sponsor-logos img {
+  height: 40px;
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-bottom p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-bottom-links a {
+  font-size: 0.9rem;
+}
+
+/* Back to top button */
+.back-to-top {
+  background-color: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  position: absolute;
+  top: 30px;
+  right: 50%;
+  transform: translateX(50%);
+  z-index: 10;
+}
+
+.back-to-top:hover {
+  background-color: rgba(255,255,255,0.3);
+}
+
+/* Additional styles to ensure footer doesn't overlay other content */
+.nosmoke-footer {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  clear: both;
+  margin-top: 30px;
+}
+
+/* Ensure container stays within bounds */
+.nosmoke-footer .container {
+  overflow: hidden;
+}
+
+/* Ensure footer doesn't create scrollbar */
+body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .footer-top {
+    flex-direction: column;
+  }
+  
+  .footer-col.quitline {
+    align-items: flex-start;
+  }
+  
+  .footer-bottom {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .footer-bottom-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  } 
+}

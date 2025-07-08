@@ -1,0 +1,373 @@
+/* Health Profile Styles */
+.health-profile {
+  width: 100%;
+}
+
+.health-stats {
+  margin-bottom: 30px;
+}
+
+.health-stat-row {
+  margin-bottom: 22px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.health-stat-row:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.health-stat-row.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.health-stat h4 {
+  font-size: 15px;
+  margin: 0 0 8px;
+  color: #555;
+  font-weight: 600;
+}
+
+.health-stat p, .health-stat-item p {
+  font-size: 16px;
+  color: #333;
+  margin: 0;
+  font-weight: 500;
+}
+
+.health-stat-item label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.health-stat-item p {
+  font-weight: 600;
+  color: #333;
+}
+
+/* Health Improvements */
+.health-improvements h3 {
+  font-size: 18px;
+  margin: 0 0 15px;
+  color: #333;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.improvements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.improvement-item {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border-left: 3px solid #2570e8;
+  flex-wrap: wrap;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.improvement-item:hover {
+  background-color: #f0f7ff;
+  transform: translateX(3px);
+}
+
+.improvement-time {
+  min-width: 80px;
+  max-width: 80px;
+  font-weight: 600;
+  color: #2570e8;
+  font-size: 14px;
+}
+
+.improvement-description {
+  flex: 1;
+  font-size: 14px;
+  color: #555;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.completed-icon {
+  color: #28a745;
+  font-size: 18px;
+  margin-left: auto;
+}
+
+.pending-icon {
+  color: #ffa000;
+  font-size: 18px;
+  margin-left: auto;
+}
+
+/* Styles cho header thông tin sức khỏe */
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e5e5e5;
+}
+
+.stats-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
+
+.edit-stats-btn {
+  background: none;
+  border: none;
+  color: #2570e8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.edit-stats-btn:hover {
+  background-color: #f0f8ff;
+  color: #1a5bb8;
+}
+
+/* Styles cho form input khi chỉnh sửa */
+.health-stat input[type="text"], 
+.health-stat textarea,
+.health-stat-item input[type="text"],
+.health-stat select,
+.health-stat-item select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-top: 5px;
+  background-color: white;
+}
+
+.health-stat input[type="text"]:focus, 
+.health-stat textarea:focus,
+.health-stat-item input[type="text"]:focus,
+.health-stat select:focus,
+.health-stat-item select:focus {
+  outline: none;
+  border-color: #2570e8;
+  box-shadow: 0 0 0 2px rgba(37, 112, 232, 0.1);
+}
+
+.health-stat select,
+.health-stat-item select {
+  cursor: pointer;
+}
+
+.health-stat select option,
+.health-stat-item select option {
+  padding: 8px;
+}
+
+.health-stat textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Styles cho improvements header */
+.improvements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e5e5e5;
+}
+
+.improvements-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
+
+.improvements-info {
+  display: flex;
+  align-items: center;
+}
+
+.info-text {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Cập nhật styles cho improvement items */
+.improvement-item.basic {
+  border-left: 4px solid #28a745;
+  background-color: #f8fff8;
+}
+
+.improvement-item.from-plan {
+  border-left: 4px solid #2570e8;
+  background-color: #f8fafe;
+}
+
+.basic-badge {
+  font-size: 12px;
+  background-color: #28a745;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.plan-badge {
+  font-size: 12px;
+  background-color: #2570e8;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.basic-badge {
+  font-size: 12px;
+  background-color: #28a745;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* Styles cho trường hợp không có improvements */
+.no-improvements {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.no-improvements p {
+  margin: 8px 0;
+  color: #666;
+}
+
+.no-improvements p:first-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.save-btn, .cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.save-btn {
+  color: #28a745;
+}
+
+.save-btn:hover {
+  background-color: #f0fff0;
+  color: #1e7e34;
+}
+
+.cancel-btn {
+  color: #dc3545;
+}
+
+.cancel-btn:hover {
+  background-color: #fff5f5;
+  color: #bd2130;
+}
+
+/* Styles cho improvement items đã cải tiến */
+.improvement-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background-color: #fff;
+  transition: all 0.2s ease;
+}
+
+.improvement-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.improvement-item.from-plan {
+  border-left: 4px solid #2570e8;
+  background-color: #f8fafe;
+}
+
+.improvement-status {  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.add-improvement-btn:hover {
+  background-color: #1a5bb8;
+  transform: translateY(-1px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .health-stat-row.two-col {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .improvement-item {
+    padding: 12px;
+  }
+  
+  .improvement-time {
+    min-width: 70px;
+    font-size: 13px;
+  }
+  
+  .stats-header,
+  .improvements-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .improvement-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+    .health-stat input[type="text"], 
+  .health-stat textarea,
+  .health-stat-item input[type="text"],
+  .health-stat select,
+  .health-stat-item select {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
