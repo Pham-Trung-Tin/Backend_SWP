@@ -4,21 +4,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginModal = ({ isOpen, onClose }) => {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
+
     try {
-      const result = await login(email, password, rememberMe);
+      const result = await login(emailOrUsername, password, rememberMe);
       if (result.success) {
         onClose();
         navigate('/'); // Chuyển hướng đến trang home sau khi đăng nhập
@@ -39,21 +39,21 @@ const LoginModal = ({ isOpen, onClose }) => {
     <div className="login-modal-overlay">
       <div className="login-modal">
         <button className="close-button" onClick={onClose}>×</button>
-        
+
         <div className="login-header">
           <h2>Đăng nhập</h2>
           <p>Chào mừng bạn quay trở lại với NoSmoke</p>
         </div>        <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error-message">{error}</div>}
-          
+
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="emailOrUsername">Email hoặc Username</label>
             <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Nhập email của bạn"
+              type="text"
+              id="emailOrUsername"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
+              placeholder="Nhập email hoặc username của bạn"
               disabled={isLoading}
               required
             />
@@ -86,9 +86,9 @@ const LoginModal = ({ isOpen, onClose }) => {
             <Link to="/forgot-password" className="forgot-password" onClick={onClose}>Quên mật khẩu?</Link>
           </div>
 
-          <button 
-            type="submit" 
-            className="login-button" 
+          <button
+            type="submit"
+            className="login-button"
             disabled={isLoading}
           >
             {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
@@ -96,7 +96,7 @@ const LoginModal = ({ isOpen, onClose }) => {
         </form>
 
         <div className="login-footer">
-          <p>Bạn chưa có tài khoản? 
+          <p>Bạn chưa có tài khoản?
             <Link to="/signup" className="signup-link" onClick={onClose}>
               Đăng ký ngay
             </Link>

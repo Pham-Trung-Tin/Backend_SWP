@@ -2,7 +2,6 @@ import { pool } from '../config/database.js';
 
 const createProgressTable = async () => {
     try {
-        console.log('📊 Creating daily_progress table...');
 
         const createTableSQL = `
             CREATE TABLE IF NOT EXISTS daily_progress (
@@ -25,10 +24,8 @@ const createProgressTable = async () => {
         `;
 
         await pool.execute(createTableSQL);
-        console.log('✅ daily_progress table created or already exists');
 
     } catch (error) {
-        console.error('❌ Error creating daily_progress table:', error);
         throw error;
     }
 };

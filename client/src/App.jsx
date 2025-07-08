@@ -12,6 +12,8 @@ import TestPage from "./page/TestPage.jsx"; // Thêm trang test đơn giản
 import Blog from "./page/Blog.jsx"; // Import component Blog
 import Login from "./page/Login.jsx"; // Import component Login
 import Register from "./page/Register.jsx"; // Import component Register
+import ForgotPassword from "./page/ForgotPassword.jsx"; // Import component ForgotPassword
+import EmailVerification from "./page/EmailVerification.jsx"; // Import component EmailVerification
 import MembershipPackage from "./page/MembershipPackage.jsx"; // Import component MembershipPackage
 import BookAppointment from "./page/BookAppointment.jsx"; // Import component BookAppointment
 import ProtectedRoute from "./components/ProtectedRoute.jsx"; // Import ProtectedRoute
@@ -248,6 +250,22 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <Register />
+      </Layout>
+    ),
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <Layout>
+        <ForgotPassword />
+      </Layout>
+    ),
+  },
+  {
+    path: "/verify-email",
+    element: (
+      <Layout>
+        <EmailVerification />
       </Layout>
     ),
   },

@@ -21,9 +21,7 @@ export const createQuitPlanTable = async () => {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
-        console.log('✅ quit_smoking_plan table created or already exists');
     } catch (error) {
-        console.error('❌ Error creating quit_smoking_plan table:', error);
     }
 };
 
