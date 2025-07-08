@@ -184,10 +184,10 @@ The quit plans API is **fully functional** and ready for production use. All end
 1. **Start the servers**:
    ```bash
    # Backend
-   cd server && npm run dev
+   cd server; npm run dev
    
    # Frontend  
-   cd client && npm run dev
+   cd client; npm run dev
    ```
 
 2. **Visit the test page**: http://localhost:5173/api-test

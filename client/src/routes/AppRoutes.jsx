@@ -9,6 +9,7 @@ import PaymentSuccess from '../page/PaymentSuccess';
 import CoachBookings from '../page/coach/CoachBookings';
 import CoachDashboard from '../page/coach/CoachDashboard';
 import Chat from '../page/Chat';
+import UserProfile from '../components/UserProfile';
 
 /**
  * AppRoutes - Cung cấp cấu hình định tuyến (routing) cho toàn bộ ứng dụng
@@ -33,16 +34,16 @@ const router = createBrowserRouter([
   {
     path: "/home",
     loader: () => { return window.location.replace('/') },
-  },  {
+  }, {
     path: "/tools",
     element: <Layout><Tools /></Layout>,
   }, {
-   path: "/settings",
+    path: "/settings",
     element: <Layout><SettingsPage /></Layout>,
-  },  {
+  }, {
     path: "/membership",
     element: <Layout><MembershipPackage /></Layout>,
-  },  {
+  }, {
     path: "/payment",
     element: <Layout><Pay /></Layout>,
   },
@@ -57,6 +58,10 @@ const router = createBrowserRouter([
   {
     path: "/chat",
     element: <Layout><Chat /></Layout>,
+  },
+  {
+    path: "/profile",
+    element: <Layout><UserProfile /></Layout>,
   },
   {
     path: "*",
