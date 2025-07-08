@@ -7,9 +7,8 @@
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.85);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000000;
+  align-items: center;  justify-content: center;
+  z-index: 500; /* Z-index thấp hơn dropdown để không che */
   animation: fadeIn 0.3s ease;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
@@ -38,7 +37,7 @@ body.modal-open {
   animation: slideUp 0.4s cubic-bezier(0.19, 1, 0.22, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative; /* Ensure proper positioning */
-  z-index: 1000001; /* Above the overlay */
+  z-index: 501; /* Above the overlay but below dropdown */
 }
 
 @keyframes slideUp {
@@ -194,7 +193,7 @@ body.modal-open .modal-overlay {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100000;
+  z-index: 500;
 }
 
 /* Transition cho các phần tử */

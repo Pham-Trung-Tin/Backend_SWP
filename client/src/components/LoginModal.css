@@ -55,6 +55,8 @@
 }
 
 .login-header h2 {
+  display: flex;
+  margin-left: 105px;
   color: #2570e8;
   font-size: 24px;
   margin-bottom: 8px;

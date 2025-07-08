@@ -65,9 +65,8 @@ export const validateRegister = [
 export const validateLogin = [
     body('email')
         .trim()
-        .isEmail()
-        .normalizeEmail()
-        .withMessage('Please provide a valid email address'),
+        .notEmpty()
+        .withMessage('Please provide email or username'),
 
     body('password')
         .notEmpty()

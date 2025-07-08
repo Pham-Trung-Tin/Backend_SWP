@@ -1,8 +1,8 @@
 /* User Profile Styles - Updated Layout */
 .user-profile-container {
-  max-width: 1000px;
+  max-width: 1200px; /* Tăng từ 1000px lên 1200px để tận dụng không gian */
   margin: 30px auto;
-  padding: 25px;
+  padding: 30px; /* Tăng từ 25px lên 30px */
   background-color: #fff;
   border-radius: 16px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
@@ -33,11 +33,11 @@
   margin-bottom: 15px;
   background-color: #fff;
   border-radius: 8px;
-  padding: 15px;
+  padding: 30px; /* Tăng từ 25px lên 30px */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   border: 1px solid #eaeef3;
   width: 100%;
-  max-width: 900px;
+  max-width: 1300px; /* Tăng từ 1150px lên 1300px để chứa avatar lớn */
   overflow: hidden; /* Prevent content from overflowing */
 }
 
@@ -55,29 +55,30 @@
 }
 
 .avatar-section {
-  flex: 0 0 140px; /* Increased width to accommodate content */
+  flex: 0 0 280px; /* Tăng từ 160px lên 280px để chứa avatar lớn hơn */
   text-align: center;
   position: relative;
-  margin-right: 20px;
+  margin-right: 30px; /* Tăng từ 25px lên 30px */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 10px 0;
+  padding: 20px 0; /* Tăng từ 15px lên 20px */
   border-right: 1px solid #eaeef3;
-  padding-right: 20px;
-  min-height: 240px; /* Ensure consistent height */
+  padding-right: 30px; /* Tăng từ 25px lên 30px */
+  min-height: 350px; /* Tăng từ 260px lên 350px */
   overflow: visible; /* Allow badges to overflow if needed */
 }
 
-.user-avatar,
-.user-avatar-placeholder {
-  width: 120px;
-  height: 120px;
+/* Avatar chỉ lớn trong profile section */
+.profile-section .user-avatar,
+.profile-section .user-avatar-placeholder {
+  width: 240px !important; /* Tăng gấp đôi từ 120px lên 240px */
+  height: 240px !important; /* Tăng gấp đôi từ 120px lên 240px */
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #2570e8;
-  box-shadow: 0 2px 5px rgba(37, 112, 232, 0.1);
+  border: 3px solid #2570e8; /* Tăng border từ 2px lên 3px */
+  box-shadow: 0 4px 10px rgba(37, 112, 232, 0.15); /* Tăng shadow */
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;
@@ -88,29 +89,29 @@
   margin: 0 auto;
 }
 
-.user-avatar-placeholder svg {
-  font-size: 50px;
+.profile-section .user-avatar-placeholder svg {
+  font-size: 100px !important; /* Tăng gấp đôi từ 50px lên 100px */
   color: #8395a7;
 }
 
 /* Style cho ID người dùng */
 .user-id {
   display: block;
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 12px; /* Tăng từ 8px lên 12px */
+  font-size: 14px; /* Tăng từ 12px lên 14px */
   color: #666;
   background-color: #f0f4f8;
-  padding: 3px 8px;
-  border-radius: 12px;
+  padding: 4px 12px; /* Tăng từ 3px 8px lên 4px 12px */
+  border-radius: 15px; /* Tăng từ 12px lên 15px */
   font-weight: 500;
   text-align: center;
   border: 1px solid #e0e4e8;
   width: fit-content;
-  margin: 8px auto 5px;
+  margin: 12px auto 8px; /* Tăng từ 8px auto 5px */
   white-space: nowrap; /* Prevent ID from wrapping */
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px; /* Ensure it doesn't overflow container */
+  max-width: 240px; /* Tăng từ 120px lên 240px */
 }
 
 /* Loại bỏ hiệu ứng animation gây phân tâm */
@@ -123,8 +124,8 @@
   }
 }
 
-.user-avatar:hover,
-.user-avatar-placeholder:hover {
+.profile-section .user-avatar:hover,
+.profile-section .user-avatar-placeholder:hover {
   transform: scale(1.02);
   box-shadow: 0 3px 6px rgba(37, 112, 232, 0.15);
 }
@@ -134,10 +135,10 @@
   flex-direction: row;
   flex-wrap: wrap;
   flex: 1;
-  gap: 8px;
+  gap: 15px; /* Tăng từ 8px lên 15px để có thêm không gian */
   background-color: transparent;
   border: none;
-  padding: 0 0 0 10px;
+  padding: 0 0 0 15px; /* Tăng từ 10px lên 15px */
   width: 100%;
   overflow: hidden; /* Prevent content from overflowing */
 }
@@ -341,13 +342,13 @@
 
 .profile-section {
   background-color: #fff;
-  padding: 12px 10px; /* Giảm padding ngang */
-  border-radius: 5px; /* Làm giảm border-radius */
-  margin-bottom: 8px; /* Giảm margin-bottom */
+  padding: 18px 15px; /* Tăng từ 12px 10px lên 18px 15px */
+  border-radius: 8px; /* Tăng từ 5px lên 8px */
+  margin-bottom: 12px; /* Tăng từ 8px lên 12px */
   position: relative;
   border: 1px solid #eaeef3;
-  flex: 1 1 calc(50% - 4px); /* Điều chỉnh chiều rộng tương ứng với gap mới */
-  min-width: 250px; /* Đảm bảo chiều rộng tối thiểu */
+  flex: 1 1 calc(50% - 7.5px); /* Điều chỉnh theo gap mới (15px/2 = 7.5px) */
+  min-width: 280px; /* Tăng từ 250px lên 280px */
 }
 
 /* Loại bỏ border và box-shadow cho các profile section trong info-section */
@@ -361,20 +362,20 @@
 }
 
 .profile-section h2 {
-  font-size: 16px;
+  font-size: 18px; /* Tăng từ 16px lên 18px */
   color: #2570e8;
   margin-top: 0;
-  margin-bottom: 8px; /* Giảm margin-bottom */
-  padding-bottom: 6px; /* Giảm padding-bottom */
+  margin-bottom: 12px; /* Tăng từ 8px lên 12px */
+  padding-bottom: 8px; /* Tăng từ 6px lên 8px */
   border-bottom: 1px solid rgba(37, 112, 232, 0.1);
   font-weight: 600;
 }
 
 /* Thêm quy tắc mới để tạo sự thống nhất giữa các section */
 .info-section .profile-section {
-  margin-bottom: 8px; /* Giảm margin-bottom */
+  margin-bottom: 12px; /* Tăng từ 8px lên 12px */
   border-bottom: none; /* Bỏ border-bottom */
-  padding-bottom: 10px; /* Giảm padding-bottom */
+  padding-bottom: 15px; /* Tăng từ 10px lên 15px */
 }
 
 .info-section .profile-section:last-child {
@@ -385,14 +386,14 @@
 .membership-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 5px 15px; /* Tăng từ 3px 10px lên 5px 15px */
+  border-radius: 25px; /* Tăng từ 20px lên 25px */
+  font-size: 14px; /* Tăng từ 12px lên 14px */
   font-weight: 600;
   color: white;
-  margin-top: 8px;
+  margin-top: 12px; /* Tăng từ 8px lên 12px */
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 240px; /* Tăng từ 120px lên 240px */
   overflow: hidden;
   margin-left: auto;
   margin-right: auto;
@@ -473,10 +474,10 @@
 
 .profile-section.quit-reason-section {
   flex: 1 1 100%; /* Chiếm toàn bộ chiều rộng hàng */
-  margin-top: 4px; /* Thêm khoảng cách nhỏ phía trên */
+  margin-top: 8px; /* Tăng từ 4px lên 8px */
   background-color: #fff;
   border-radius: 8px;
-  padding: 15px;
+  padding: 20px; /* Tăng từ 15px lên 20px */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   border: 1px solid #eaeef3;
   position: relative;
@@ -486,17 +487,17 @@
 
 .profile-section.quit-reason-section h2 {
   color: #2570e8;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 18px; /* Tăng từ 15px lên 18px */
+  padding-bottom: 12px; /* Tăng từ 10px lên 12px */
   border-bottom: 1px solid rgba(37, 112, 232, 0.1);
-  font-size: 16px;
+  font-size: 18px; /* Tăng từ 16px lên 18px */
   font-weight: 600;
 }
 
 /* Styling cho textarea trong phần lý do cai thuốc */
 .profile-section.quit-reason-section textarea {
   width: 100%;
-  padding: 10px;
+  padding: 12px; /* Tăng từ 10px lên 12px */
   border: 1px solid #d0d7de;
   border-radius: 6px;
   min-height: 100px;
@@ -632,7 +633,7 @@
 .profile-section.basic-info,
 .profile-section.contact-section,
 .profile-section.security-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px; /* Tăng từ 15px lên 18px */
   background-color: #fff;
   border: 1px solid #eaeef3;
   border-radius: 8px;
@@ -647,7 +648,7 @@
 .profile-section.security-section {
   position: relative;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-  margin-bottom: 15px;
+  margin-bottom: 18px; /* Tăng từ 15px lên 18px */
 }
 
 /* Đảm bảo các trường thông tin hiển thị đồng đều */
@@ -655,10 +656,10 @@
 .info-field select, 
 .info-field textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 15px; /* Tăng từ 10px 12px lên 12px 15px */
   border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 6px; /* Tăng từ 4px lên 6px */
+  font-size: 15px; /* Tăng từ 14px lên 15px */
   color: #333;
   background-color: #fff;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -674,7 +675,7 @@
 
 /* Điều chỉnh hiển thị của textarea trong phần lý do cai thuốc */
 .quit-reason-section textarea {
-  min-height: 80px;
+  min-height: 100px; /* Tăng từ 80px lên 100px */
   resize: vertical;
 }
 
@@ -715,18 +716,21 @@
 /* Responsive styling */
 @media (max-width: 992px) {
   .avatar-info-layout {
-    padding: 20px;
+    padding: 25px; /* Tăng từ 22px lên 25px */
   }
   
   .avatar-section {
-    flex: 0 0 100px;
-    margin-right: 25px;
+    flex: 0 0 200px; /* Tăng từ 120px lên 200px */
+    margin-right: 25px; /* Giảm từ 30px xuống 25px */
+  }
+    .profile-section .user-avatar,
+  .profile-section .user-avatar-placeholder {
+    width: 180px; /* Tăng từ 90px lên 180px */
+    height: 180px;
   }
   
-  .user-avatar,
-  .user-avatar-placeholder {
-    width: 80px;
-    height: 80px;
+  .profile-section .user-avatar-placeholder svg {
+    font-size: 80px; /* Tăng từ 40px lên 80px */
   }
 }
 
@@ -734,20 +738,29 @@
   .avatar-info-layout {
     flex-direction: column;
     align-items: center;
-    padding: 12px;
+    padding: 20px; /* Tăng từ 18px lên 20px */
   }
   
   .avatar-section {
     flex: 0 0 auto;
     width: 100%;
-    max-width: 180px;
+    max-width: 300px; /* Tăng từ 200px lên 300px */
     border-right: none;
     border-bottom: 1px solid #eaeef3;
     padding-right: 0;
-    padding-bottom: 15px;
+    padding-bottom: 20px; /* Tăng từ 18px lên 20px */
     margin-right: 0;
-    margin-bottom: 15px;
+    margin-bottom: 20px; /* Tăng từ 18px lên 20px */
     min-height: auto;
+  }
+    .profile-section .user-avatar,
+  .profile-section .user-avatar-placeholder {
+    width: 160px; /* Tăng từ 120px lên 160px */
+    height: 160px;
+  }
+  
+  .profile-section .user-avatar-placeholder svg {
+    font-size: 70px; /* Tăng từ 50px lên 70px */
   }
   
   .info-section {
@@ -756,89 +769,97 @@
   
   .profile-section {
     width: 100%;
+    min-width: auto; /* Loại bỏ min-width trên mobile */
   }
   
   .info-field {
-    margin-bottom: 8px;
-    padding: 8px 10px;
+    margin-bottom: 10px; /* Tăng từ 8px lên 10px */
+    padding: 10px 12px; /* Tăng từ 8px 10px lên 10px 12px */
   }
   
   .info-field label {
-    font-size: 13px;
+    font-size: 14px; /* Tăng từ 13px lên 14px */
   }
   
   .info-field p {
-    font-size: 14px;
+    font-size: 15px; /* Tăng từ 14px lên 15px */
   }
 }
 
 @media screen and (max-width: 480px) {
   .user-profile-container {
-    padding: 15px;
+    padding: 20px; /* Tăng từ 15px lên 20px */
     margin: 15px auto;
   }
+    .profile-section .user-avatar,
+  .profile-section .user-avatar-placeholder {
+    width: 140px; /* Tăng từ 110px lên 140px */
+    height: 140px;
+  }
   
-  .user-avatar,
-  .user-avatar-placeholder {
-    width: 100px;
-    height: 100px;
+  .profile-section .user-avatar-placeholder svg {
+    font-size: 60px; /* Tăng từ 50px lên 60px */
   }
   
   .user-id {
-    max-width: 100px;
+    max-width: 140px; /* Tăng từ 110px lên 140px */
   }
   
   .membership-badge {
-    padding: 2px 8px;
-    font-size: 11px;
+    padding: 4px 12px; /* Tăng từ 3px 10px lên 4px 12px */
+    font-size: 13px; /* Tăng từ 12px lên 13px */
   }
   
   .edit-button, .save-button, .cancel-button {
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 8px 15px; /* Tăng từ 6px 12px lên 8px 15px */
+    font-size: 14px; /* Tăng từ 13px lên 14px */
   }
 }
 
 /* Mobile-first approach */
 @media screen and (max-width: 480px) {
   .user-profile-container {
-    padding: 15px;
+    padding: 18px; /* Tăng từ 15px lên 18px */
     margin: 10px;
   }
   
   .avatar-info-layout {
-    padding: 15px;
+    padding: 18px; /* Tăng từ 15px lên 18px */
     flex-direction: column;
     align-items: center;
   }
   
   .avatar-section {
     margin-right: 0;
-    margin-bottom: 20px;
+    margin-bottom: 22px; /* Tăng từ 20px lên 22px */
+  }
+    .profile-section .user-avatar,
+  .profile-section .user-avatar-placeholder {
+    width: 120px; /* Tăng từ 100px lên 120px */
+    height: 120px;
   }
   
-  .user-avatar,
-  .user-avatar-placeholder {
-    width: 90px;
-    height: 90px;
+  .profile-section .user-avatar-placeholder svg {
+    font-size: 50px; /* Tăng từ 40px lên 50px */
   }
+  
     .info-section {
     padding: 0;
     width: 100%;
   }
   
   .profile-section {
-    padding: 15px;
+    padding: 18px; /* Tăng từ 15px lên 18px */
   }
   
   .info-field {
-    padding: 10px;
+    padding: 12px; /* Tăng từ 10px lên 12px */
   }
   
   .user-profile-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 12px; /* Tăng từ 10px lên 12px */
   }
   
   .editing-buttons {
@@ -855,7 +876,7 @@
 /* Tablet */
 @media screen and (min-width: 481px) and (max-width: 768px) {
   .user-profile-container {
-    padding: 20px;
+    padding: 25px; /* Tăng từ 20px lên 25px */
   }
     .info-section {
     padding: 0;
@@ -894,34 +915,34 @@
 .profile-section.basic-info {
   order: 1; /* Hiển thị đầu tiên */
   border-left: 3px solid #2570e8; /* Đường viền bên trái màu xanh */
-  margin-bottom: 4px; /* Giảm margin-bottom */
+  margin-bottom: 8px; /* Tăng từ 4px lên 8px */
 }
 
 .profile-section.contact-section {
   order: 1; /* Hiển thị thứ nhất cùng hàng với basic-info */
   border-left: 3px solid #34a853; /* Đường viền bên trái màu xanh lá */
-  margin-bottom: 4px; /* Giảm margin-bottom */
+  margin-bottom: 8px; /* Tăng từ 4px lên 8px */
 }
 
 .profile-section.quit-reason-section {
   order: 3; /* Hiển thị thứ ba - trước security section */
   border-left: 3px solid #fbbc05; /* Đường viền bên trái màu vàng */
   flex: 1 1 100%; /* Chiếm toàn bộ chiều rộng */
-  margin-top: 4px; /* Thêm khoảng cách nhỏ phía trên */
+  margin-top: 8px; /* Tăng từ 4px lên 8px */
 }
 
 .profile-section.security-section {
   order: 2; /* Hiển thị cùng hàng với contact-section */
   border-left: 3px solid #ea4335; /* Đường viền bên trái màu đỏ */
-  margin-bottom: 4px; /* Giảm margin-bottom */
+  margin-bottom: 8px; /* Tăng từ 4px lên 8px */
 }
 
 /* Cải thiện hiển thị các trường thông tin */
 .info-field {
-  margin-bottom: 8px; /* Giảm margin-bottom */
+  margin-bottom: 12px; /* Tăng từ 8px lên 12px */
   background-color: #f9fafb;
-  padding: 8px 10px; /* Giảm padding */
-  border-radius: 5px; /* Giảm border-radius */
+  padding: 12px 15px; /* Tăng từ 8px 10px lên 12px 15px */
+  border-radius: 6px; /* Tăng từ 5px lên 6px */
   box-shadow: none;
   border-left: 2px solid transparent;
   transition: all 0.2s ease;
@@ -943,11 +964,11 @@
 
 /* Cải thiện textarea trong phần lý do */
 .quit-reason-section textarea {
-  min-height: 100px;
+  min-height: 120px; /* Tăng từ 100px lên 120px */
   background-color: #f9fafb;
   border: 1px solid #e0e4e8;
   border-radius: 6px;
-  padding: 10px;
+  padding: 12px; /* Tăng từ 10px lên 12px */
   width: 100%;
   font-family: inherit;
   resize: vertical;
@@ -963,7 +984,7 @@
 /* Style cho phần text lý do khi không ở chế độ sửa */
 .quit-reason-text {
   white-space: pre-line;
-  padding: 10px;
+  padding: 12px; /* Tăng từ 10px lên 12px */
   background-color: #f9fafb;
   border-radius: 6px;
   line-height: 1.5;

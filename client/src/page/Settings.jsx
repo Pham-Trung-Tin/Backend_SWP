@@ -44,20 +44,7 @@ export default function SettingsPage() {
             </label>
           </div>
 
-          <div className="settings-item">
-            <div className="setting-info">
-              <h3>Thông báo Push</h3>
-              <p>Nhận thông báo đẩy trên thiết bị</p>
-            </div>
-            <label className="switch">
-              <input 
-                type="checkbox" 
-                checked={settings.pushNotifications}
-                onChange={(e) => handleSettingsChange('pushNotifications', e.target.checked)}
-              />
-              <span className="slider"></span>
-            </label>
-          </div>
+
 
           <div className="settings-item">
             <div className="setting-info">

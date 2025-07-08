@@ -4,6 +4,8 @@ footer {
   color: white;
   padding: 50px 0 20px;
   font-family: 'Nunito', sans-serif;
+  position: relative;
+  z-index: 0;
 }
 
 footer a {
@@ -166,10 +168,30 @@ footer a:hover {
   top: 30px;
   right: 50%;
   transform: translateX(50%);
+  z-index: 10;
 }
 
 .back-to-top:hover {
   background-color: rgba(255,255,255,0.3);
+}
+
+/* Additional styles to ensure footer doesn't overlay other content */
+.nosmoke-footer {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  clear: both;
+  margin-top: 30px;
+}
+
+/* Ensure container stays within bounds */
+.nosmoke-footer .container {
+  overflow: hidden;
+}
+
+/* Ensure footer doesn't create scrollbar */
+body {
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {
@@ -189,5 +211,5 @@ footer a:hover {
   .footer-bottom-links {
     flex-wrap: wrap;
     justify-content: center;
-  }
+  } 
 }

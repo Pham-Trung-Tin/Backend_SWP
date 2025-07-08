@@ -4,11 +4,11 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
+import quitPlanRoutes from './routes/quitPlanRoutes.js';
+import progressRoutes from './routes/progressRoutes.js';
 import ensureTablesExist from './ensureTables.js';
-import path from 'path';
 
-// Load environment variables --
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -51,6 +51,17 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/quit-plans', quitPlanRoutes);
+app.use('/api/progress', progressRoutes);
+
 // Test database connection
 await testConnection();
 // Ensure all required tables exist on startup
@@ -66,13 +77,6 @@ app.get('/health', (req, res) => {
         version: '1.0.0'
     });
 });
-
-// Static files for uploads
-app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
-
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

@@ -45,6 +45,8 @@
   margin: 0;
   font-size: 12px;
   opacity: 0.9;
+  color: #4caf50;
+  font-weight: 500;
 }
 
 .coach-avatar-small {
@@ -59,16 +61,19 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid white;
+  position: relative;
+  z-index: 1;
 }
 
 .coach-status {
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 2px;
+  right: 2px;
   width: 12px;
   height: 12px;
   border-radius: 50%;
   border: 2px solid white;
+  z-index: 10;
 }
 
 .coach-status.online {
@@ -107,6 +112,7 @@
 
 .user-message {
   flex-direction: row-reverse;
+  align-items: flex-end;
 }
 
 .coach-avatar-mini {
@@ -122,6 +128,74 @@
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.coach-avatar-mini:hover img {
+  transform: scale(1.05);
+}
+
+.coach-avatar-mini:hover::after {
+  content: attr(data-username);
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 1;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-avatar-mini {
+  width: 28px;
+  height: 28px;
+  margin: 0 8px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.user-avatar-mini img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #2570e8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.user-avatar-mini:hover img {
+  transform: scale(1.05);
+}
+
+.user-avatar-mini:hover::after {
+  content: attr(data-username);
+  position: absolute;
+  bottom: 35px;
+  right: 50%;
+  transform: translateX(50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 1;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .user-avatar {
@@ -284,6 +358,60 @@
   font-size: 16px;
 }
 
+/* Cải thiện tooltip appearance */
+.coach-avatar-mini:hover::after,
+.user-avatar-mini:hover::after {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Cải thiện spacing và alignment */
+.user-message {
+  align-items: flex-end;
+}
+
+.coach-message {
+  align-items: flex-end;
+}
+
+/* New message indicator */
+.new-message-indicator {
+  background-color: #ff5722;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: auto;
+  animation: pulse 1s infinite;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Responsive styles */
 @media (max-width: 480px) {
   .coach-chat-overlay {
@@ -294,5 +422,12 @@
   .coach-chat-container {
     width: calc(100vw - 20px);
     height: 450px;
+  }
+
+  /* Responsive tooltip */
+  .coach-avatar-mini:hover::after,
+  .user-avatar-mini:hover::after {
+    font-size: 10px;
+    padding: 4px 8px;
   }
 }

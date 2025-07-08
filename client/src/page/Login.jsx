@@ -4,32 +4,35 @@ import './Login.css';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   // Get the redirect path from location state or default to home
   const from = location.state?.from || '/';
-  // Redirect to home if already logged in
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from);
-    }
-  }, [isAuthenticated, navigate, from]);
+
+  // Removed auto-redirect on mount to prevent issues with page reload
+  // Users will only be redirected when they actively submit the login form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      const result = await login(email, password, rememberMe);
+      const result = await login(emailOrUsername, password, rememberMe);
       if (result.success) {
-        navigate(from);
+        // Redirect based on user role
+        if (result.user && result.user.role === 'coach') {
+          navigate('/coach');
+        } else {
+          navigate(from);
+        }
       } else {
         setError(result.error || 'Đăng nhập không thành công');
       }
@@ -52,13 +55,13 @@ export default function Login() {
             {error && <div className="error-message">{error}</div>}
 
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="emailOrUsername">Email hoặc Username</label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Nhập email của bạn"
+                type="text"
+                id="emailOrUsername"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
+                placeholder="Nhập email hoặc username của bạn"
                 disabled={isLoading}
                 required
               />
