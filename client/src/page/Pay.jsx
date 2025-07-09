@@ -591,6 +591,9 @@
 
 // export default Pay;
 
+//=====================================================================================================//
+
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -644,7 +647,9 @@ const Pay = () => {
     setIsProcessing(true);
     setProcessingMessage(`Đang xử lý thanh toán qua ${paymentMethod}...`);
 
-    const token = localStorage.getItem('token');
+    // Get token from both localStorage and sessionStorage to match AuthContext storage pattern
+    const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+    console.log('Token status:', token ? 'Token found' : 'No token found');
     if (!token) return alert('Bạn cần đăng nhập để thanh toán.');
 
     const backendMethod = {
@@ -694,7 +699,8 @@ const Pay = () => {
           replace: true,
           state: { package: selectedPackage, paymentMethod, paymentId, transactionId, orderId }
         });
-      } else {
+      } 
+      else {
         throw new Error(res.data.message || 'Tạo thanh toán thất bại');
       }
     } catch (err) {

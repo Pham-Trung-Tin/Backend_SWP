@@ -84,8 +84,9 @@ const PaymentSuccess = () => {
   const checkPaymentStatus = async (paymentId) => {
     setIsLoadingBackend(true);
     try {
-      // Lấy token xác thực từ localStorage
-      const token = localStorage.getItem('token');
+      // Lấy token xác thực từ localStorage hoặc sessionStorage
+      const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+      console.log('Token status:', token ? 'Token found' : 'No token found');
       
       if (!token) {
         console.warn('Token không tồn tại, không thể kiểm tra trạng thái thanh toán');
@@ -186,8 +187,9 @@ const PaymentSuccess = () => {
       // Kiểm tra thông tin membership từ backend
       const fetchUserMembership = async () => {
         try {
-          // Lấy token xác thực từ localStorage
-          const token = localStorage.getItem('token');
+          // Lấy token xác thực từ localStorage hoặc sessionStorage
+          const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+          console.log('Membership fetch - Token status:', token ? 'Token found' : 'No token found');
           
           if (token) {
             // Gọi API kiểm tra thông tin người dùng
