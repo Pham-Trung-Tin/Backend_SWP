@@ -27,17 +27,21 @@
         "test-payment-history": "node src/scripts/test-payment-history-api.js",
         "test-payment-verify": "node src/scripts/test-payment-verify-endpoints.js",
         "create-test-user": "node src/scripts/create-test-user.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "zalopay": "nodemon zalopay/server.js"
     },
     "dependencies": {
+        "axios": "^1.10.0",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
+        "crypto-js": "^4.2.0",
         "dotenv": "^16.3.1",
         "express": "^4.21.2",
         "express-rate-limit": "^7.1.5",
         "express-validator": "^7.0.1",
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
+        "moment": "^2.30.1",
         "multer": "^2.0.1",
         "mysql2": "^3.6.5",
         "node-fetch": "^3.3.2",
