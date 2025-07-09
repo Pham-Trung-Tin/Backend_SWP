@@ -26,7 +26,9 @@
         "test-payment-endpoints": "node src/scripts/test-payment-endpoints.js",
         "test-payment-history": "node src/scripts/test-payment-history-api.js",
         "test-payment-verify": "node src/scripts/test-payment-verify-endpoints.js",
-        "create-test-user": "node src/scripts/create-test-user.js",
+        "test-zalopay": "node src/scripts/test-zalopay.js",
+        "test-zalopay-integrated": "node src/scripts/test-zalopay-integrated.js",
+        "alter-payment-tables": "node src/scripts/alter-payment-tables.js",
         "test": "echo \"Error: no test specified\" && exit 1",
         "zalopay": "nodemon zalopay/server.js"
     },
@@ -45,7 +47,8 @@
         "multer": "^2.0.1",
         "mysql2": "^3.6.5",
         "node-fetch": "^3.3.2",
-        "nodemailer": "^6.10.1"
+        "nodemailer": "^6.10.1",
+        "qs": "^6.11.2"
     },
     "devDependencies": {
         "nodemon": "^3.0.2"

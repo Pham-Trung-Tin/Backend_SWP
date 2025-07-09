@@ -652,56 +652,99 @@ const Pay = () => {
     console.log('Token status:', token ? 'Token found' : 'No token found');
     if (!token) return alert('Bạn cần đăng nhập để thanh toán.');
 
-    const backendMethod = {
-      creditCard: 'credit_card', momo: 'momo', zalopay: 'vnpay', paypal: 'other'
-    }[paymentMethod] || 'other';
-
-    const totalAmount = selectedPackage.price || 0;
-
-    const paymentData = {
-      packageId: selectedPackage.id,
-      amount: totalAmount,
-      paymentMethod: backendMethod,
-      paymentStatus: 'pending',
-      paymentDetails: {
-        packageName: selectedPackage.name,
-        price: selectedPackage.price,
-        totalAmount,
-        paymentTime: new Date().toISOString(),
-        ...(paymentMethod === 'creditCard' && {
-          cardInfo: {
-            cardName: cardInfo.cardName,
-            cardNumberLast4: cardInfo.cardNumber.slice(-4)
-          }
-        })
-      }
-    };
-
     try {
-      const res = await axios.post('/api/payments/create', paymentData, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-      });
+      // Xử lý đặc biệt cho ZaloPay
+      if (paymentMethod === 'zalopay') {
+        const zaloPayData = {
+          packageId: selectedPackage.id,
+          amount: selectedPackage.price,
+          redirectUrl: `${window.location.origin}/payment/success` // URL để chuyển hướng sau khi thanh toán
+        };
 
-      if (res.data.success) {
-        const { id: paymentId, transaction_id } = res.data.data;
-        const transactionId = transaction_id || `${backendMethod}_${Date.now()}`;
-        const orderId = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        console.log('Gọi API ZaloPay với dữ liệu:', zaloPayData);
+        
+        const zaloPayRes = await axios.post('/api/payments/zalopay/create', zaloPayData, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-        await axios.post('/api/payments/verify', {
-          transactionId,
-          paymentStatus: 'completed',
-          paymentMethod: backendMethod,
+        console.log('ZaloPay API response:', zaloPayRes.data);
+
+        if (zaloPayRes.data.success) {
+          // Lấy order_url từ đúng vị trí trong response
+          // Có thể order_url nằm trực tiếp trong data hoặc trong data.data
+          const order_url = zaloPayRes.data.order_url || (zaloPayRes.data.data && zaloPayRes.data.data.order_url);
+          
+          if (order_url) {
+            console.log('Chuyển hướng đến ZaloPay URL:', order_url);
+            // Lưu thông tin gói để sau khi thanh toán quay lại
+            localStorage.setItem('pendingPaymentPackage', JSON.stringify(selectedPackage));
+            localStorage.setItem('selectedPackage', JSON.stringify(selectedPackage));
+            
+            // Chuyển hướng người dùng đến trang thanh toán ZaloPay
+            window.location.href = order_url;
+            return;
+          } else {
+            console.error('ZaloPay response không có order_url:', zaloPayRes.data);
+            throw new Error('Không nhận được URL thanh toán từ ZaloPay');
+          }
+        } else {
+          throw new Error(zaloPayRes.data.message || 'Tạo thanh toán ZaloPay thất bại');
+        }
+      } else {
+        // Xử lý cho các phương thức thanh toán khác
+        const backendMethod = {
+          creditCard: 'credit_card', momo: 'momo', paypal: 'other'
+        }[paymentMethod] || 'other';
+
+        const totalAmount = selectedPackage.price || 0;
+
+        const paymentData = {
+          packageId: selectedPackage.id,
           amount: totalAmount,
-          paymentDetails: { orderId, paymentTime: new Date().toISOString() }
+          paymentMethod: backendMethod,
+          paymentStatus: 'pending',
+          paymentDetails: {
+            packageName: selectedPackage.name,
+            price: selectedPackage.price,
+            totalAmount,
+            paymentTime: new Date().toISOString(),
+            ...(paymentMethod === 'creditCard' && {
+              cardInfo: {
+                cardName: cardInfo.cardName,
+                cardNumberLast4: cardInfo.cardNumber.slice(-4)
+              }
+            })
+          }
+        };
+
+        const res = await axios.post('/api/payments/create', paymentData, {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
         });
 
-        navigate('/payment/success', {
-          replace: true,
-          state: { package: selectedPackage, paymentMethod, paymentId, transactionId, orderId }
-        });
-      } 
-      else {
-        throw new Error(res.data.message || 'Tạo thanh toán thất bại');
+        if (res.data.success) {
+          const { id: paymentId, transaction_id } = res.data.data;
+          const transactionId = transaction_id || `${backendMethod}_${Date.now()}`;
+          const orderId = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+          await axios.post('/api/payments/verify', {
+            transactionId,
+            paymentStatus: 'completed',
+            paymentMethod: backendMethod,
+            amount: totalAmount,
+            paymentDetails: { orderId, paymentTime: new Date().toISOString() }
+          });
+
+          navigate('/payment/success', {
+            replace: true,
+            state: { package: selectedPackage, paymentMethod, paymentId, transactionId, orderId }
+          });
+        } 
+        else {
+          throw new Error(res.data.message || 'Tạo thanh toán thất bại');
+        }
       }
     } catch (err) {
       console.error('Payment error:', err);

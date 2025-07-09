@@ -1,8 +1,12 @@
 import express from 'express';
 import paymentController from '../controllers/paymentController.js';
+import zaloPayRoutes from './zaloPayRoutes.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// Include ZaloPay routes
+router.use('/', zaloPayRoutes);
 
 /**
  * @route POST /api/payments/create

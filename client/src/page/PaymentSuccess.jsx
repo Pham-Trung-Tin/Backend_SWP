@@ -131,10 +131,94 @@ const PaymentSuccess = () => {
     }
   };
   
+  // Hàm kiểm tra trạng thái thanh toán ZaloPay
+  const checkZaloPayStatus = async (transactionId) => {
+    setIsLoadingBackend(true);
+    try {
+      const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+      if (!token) {
+        console.warn('Token không tồn tại, không thể kiểm tra trạng thái thanh toán ZaloPay');
+        setIsLoadingBackend(false);
+        setErrorMessage('Không thể xác thực người dùng');
+        return;
+      }
+      
+      // Gọi API kiểm tra trạng thái thanh toán ZaloPay
+      console.log(`Đang kiểm tra trạng thái thanh toán ZaloPay với transaction_id: ${transactionId}`);
+      const response = await axios.get(`/api/payments/zalopay/status/${transactionId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Kết quả kiểm tra ZaloPay:', response.data);
+      
+      if (response.data.success) {
+        // Nếu trạng thái thành công, lấy thông tin gói đã lưu
+        if (response.data.data.return_code === 1) {
+          setPaymentStatus('completed');
+          try {
+            // Lấy thông tin gói đã lưu trước đó
+            const savedPackage = JSON.parse(localStorage.getItem('pendingPaymentPackage'));
+            if (savedPackage) {
+              setPackageInfo(savedPackage);
+              setPaymentMethod('zalopay');
+              localStorage.removeItem('pendingPaymentPackage');
+            } else {
+              // Nếu không có thông tin gói, lấy từ API
+              const userToken = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+              const membershipResponse = await axios.get('/api/users/membership', {
+                headers: {
+                  'Authorization': `Bearer ${userToken}`
+                }
+              });
+              if (membershipResponse.data.success) {
+                setPackageInfo(membershipResponse.data.data.package);
+              }
+            }
+          } catch (e) {
+            console.error('Lỗi khi lấy thông tin gói:', e);
+          }
+        } else {
+          setPaymentStatus('failed');
+          setErrorMessage('Thanh toán không thành công: ' + response.data.data.return_message);
+        }
+      } else {
+        setPaymentStatus('failed');
+        setErrorMessage('Không thể kiểm tra trạng thái thanh toán');
+      }
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra trạng thái ZaloPay:', error);
+      setPaymentStatus('unknown');
+      setErrorMessage('Lỗi khi kiểm tra thanh toán');
+    } finally {
+      setIsLoadingBackend(false);
+    }
+  };
+  
   // Initialize component with payment data
-  useEffect(() => {
-    // Try to get data from location state first
-    if (location.state?.package) {
+  useEffect(() => {      // Kiểm tra URL params từ ZaloPay redirect
+    const urlParams = new URLSearchParams(window.location.search);
+    const appTransId = urlParams.get('apptransid');
+    
+    if (appTransId) {
+      // Nếu có transaction ID từ URL, kiểm tra trạng thái ZaloPay
+      setTransactionId(appTransId);
+      checkZaloPayStatus(appTransId);
+      
+      // Lấy thông tin gói từ localStorage
+      try {
+        const savedPackage = JSON.parse(localStorage.getItem('selectedPackage'));
+        if (savedPackage) {
+          setPackageInfo(savedPackage);
+          setPaymentMethod('zalopay');
+        }
+      } catch (e) {
+        console.error('Lỗi khi lấy thông tin gói từ localStorage:', e);
+      }
+    }
+    // Nếu không có params, sử dụng location state như trước
+    else if (location.state?.package) {
       setPackageInfo(location.state.package);
       setPaymentMethod(location.state.paymentMethod);
       setPaymentId(location.state.paymentId);

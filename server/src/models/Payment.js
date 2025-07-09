@@ -121,6 +121,40 @@ export const getUserPayments = async (userId) => {
 };
 
 /**
+ * Lấy thanh toán theo transaction_id
+ * @param {string} transactionId - Transaction ID của thanh toán
+ * @returns {Object|null} - Bản ghi thanh toán hoặc null nếu không tìm thấy
+ */
+export const getPaymentByTransactionId = async (transactionId) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT * FROM payments WHERE transaction_id = ?`,
+      [transactionId]
+    );
+    
+    if (rows.length === 0) {
+      return null;
+    }
+    
+    const payment = rows[0];
+    
+    // Parse payment_details JSON
+    if (payment.payment_details && typeof payment.payment_details === 'string') {
+      try {
+        payment.payment_details = JSON.parse(payment.payment_details);
+      } catch (e) {
+        // Ignore parse errors, keep as string
+      }
+    }
+    
+    return payment;
+  } catch (error) {
+    console.error('❌ Error getting payment by transaction ID:', error);
+    throw error;
+  }
+};
+
+/**
  * Cập nhật trạng thái thanh toán
  * @param {number} paymentId - ID của thanh toán cần cập nhật
  * @param {string} newStatus - Trạng thái mới ('pending', 'completed', 'failed', 'refunded')

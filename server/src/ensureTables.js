@@ -3,6 +3,7 @@ import { ensureTablesExist as ensureAuthTables } from './controllers/authControl
 import { ensurePackageTable } from './models/Package.js';
 import { ensureMembershipTables } from './models/Membership.js';
 import { ensurePaymentsTable } from './models/Payment.js';
+import { ensurePaymentTransactionsTable } from './models/PaymentTransaction.js';
 import { ensureCoachTables } from './models/CoachTables.js';
 
 const ensureAllTables = async () => {
@@ -10,6 +11,7 @@ const ensureAllTables = async () => {
   await ensurePackageTable();
   await ensureMembershipTables();
   await ensurePaymentsTable();
+  await ensurePaymentTransactionsTable();
   await ensureCoachTables();
 };
 

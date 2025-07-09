@@ -318,7 +318,7 @@ app.post("/payment", async (req, res) => {
         amount,
         description: `NoSmoke - Gói ${packageName} [${app_trans_id}]`,
         bank_code: "",
-        callback_url: "http://localhost:5000/callback"
+        callback_url: "http://localhost:5001/callback"
     };
 
     const data = `${order.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
@@ -410,7 +410,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.listen(5000, () => {
-    console.log("ZaloPay server is running on port 5000");
-    console.log("Test interface available at http://localhost:5000/");
+app.listen(5001, () => {
+    console.log("ZaloPay server is running on port 5001");
+    console.log("Test interface available at http://localhost:5001/");
 });
