@@ -1,4 +1,4 @@
-import { body, validationResult } from 'express-validator';
+import { body, validationResult, oneOf } from 'express-validator';
 import { sendValidationError } from '../utils/response.js';
 
 // Validation rules for registration
@@ -63,11 +63,22 @@ export const validateRegister = [
 
 // Validation rules for login
 export const validateLogin = [
-    body('email')
-        .trim()
-        .isEmail()
-        .normalizeEmail()
-        .withMessage('Please provide a valid email address'),
+    oneOf([
+        // Validate email nếu được cung cấp
+        body('email')
+            .exists()
+            .trim()
+            .isEmail()
+            .normalizeEmail()
+            .withMessage('Please provide a valid email address'),
+
+        // Validate username nếu được cung cấp
+        body('username')
+            .exists()
+            .trim()
+            .isLength({ min: 3 })
+            .withMessage('Username must be at least 3 characters')
+    ]),
 
     body('password')
         .notEmpty()

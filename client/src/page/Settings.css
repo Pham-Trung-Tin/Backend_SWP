@@ -132,3 +132,74 @@ input:checked + .slider:before {
 .save-settings-btn:hover {
   background-color: #218838;
 }
+
+/* Link styled as button */
+a.settings-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* Delete account confirmation */
+.delete-confirmation {
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #fff0f0;
+  border: 1px solid #ffcccc;
+  border-radius: 4px;
+}
+
+.delete-warning {
+  color: #dc3545;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.delete-confirmation input {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.delete-confirmation input:focus {
+  border-color: #dc3545;
+  outline: none;
+}
+
+.delete-error {
+  color: #dc3545;
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.delete-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.settings-btn.cancel {
+  background-color: #6c757d;
+}
+
+.settings-btn.cancel:hover {
+  background-color: #5a6268;
+}
+
+/* Security zone */
+.security-zone {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #17a2b8;
+}
+
+/* Danger zone */
+.danger-zone {
+  background-color: #fff8f8;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #dc3545;
+}

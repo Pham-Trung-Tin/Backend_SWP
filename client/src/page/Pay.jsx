@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Pay.css';
 import { FaCreditCard, FaWallet, FaMoneyBillWave, FaPaypal } from 'react-icons/fa';
+import axios from 'axios';
 
 const Pay = () => {
   const location = useLocation();
@@ -21,13 +22,90 @@ const Pay = () => {
   const [processingMessage, setProcessingMessage] = useState('');
 
   useEffect(() => {
-    // Kiểm tra nếu có dữ liệu từ trang chọn gói
+    console.log('Pay.jsx useEffect - Kiểm tra dữ liệu gói');
+    console.log('Location state:', location.state);
+    
+    // Kiểm tra nếu có dữ liệu từ trang chọn gói qua location.state
     if (location.state && location.state.package) {
-      setSelectedPackage(location.state.package);
-    } else {
-      // Nếu không có dữ liệu, chuyển về trang chọn gói
-      navigate('/membership');
+      console.log('Nhận dữ liệu từ location.state:', location.state.package);
+      
+      // Kiểm tra xem dữ liệu package có hợp lệ không
+      if (location.state.package && typeof location.state.package === 'object') {
+        const packageData = location.state.package;
+        
+        // Đảm bảo gói có các thuộc tính cần thiết
+        if (!packageData.name) {
+          console.warn('Package is missing name property:', packageData);
+          packageData.name = packageData.membershipType === 'free' ? 'Free' : 
+                             packageData.membershipType === 'premium' ? 'Premium' : 
+                             packageData.membershipType === 'pro' ? 'Pro' : 'Unknown Package';
+        }
+        
+        if (!packageData.id) {
+          console.warn('Package is missing id property:', packageData);
+          packageData.id = packageData.membershipType === 'free' ? '1' : 
+                          packageData.membershipType === 'premium' ? '2' : 
+                          packageData.membershipType === 'pro' ? '3' : '1';
+        }
+        
+        if (typeof packageData.price !== 'number') {
+          console.warn('Package price is not a number:', packageData.price);
+          packageData.price = Number(packageData.price) || 0;
+        }
+        
+        console.log('Dữ liệu gói đã được chuẩn hóa:', packageData);
+        setSelectedPackage(packageData);
+        
+        // Lưu vào localStorage để bảo hiểm nếu trang bị refresh
+        try {
+          const packageJson = JSON.stringify(packageData);
+          console.log('Dữ liệu JSON trước khi lưu:', packageJson);
+          localStorage.setItem('selectedPackage', packageJson);
+          console.log('Đã sao lưu gói vào localStorage từ location.state');
+        } catch (error) {
+          console.error('Lỗi khi lưu gói vào localStorage:', error);
+        }
+        return;
+      } else {
+        console.error('Dữ liệu package từ location.state không hợp lệ:', location.state.package);
+      }
+    } 
+    
+    // Nếu không có trong location.state, thử lấy từ localStorage
+    try {
+      const storedPackage = localStorage.getItem('selectedPackage');
+      if (storedPackage && storedPackage !== 'undefined' && storedPackage !== 'null') {
+        console.log('Raw stored package data:', storedPackage);
+        const packageData = JSON.parse(storedPackage);
+        console.log('Nhận dữ liệu từ localStorage:', packageData);
+        setSelectedPackage(packageData);
+        return;
+      } else {
+        console.log('Không có dữ liệu gói hợp lệ trong localStorage, giá trị nhận được:', storedPackage);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy dữ liệu từ localStorage:', error);
     }
+    
+    // Nếu không có dữ liệu từ cả hai nguồn, chuyển về trang chọn gói
+    console.log('Không tìm thấy dữ liệu gói, chuyển hướng về trang membership');
+    navigate('/membership');
+    
+    // Không xóa dữ liệu ngay trong cleanup function để tránh mất dữ liệu khi chuyển trang
+    // Chỉ cần dọn dẹp khi thực sự cần thiết (sau khi thanh toán hoàn tất)
+    return () => {
+      // Kiểm tra xem có đang chuyển đến trang thành công không
+      if (window.location.pathname === '/payment/success') {
+        try {
+          localStorage.removeItem('selectedPackage');
+          console.log('Đã xóa dữ liệu gói khỏi localStorage khi thanh toán thành công');
+        } catch (e) {
+          console.error('Lỗi khi xóa dữ liệu từ localStorage:', e);
+        }
+      } else {
+        console.log('Giữ lại dữ liệu gói trong localStorage khi chuyển trang');
+      }
+    };
   }, [location, navigate]);
 
   // Xử lý thay đổi phương thức thanh toán
@@ -43,13 +121,42 @@ const Pay = () => {
       [name]: value
     });
   };  // Xử lý khi nhấn nút thanh toán
-  const handlePayment = (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
+    console.log('Bắt đầu xử lý thanh toán với gói:', selectedPackage);
     
     if (!termsAccepted) {
       alert('Vui lòng đồng ý với điều khoản sử dụng dịch vụ');
       return;
     }
+    
+    if (!selectedPackage) {
+      console.error('Lỗi: Không có thông tin gói được chọn!');
+      alert('Không tìm thấy thông tin gói. Vui lòng thử lại.');
+      navigate('/membership');
+      return;
+    }
+    
+    // Kiểm tra xem gói có đủ thông tin cần thiết không
+    if (!selectedPackage.price || !selectedPackage.name) {
+      console.error('Lỗi: Gói không có đủ thông tin cần thiết:', selectedPackage);
+      alert('Thông tin gói không đầy đủ. Vui lòng thử lại.');
+      navigate('/membership');
+      return;
+    }
+    
+    // Đảm bảo gói có ID
+    if (!selectedPackage.id) {
+      console.log('Thiếu ID gói, đang thêm ID dựa vào loại membership:', selectedPackage.membershipType);
+      const membershipTypeToId = {
+        'free': '1',
+        'premium': '2', 
+        'pro': '3'
+      };
+      selectedPackage.id = membershipTypeToId[selectedPackage.membershipType] || '1';
+    }
+    
+    console.log('Thông tin gói hợp lệ, tiếp tục xử lý thanh toán...');
 
     // Hiển thị loading hoặc thông báo đang xử lý thanh toán dựa trên phương thức thanh toán
     setIsProcessing(true);
@@ -73,25 +180,149 @@ const Pay = () => {
         message = 'Đang xử lý thanh toán...';
     }
     
+    console.log(`Phương thức thanh toán: ${paymentMethod}, Thông báo: ${message}`);
+    
     setProcessingMessage(message);
     
-    // Mô phỏng quá trình thanh toán (giả lập delay để tạo trải nghiệm thực tế hơn)
     console.log(`Đang xử lý thanh toán gói ${selectedPackage.name} với giá ${selectedPackage.price.toLocaleString()}đ qua ${paymentMethod}`);
     
-    // Mô phỏng thời gian xử lý thanh toán
-    setTimeout(() => {
-      // Cập nhật gói thành viên của người dùng
-      updateUser({ membershipType: selectedPackage.name.toLowerCase() });
+    try {
+      // Lấy token xác thực từ localStorage
+      const token = localStorage.getItem('token');
       
-      // Chuyển hướng người dùng sau khi thanh toán - sử dụng replace để không thể quay lại
-      navigate('/payment/success', { 
-        replace: true,
-        state: { 
-          package: selectedPackage,
-          paymentMethod: paymentMethod
-        } 
+      if (!token) {
+        throw new Error('Bạn cần đăng nhập để thực hiện thanh toán');
+      }
+      
+      // Map phương thức thanh toán frontend sang backend
+      const backendPaymentMethod = {
+        'creditCard': 'credit_card',
+        'momo': 'momo',
+        'zalopay': 'vnpay', // Giả định zalopay trên frontend map sang vnpay trên backend
+        'paypal': 'other'
+      }[paymentMethod] || 'other';
+      
+      // Chuẩn bị dữ liệu thanh toán
+      const paymentData = {
+        packageId: selectedPackage.id,
+        amount: totalAmount,
+        paymentMethod: backendPaymentMethod,
+        paymentStatus: 'pending',
+        paymentDetails: {
+          packageName: selectedPackage.name,
+          price: selectedPackage.price,
+          vat: vat,
+          totalAmount: totalAmount,
+          paymentTime: new Date().toISOString()
+        }
+      };
+      
+      // Thêm thông tin thẻ nếu phương thức thanh toán là thẻ tín dụng
+      if (paymentMethod === 'creditCard') {
+        paymentData.paymentDetails.cardInfo = {
+          cardName: cardInfo.cardName,
+          cardNumberLast4: cardInfo.cardNumber.slice(-4) // Chỉ lưu 4 số cuối vì lý do bảo mật
+        };
+      }
+      
+      // Gọi API tạo thanh toán
+      console.log('Gọi API tạo thanh toán với dữ liệu:', paymentData);
+      const response = await axios.post('/api/payments/create', paymentData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
-    }, 2000); // Giả lập delay 2 giây
+      
+      console.log('Kết quả API tạo thanh toán:', response.data);
+      
+      if (response.data.success) {
+        const paymentId = response.data.data.id;
+        // Lưu transaction ID để sử dụng trong bước xác minh
+        // Nếu backend không trả về transaction_id, tạo một cái tạm thời
+        const transactionId = response.data.data.transaction_id || `${backendPaymentMethod}_${Date.now()}`;
+        
+        // Lưu thông tin giao dịch vào sessionStorage để dùng khi cần
+        sessionStorage.setItem('pendingPayment', JSON.stringify({
+          paymentId,
+          transactionId,
+          packageInfo: selectedPackage,
+          paymentMethod,
+          amount: totalAmount,
+          timestamp: new Date().toISOString()
+        }));
+        
+        // Mô phỏng gọi API xác minh thanh toán (trong thực tế sẽ do cổng thanh toán callback)
+        // Trong production, đoạn này sẽ được thực hiện bởi cổng thanh toán và gọi API backend trực tiếp
+        try {
+          console.log('Mô phỏng xác minh thanh toán với transactionId:', transactionId);
+          
+          // Tạo mã đơn hàng ngẫu nhiên
+          const orderId = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          
+          // Gọi API xác minh thanh toán
+          const verifyResponse = await axios.post('/api/payments/verify', {
+            transactionId: transactionId,
+            paymentStatus: 'completed', // Giả sử thanh toán thành công
+            paymentMethod: backendPaymentMethod,
+            amount: totalAmount,
+            paymentDetails: {
+              orderId: orderId,
+              paymentTime: new Date().toISOString()
+            }
+          });
+          
+          console.log('Kết quả API xác minh thanh toán:', verifyResponse.data);
+          
+          if (verifyResponse.data.success) {
+            // Lưu thông tin thanh toán thành công để hiển thị ở trang success
+            const successData = {
+              package: selectedPackage,
+              paymentMethod: paymentMethod,
+              paymentId: paymentId,
+              transactionId: transactionId,
+              orderId: orderId
+            };
+            
+            // Chuyển hướng người dùng sau khi thanh toán - sử dụng replace để không thể quay lại
+            navigate('/payment/success', { 
+              replace: true,
+              state: successData 
+            });
+          } else {
+            throw new Error(verifyResponse.data.message || 'Xác minh thanh toán thất bại');
+          }
+        } catch (verifyError) {
+          console.error('Lỗi xác minh thanh toán:', verifyError);
+          setIsProcessing(false);
+          
+          // Thông báo lỗi chi tiết hơn
+          let errorMessage = 'Xác minh thanh toán thất bại';
+          if (verifyError.response && verifyError.response.data) {
+            errorMessage = verifyError.response.data.message || errorMessage;
+          } else if (verifyError.message) {
+            errorMessage = verifyError.message;
+          }
+          
+          alert(`Thanh toán không thành công: ${errorMessage}`);
+        }
+      } else {
+        throw new Error(response.data.message || 'Tạo thanh toán thất bại');
+      }
+    } catch (error) {
+      console.error('Lỗi khi thanh toán:', error);
+      setIsProcessing(false);
+      
+      // Thông báo lỗi chi tiết hơn
+      let errorMessage = 'Thanh toán thất bại';
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Thanh toán thất bại: ${errorMessage}`);
+    }
   };
 
   // Xử lý nút quay lại
@@ -129,9 +360,10 @@ const Pay = () => {
     );
   }
 
-  // Tính VAT và tổng tiền
-  const vat = selectedPackage.price * 0.1;
-  const totalAmount = selectedPackage.price + vat;
+  // Tính VAT và tổng tiền - đảm bảo giá trị hợp lệ
+  const price = selectedPackage && selectedPackage.price ? Number(selectedPackage.price) : 0;
+  const vat = price * 0.1;
+  const totalAmount = price + vat;
 
   return (
     <div className="payment-container">

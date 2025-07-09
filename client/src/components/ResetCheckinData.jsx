@@ -1,7 +1,6 @@
 import React from 'react';
 
-const ResetCheckinData = () => {
-  const handleReset = () => {
+const ResetCheckinData = ({ onDataReset }) => {  const handleReset = () => {
     // Xóa tất cả dữ liệu check-in từ localStorage
     const keys = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -11,7 +10,27 @@ const ResetCheckinData = () => {
       }
     }
     
+    console.log("Đang xóa tất cả dữ liệu check-in:", keys);
     keys.forEach(key => localStorage.removeItem(key));
+    
+    // Reset dashboard statistics và xóa toàn bộ dữ liệu thống kê cũ
+    localStorage.removeItem('dashboardStats');
+    console.log("Đã xóa tất cả thống kê cũ");
+    
+    // Tạo thống kê mới với số điếu đã tránh = 0
+    const defaultStats = {
+      noSmokingDays: 0,
+      savedCigarettes: 0, // Đặt số điếu đã tránh về 0
+      savedMoney: 0,
+      healthProgress: 0,
+      calculationDetails: {
+        initialCigarettesPerDay: 0,
+        dailySavings: [],
+        lastCalculated: new Date().toISOString(),
+        resetNote: "Dữ liệu đã được reset hoàn toàn"
+      }
+    };
+    localStorage.setItem('dashboardStats', JSON.stringify(defaultStats));
     
     // Tạo dữ liệu mẫu cho 7 ngày gần nhất
     const today = new Date();
@@ -54,7 +73,11 @@ const ResetCheckinData = () => {
       localStorage.setItem(`checkin_${dateStr}`, JSON.stringify(checkinData));
     }
     
-    alert('Đã tạo lại dữ liệu check-in cho 7 ngày gần nhất. Vui lòng tải lại trang để xem thay đổi.');
+    if (typeof onDataReset === 'function') {
+      onDataReset();
+    }
+    
+    alert('Đã tạo lại dữ liệu check-in cho 7 ngày gần nhất. Dữ liệu sẽ được cập nhật ngay lập tức.');
   };
   
   return (

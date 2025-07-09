@@ -111,6 +111,19 @@ export const ensureTablesExist = async () => {
                 console.log('address column error:', error.message);
             }
         }
+        
+        // Thêm cột membership nếu chưa có
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN membership ENUM('free', 'premium', 'pro') DEFAULT 'free'
+            `);
+            console.log('✅ Added membership column to users table');
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('membership column error:', error.message);
+            }
+        }
 
         // Fix role column to ensure it has correct ENUM values
         try {
@@ -202,7 +215,7 @@ export const ensureTablesExist = async () => {
 // Generate JWT Token
 const generateToken = (userId) => {
     return jwt.sign(
-        { userId },
+        { userId, id: userId },  // Include both userId and id for compatibility
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -211,7 +224,7 @@ const generateToken = (userId) => {
 // Generate Refresh Token
 const generateRefreshToken = (userId) => {
     return jwt.sign(
-        { userId, type: 'refresh' },
+        { userId, id: userId, type: 'refresh' },  // Include both userId and id for compatibility
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
     );
@@ -228,6 +241,7 @@ const formatUserResponse = (user) => {
     console.log('- address:', user.address, typeof user.address);
     console.log('- age:', user.age, typeof user.age);
     console.log('- quit_reason:', user.quit_reason, typeof user.quit_reason);
+    console.log('- membership:', user.membership, typeof user.membership);
     
     // Ensure all fields are mapped for frontend and backend compatibility
     const formattedUser = {
@@ -250,6 +264,8 @@ const formatUserResponse = (user) => {
         quitReason: user.quit_reason,
         age: user.age !== undefined ? user.age : null,
         address: user.address,
+        membership: user.membership || 'free',  // Thêm membership với giá trị mặc định là 'free'
+        membershipType: user.membership || 'free',  // Thêm membershipType cho frontend
         createdAt: user.created_at,
         updatedAt: user.updated_at
     };
@@ -352,24 +368,32 @@ export const register = async (req, res) => {
 // Login User
 export const login = async (req, res) => {
     try {
-        console.log('🔑 Login attempt for:', req.body.email);
-        const { email, password } = req.body;
+        // Hỗ trợ đăng nhập bằng email hoặc username
+        const { email, username, password } = req.body;
         
-        // Đảm bảo truy vấn lấy tất cả các trường, bao gồm address, age, quit_reason
+        // Xác định username hay email được sử dụng
+        const loginIdentifier = email || username;
+        console.log('🔑 Login attempt for:', loginIdentifier);
+        
+        if (!loginIdentifier) {
+            return sendError(res, 'Username or email is required', 400);
+        }
+        
+        // Đảm bảo truy vấn lấy tất cả các trường, bao gồm address, age, quit_reason, membership
         const [users] = await pool.execute(
             `SELECT 
                 id, username, email, password_hash, full_name, phone, 
                 date_of_birth, gender, role, email_verified, is_active,
                 profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason
+                address, age, quit_reason, membership
              FROM users 
-             WHERE email = ?`,
-            [email]
+             WHERE email = ? OR username = ?`,
+            [loginIdentifier, loginIdentifier]
         );
 
         if (users.length === 0) {
-            console.log('❌ User not found:', email);
-            return sendError(res, 'Invalid email or password', 401);
+            console.log('❌ User not found:', loginIdentifier);
+            return sendError(res, 'Invalid username, email or password', 401);
         }
 
         const user = users[0];
@@ -384,12 +408,15 @@ export const login = async (req, res) => {
 
         if (!isPasswordValid) {
             console.log('❌ Invalid password for user:', user.id);
-            return sendError(res, 'Invalid email or password', 401);
+            return sendError(res, 'Invalid username, email or password', 401);
         }
 
         // Tạo tokens
         const token = generateToken(user.id);
         const refreshToken = generateRefreshToken(user.id);
+        
+        // Log token structure for debugging
+        console.log('🔐 Generated token structure:', jwt.decode(token));
         
         // Cập nhật thời gian đăng nhập
         await pool.execute(
@@ -404,7 +431,7 @@ export const login = async (req, res) => {
                 id, username, email, password_hash, full_name, phone, 
                 date_of_birth, gender, role, email_verified, is_active,
                 profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason
+                address, age, quit_reason, membership
              FROM users 
              WHERE id = ?`,
             [user.id]
@@ -416,8 +443,17 @@ export const login = async (req, res) => {
             name: updatedUser.full_name,
             quit_reason: updatedUser.quit_reason,
             age: updatedUser.age,
-            profile_image: updatedUser.profile_image
+            profile_image: updatedUser.profile_image,
+            membership: updatedUser.membership // Thêm log membership để debug
         });
+        
+        // Check if membership exists in the database
+        if (updatedUser.membership === undefined || updatedUser.membership === null) {
+            console.log('⚠️ Membership field is missing in user data. Adding default value "free"');
+            updatedUser.membership = 'free';
+        } else {
+            console.log('✅ Membership found in user data:', updatedUser.membership);
+        }
         
         // Format và trả về dữ liệu
         const formattedUser = formatUserResponse(updatedUser);
@@ -464,8 +500,8 @@ export const verifyEmail = async (req, res) => {
         // Move data from pending_registrations to users table
         const [result] = await pool.execute(
             `INSERT INTO users 
-             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at, age, address, quit_reason) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW(), ?, ?, ?)`,
+             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at, age, address, quit_reason, membership) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW(), ?, ?, ?, ?)`,
             [
                 pendingUser.username,
                 pendingUser.email,
@@ -477,7 +513,8 @@ export const verifyEmail = async (req, res) => {
                 pendingUser.role || 'user',
                 null, // age
                 null, // address
-                null  // quit_reason
+                null, // quit_reason
+                'free' // membership - mặc định là free cho người dùng mới
             ]
         );
 
@@ -580,7 +617,7 @@ export const getProfile = async (req, res) => {
                 id, username, email, password_hash, full_name, phone, 
                 date_of_birth, gender, role, email_verified, is_active,
                 profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason
+                address, age, quit_reason, membership
              FROM users 
              WHERE id = ?`,
             [userId]
@@ -623,7 +660,8 @@ export const updateProfile = async (req, res) => {
             address,
             age,
             quitReason,
-            quit_reason
+            quit_reason,
+            membership
         } = req.body;
         
         // Format age thành số nếu có
@@ -638,7 +676,7 @@ export const updateProfile = async (req, res) => {
         
         console.log('🔄 Prepared update data:', {
             fullName, phone, dateOfBirth, gender, role,
-            address, age: formattedAge, quitReason: finalQuitReason
+            address, age: formattedAge, quitReason: finalQuitReason, membership
         });
         
         await pool.execute(
@@ -651,6 +689,7 @@ export const updateProfile = async (req, res) => {
                 address = ?,
                 age = ?,
                 quit_reason = ?,
+                membership = ?,
                 updated_at = NOW() 
              WHERE id = ?`,
             [
@@ -662,6 +701,7 @@ export const updateProfile = async (req, res) => {
                 address || null,
                 formattedAge,
                 finalQuitReason,
+                membership || 'free', // Giữ lại trường membership, mặc định 'free' nếu null
                 userId
             ]
         );
@@ -672,7 +712,7 @@ export const updateProfile = async (req, res) => {
                 id, username, email, full_name, phone, 
                 date_of_birth, gender, role, email_verified, is_active,
                 profile_image, created_at, updated_at,
-                address, age, quit_reason
+                address, age, quit_reason, membership
              FROM users 
              WHERE id = ?`,
             [userId]

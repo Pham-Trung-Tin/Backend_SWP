@@ -363,10 +363,13 @@
 }
 
 .success-story h2 {
-  margin: 0 0 20px 0;
+  margin: 0 auto 20px auto;
   color: #1a73e8;
   font-size: 24px;
   font-weight: 600;
+  text-align: center;
+  width: 100%;
+  display: block;
 }
 
 .story-content p {

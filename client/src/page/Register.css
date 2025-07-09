@@ -92,33 +92,6 @@
   flex: 1;
 }
 
-.form-divider {
-  position: relative;
-  text-align: center;
-  margin: 15px 0;
-}
-
-.form-divider:before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: #eee;
-  z-index: 1;
-}
-
-.form-divider span {
-  position: relative;
-  display: inline-block;
-  padding: 0 15px;
-  background-color: white;
-  color: #666;
-  font-size: 14px;
-  z-index: 2;
-}
-
 .terms-privacy {
   display: flex;
   align-items: flex-start;

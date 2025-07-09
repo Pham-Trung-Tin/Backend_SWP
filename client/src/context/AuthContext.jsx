@@ -1,3 +1,307 @@
+// import React, { createContext, useState, useContext, useEffect } from 'react';
+// import authApi from '../utils/authApi';
+
+// // Tạo context cho xác thực
+// const AuthContext = createContext(null);
+
+// // Hook tùy chỉnh để sử dụng AuthContext
+// export const useAuth = () => useContext(AuthContext);
+
+// // Hardcoded coach accounts
+// const COACH_ACCOUNTS = [
+//   {
+//     id: 1,
+//     name: 'Nguyên Văn A',
+//     email: 'coach1@nosmoke.com',
+//     password: 'coach123',
+//     role: 'coach',
+//     specialization: 'Coach cai thuốc chuyên nghiệp',
+//     rating: 4.8,
+//     avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
+//   },
+//   {
+//     id: 2,
+//     name: 'Trần Thị B',
+//     email: 'coach2@nosmoke.com',
+//     password: 'coach123',
+//     role: 'coach',
+//     specialization: 'Chuyên gia tâm lý',
+//     rating: 4.9,
+//     avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
+//   },
+//   {
+//     id: 3,
+//     name: 'Phạm Minh C',
+//     email: 'coach3@nosmoke.com',
+//     password: 'coach123',
+//     role: 'coach',
+//     specialization: 'Bác sĩ phục hồi chức năng',
+//     rating: 4.7,
+//     avatar: 'https://randomuser.me/api/portraits/men/64.jpg'
+//   }
+// ];
+
+// // Provider component
+// export const AuthProvider = ({ children }) => {
+//   // Khởi tạo trạng thái từ localStorage (nếu có)
+//   const [user, setUser] = useState(() => {
+//     const storedUser = localStorage.getItem('nosmoke_user');
+//     return storedUser ? JSON.parse(storedUser) : null;
+//   });
+  
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState(null);
+
+//   // Lưu user vào localStorage khi thay đổi
+//   useEffect(() => {
+//     if (user) {
+//       localStorage.setItem('nosmoke_user', JSON.stringify(user));
+//     }
+//   }, [user]);
+
+//   // Hàm kiểm tra tài khoản đã tồn tại
+//   const checkUserExists = (email) => {
+//     const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
+//     return users.some(user => user.email === email);
+//   };
+
+//   // Hàm đăng ký tài khoản mới
+//   const register = async (userData) => {
+//     setLoading(true);
+//     setError(null);
+    
+//     try {
+//       // Gọi API đăng ký
+//       const response = await authApi.register(userData);
+      
+//       if (!response.success) {
+//         throw new Error(response.message || 'Đăng ký không thành công');
+//       }
+      
+//       // Lấy dữ liệu người dùng từ response
+//       const { user: registeredUser, token } = response.data;
+      
+//       // Đặt user hiện tại
+//       setUser(userWithoutPassword);
+//       setLoading(false);
+      
+//       return { success: true, user: userWithoutPassword };
+//     } catch (err) {
+//       setError(err.message);
+//       setLoading(false);
+//       return { success: false, error: err.message };
+//     }
+//   };
+
+//   // Hàm đăng nhập
+//   const login = async (email, password, rememberMe) => {
+//     setLoading(true);
+//     setError(null);
+    
+//     try {
+//       // Thử đăng nhập với API
+//       let apiSuccess = false;
+      
+//       try {
+//         // Log để debug
+//         console.log('Attempting API login with:', { email });
+
+//         // Gọi API đăng nhập
+//         const response = await authApi.login(email, password);
+        
+//         // Log full response for debugging
+//         console.log('API login response:', response);
+        
+//         if (response.success && response.data?.user) {
+//           // Lấy dữ liệu người dùng từ response
+//           const { user: loggedInUser } = response.data;
+          
+//           console.log('Login successful, user data:', loggedInUser);
+          
+//           setUser(loggedInUser);
+//           setLoading(false);
+//           apiSuccess = true;
+          
+//           return { success: true, user: loggedInUser };
+//         }
+        
+//         // Nếu response không success, log message để debug
+//         if (!response.success) {
+//           console.error('API login returned error:', response.message);
+//           throw new Error(response.message || 'Đăng nhập không thành công');
+//         }
+//       } catch (apiError) {
+//         console.error('API login failed:', apiError);
+//         throw apiError; // Throw lại lỗi để hiển thị cho người dùng
+//       }
+      
+//       // Nếu API không thành công, thử sử dụng hardcoded accounts
+//       if (!apiSuccess) {
+//         console.log('Trying hardcoded coach accounts');
+//         const foundCoach = COACH_ACCOUNTS.find(coach => coach.email === email && coach.password === password);
+//         if (foundCoach) {
+//           console.log('Found matching coach account:', foundCoach.email);
+//           // Không lưu mật khẩu vào coach session
+//           const { password, ...coachWithoutPassword } = foundCoach;
+          
+//           // Đặt user là coach và lưu vào localStorage
+//           const coachUser = { ...coachWithoutPassword, role: 'coach' };
+//           setUser(coachUser);
+//           localStorage.setItem('nosmoke_user', JSON.stringify(coachUser));
+//           setLoading(false);
+          
+//           // Redirect coach đến dashboard ngay lập tức
+//           window.location.href = '/coach';
+          
+//           return { success: true, user: coachUser };
+//         }
+        
+//         // Nếu không tìm thấy tài khoản coach phù hợp
+//         console.error('No matching coach account found');
+//         throw new Error('Email hoặc mật khẩu không đúng');
+//       }
+//     } catch (err) {
+//       console.error('Login error (final catch):', err);
+//       setError(err.message);
+//       setLoading(false);
+//       return { success: false, error: err.message };
+//     }
+//   };
+
+//   // Hàm đăng xuất
+//   const logout = async () => {
+//     try {
+//       // Gọi API đăng xuất
+//       await authApi.logout();
+      
+//       setUser(null);
+//       return { success: true };
+//     } catch (error) {
+//       console.error('Logout error:', error);
+//       // Đảm bảo người dùng vẫn đăng xuất ngay cả khi API gặp lỗi
+//       setUser(null);
+//       return { success: true };
+//     }
+//   };
+//     // Đảm bảo rằng membership luôn là một giá trị hợp lệ
+//   useEffect(() => {
+//     if (user) {
+//       let needUpdate = false;
+//       let updates = {};
+      
+//       // Kiểm tra và đảm bảo membership hợp lệ
+//       if (!user.membership || !['free', 'premium', 'pro'].includes(user.membership)) {
+//         // Nếu membership không hợp lệ, kiểm tra membershipType
+//         if (user.membershipType && ['free', 'premium', 'pro'].includes(user.membershipType)) {
+//           updates.membership = user.membershipType;
+//         } else {
+//           updates.membership = 'free';
+//         }
+//         needUpdate = true;
+//       }
+      
+//       // Kiểm tra và đảm bảo membershipType hợp lệ và đồng bộ với membership
+//       if (!user.membershipType || user.membershipType !== user.membership) {
+//         updates.membershipType = user.membership || 'free';
+//         needUpdate = true;
+//       }
+      
+//       // Cập nhật nếu cần
+//       if (needUpdate) {
+//         console.log('Đồng bộ dữ liệu membership:', updates);
+//         setUser({...user, ...updates});
+//       }
+//     }
+    
+//     // Kiểm tra nếu cần refresh membership
+//     if (user && window.sessionStorage && window.sessionStorage.getItem('membership_refresh_needed') === 'true') {
+//       refreshMembership();
+//       window.sessionStorage.removeItem('membership_refresh_needed');
+//     }
+//   }, [user]);
+  
+//   // Hàm refresh thông tin membership từ localStorage
+//   const refreshMembership = () => {
+//     if (!user) return { success: false, error: 'Không có người dùng để cập nhật' };
+    
+//     try {
+//       // Lấy thông tin user từ localStorage
+//       const users = JSON.parse(localStorage.getItem('nosmoke_users') || '[]');
+//       const storedUser = users.find(u => u.id === user.id);
+      
+//       if (storedUser && storedUser.membership !== user.membership) {
+//         // Cập nhật thông tin membership nếu có sự khác biệt
+//         setUser({ ...user, membership: storedUser.membership });
+//         return { success: true, user: { ...user, membership: storedUser.membership } };
+//       }
+      
+//       return { success: true, user };
+//     } catch (err) {
+//       console.error('Lỗi khi refresh membership:', err);
+//       return { success: false, error: err.message };
+//     }
+//   };
+//     // Hàm cập nhật thông tin người dùng
+//   const updateUser = async (updatedData) => {
+//     if (!user) return { success: false, error: 'Không có người dùng để cập nhật' };
+    
+//     try {
+//       // Đảm bảo membership hợp lệ nếu đang cập nhật membership
+//       if (updatedData.hasOwnProperty('membership') && 
+//           !['free', 'premium', 'pro'].includes(updatedData.membership)) {
+//         updatedData.membership = 'free';
+//       }
+      
+//       // Đảm bảo đồng bộ giữa membership và membershipType
+//       if (updatedData.hasOwnProperty('membership') && !updatedData.hasOwnProperty('membershipType')) {
+//         updatedData.membershipType = updatedData.membership;
+//         console.log('Tự động đồng bộ membershipType:', updatedData.membershipType);
+//       }
+      
+//       if (updatedData.hasOwnProperty('membershipType') && !updatedData.hasOwnProperty('membership')) {
+//         updatedData.membership = updatedData.membershipType;
+//         console.log('Tự động đồng bộ membership:', updatedData.membership);
+//       }
+      
+//       // Gọi API cập nhật thông tin người dùng
+//       const response = await authApi.updateProfile(updatedData);
+      
+//       if (!response.success) {
+//         throw new Error(response.message || 'Cập nhật thông tin không thành công');
+//       }
+      
+//       // Lấy dữ liệu người dùng đã cập nhật từ response
+//       const { user: updatedUserData } = response.data;
+      
+//       // Cập nhật user hiện tại trong state
+//       const updatedUser = { ...user, ...updatedUserData };
+//       setUser(updatedUser);
+      
+//       return { success: true, user: updatedUser };
+//     } catch (err) {
+//       setError(err.message);
+//       return { success: false, error: err.message };
+//     }
+//   };
+//   // Giá trị context
+//   const value = {
+//     user,
+//     loading,
+//     error,
+//     login,
+//     logout,
+//     register,
+//     updateUser,
+//     refreshMembership,
+//     setUser,
+//     isAuthenticated: !!user
+//   };
+
+//   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+// };
+
+// export default AuthContext;
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 // Base API URL - change this to your backend URL
@@ -262,6 +566,74 @@ export const AuthProvider = ({ children }) => {
         } else {
           sessionStorage.setItem('nosmoke_user', JSON.stringify(processedUser));
           sessionStorage.setItem('nosmoke_token', data.data.token);
+        }
+
+        // Cập nhật membership ngay sau khi đăng nhập thành công
+        try {
+          console.log('🔄 Đang lấy thông tin membership sau khi đăng nhập...');
+          
+          // Tạo một function để gọi API lấy membership
+          const fetchMembershipAfterLogin = async () => {
+            try {
+              // Import API từ membershipApi.js
+              const membershipApiModule = await import('../utils/membershipApi');
+              const membershipApi = membershipApiModule.default;
+              
+              // Gọi API lấy membership hiện tại
+              const membershipResponse = await membershipApi.getCurrentMembership();
+              
+              console.log('📊 Thông tin membership từ API:', membershipResponse);
+              
+              if (membershipResponse.success && membershipResponse.data) {
+                // Lấy giá trị membership dựa trên tên gói
+                let membershipValue = 'free';
+                if (membershipResponse.data.package_name) {
+                  const packageName = membershipResponse.data.package_name.toLowerCase();
+                  if (packageName.includes('pro')) {
+                    membershipValue = 'pro';
+                  } else if (packageName.includes('premium')) {
+                    membershipValue = 'premium';
+                  } else if (membershipResponse.data.package_id !== 1) {
+                    membershipValue = 'premium';
+                  }
+                }
+                
+                console.log('📊 Membership value xác định được:', membershipValue);
+                
+                // Cập nhật user với thông tin membership
+                const updatedUser = {
+                  ...processedUser,
+                  membership: membershipValue,
+                  membershipType: membershipValue,
+                  packageDetails: membershipResponse.data
+                };
+                
+                // Cập nhật state và storage
+                setUser(updatedUser);
+                
+                if (rememberMeOption) {
+                  localStorage.setItem('nosmoke_user', JSON.stringify(updatedUser));
+                } else {
+                  sessionStorage.setItem('nosmoke_user', JSON.stringify(updatedUser));
+                }
+                
+                console.log('✅ Đã cập nhật membership sau khi đăng nhập:', updatedUser);
+                
+                // Phát ra sự kiện để thông báo cho các component khác
+                window.dispatchEvent(new CustomEvent('user-updated', { 
+                  detail: { user: updatedUser }
+                }));
+              }
+            } catch (membershipErr) {
+              console.error('❌ Lỗi khi lấy thông tin membership:', membershipErr);
+            }
+          };
+          
+          // Gọi hàm lấy membership
+          fetchMembershipAfterLogin();
+        } catch (membershipErr) {
+          console.error('❌ Lỗi khi cập nhật membership sau đăng nhập:', membershipErr);
+          // Không làm gián đoạn quá trình đăng nhập nếu có lỗi membership
         }
 
         console.log(`✅ User logged in - ${rememberMeOption ? 'persistent across browser sessions' : 'session only'}`);
@@ -531,6 +903,47 @@ export const AuthProvider = ({ children }) => {
           full_name: data.data.fullName || data.data.full_name
         };
         
+        // Cập nhật thông tin membership từ backend
+        try {
+          console.log('🔄 Đang lấy thông tin membership khi refresh user...');
+          
+          // Import API từ membershipApi.js
+          const membershipApiModule = await import('../utils/membershipApi');
+          const membershipApi = membershipApiModule.default;
+          
+          // Gọi API lấy membership hiện tại
+          const membershipResponse = await membershipApi.getCurrentMembership();
+          
+          if (membershipResponse.success && membershipResponse.data) {
+            console.log('📊 Thông tin membership từ API:', membershipResponse.data);
+            
+            // Lấy giá trị membership dựa trên tên gói
+            let membershipValue = 'free';
+            if (membershipResponse.data.package_name) {
+              const packageName = membershipResponse.data.package_name.toLowerCase();
+              if (packageName.includes('pro')) {
+                membershipValue = 'pro';
+              } else if (packageName.includes('premium')) {
+                membershipValue = 'premium';
+              } else if (membershipResponse.data.package_id !== 1) {
+                membershipValue = 'premium';
+              }
+            }
+            
+            console.log('📊 Membership value xác định được:', membershipValue);
+            
+            // Cập nhật user với thông tin membership
+            processedUser.membership = membershipValue;
+            processedUser.membershipType = membershipValue;
+            processedUser.packageDetails = membershipResponse.data;
+            
+            console.log('✅ Đã cập nhật membership trong refreshUser:', processedUser);
+          }
+        } catch (membershipErr) {
+          console.error('❌ Lỗi khi lấy thông tin membership trong refreshUser:', membershipErr);
+          // Tiếp tục với user data đã có
+        }
+        
         // Cập nhật state và storage
         setUser(processedUser);
         
@@ -540,6 +953,11 @@ export const AuthProvider = ({ children }) => {
         } else {
           sessionStorage.setItem('nosmoke_user', JSON.stringify(processedUser));
         }
+        
+        // Phát sự kiện để thông báo user đã cập nhật
+        window.dispatchEvent(new CustomEvent('user-updated', { 
+          detail: { user: processedUser }
+        }));
         
         return { success: true, user: processedUser };
       } else {

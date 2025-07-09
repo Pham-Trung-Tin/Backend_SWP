@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FaCalendarCheck, FaSave, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
-import CalendarPicker from './CalendarPicker';
+import { FaCalendarCheck, FaSave } from 'react-icons/fa';
 
 const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [todayData, setTodayData] = useState({
         date: new Date().toISOString().split('T')[0],
         targetCigarettes: 12, // Sẽ được tính từ kế hoạch
@@ -70,74 +67,67 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
         }
     };
 
-    // Tính streak days
+    // Tính streak days (chỉ tính từ ngày bắt đầu kế hoạch)
     const calculateStreakDays = () => {
         let streak = 0;
         const today = new Date();
-
-        for (let i = 0; i < 30; i++) {
+        
+        // Nếu có kế hoạch, chỉ tính từ ngày bắt đầu kế hoạch
+        let startDate = today;
+        if (currentPlan && currentPlan.startDate) {
+            const planStartDate = new Date(currentPlan.startDate);
+            if (!isNaN(planStartDate.getTime())) {
+                startDate = planStartDate;
+            }
+        }
+        
+        // Tính số ngày từ start date đến hôm nay
+        const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        const maxDaysToCheck = Math.min(daysSinceStart + 1, 30); // Không quá 30 ngày và không quá số ngày từ khi bắt đầu
+        
+        console.log(`Tính streak từ ${startDate.toISOString().split('T')[0]} (${maxDaysToCheck} ngày để kiểm tra)`);
+        
+        for (let i = 0; i < maxDaysToCheck; i++) {
             const checkDate = new Date(today);
             checkDate.setDate(checkDate.getDate() - i);
+            
+            // Không kiểm tra những ngày trước khi bắt đầu kế hoạch
+            if (checkDate < startDate) {
+                console.log(`Bỏ qua ngày ${checkDate.toISOString().split('T')[0]} vì trước ngày bắt đầu kế hoạch`);
+                break;
+            }
+            
             const dateStr = checkDate.toISOString().split('T')[0];
-
             const savedData = localStorage.getItem(`checkin_${dateStr}`);
+            
             if (savedData) {
                 const data = JSON.parse(savedData);
                 if (data.actualCigarettes <= data.targetCigarettes) {
                     streak++;
+                    console.log(`✅ Ngày ${dateStr}: ${data.actualCigarettes}/${data.targetCigarettes} - Streak: ${streak}`);
                 } else {
+                    console.log(`❌ Ngày ${dateStr}: ${data.actualCigarettes}/${data.targetCigarettes} - Streak bị phá`);
                     break; // Streak bị phá
                 }
             } else {
+                console.log(`⚪ Ngày ${dateStr}: Không có dữ liệu - Streak dừng`);
                 break; // Không có dữ liệu
             }
         }
-
+        
+        console.log(`Streak days cuối cùng: ${streak}`);
         setStreakDays(streak);
-    };    // Load dữ liệu cho ngày được chọn
-    const loadDataForDate = (dateStr) => {
-        const target = calculateTargetForDate(dateStr);
-        const savedData = localStorage.getItem(`checkin_${dateStr}`);
-
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            setTodayData({
-                ...data,
-                targetCigarettes: target
-            });
-            setIsSubmitted(true);
-        } else {
-            setTodayData({
-                date: dateStr,
-                targetCigarettes: target,
-                actualCigarettes: 0,
-                notes: ''
-            });
-            setIsSubmitted(false);
-        }
-
-        // Cập nhật current week
-        const targetDate = new Date(dateStr);
-        const startDate = new Date(currentPlan?.startDate || new Date());
-        const daysDiff = Math.floor((targetDate - startDate) / (1000 * 60 * 60 * 24));
-        const weekNumber = Math.floor(daysDiff / 7) + 1;
-        setCurrentWeek(weekNumber);
-    };
-
-    // Xử lý chọn ngày từ calendar
-    const handleDateSelect = (dateStr) => {
-        setSelectedDate(dateStr);
-        loadDataForDate(dateStr);
-        setShowCalendar(false);
     };
 
     // Cập nhật target khi component mount hoặc plan thay đổi
     useEffect(() => {
-        if (currentPlan) {
-            loadDataForDate(selectedDate);
-            calculateStreakDays();
-        }
-    }, [currentPlan, selectedDate]);// Kiểm tra xem hôm nay đã checkin chưa
+        const target = calculateTodayTarget();
+        setTodayData(prev => ({
+            ...prev,
+            targetCigarettes: target
+        }));
+        calculateStreakDays();
+    }, [currentPlan]);    // Kiểm tra xem hôm nay đã checkin chưa
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
         const savedData = localStorage.getItem(`checkin_${today}`);
@@ -146,12 +136,12 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
             setTodayData(data);
             setIsSubmitted(true);
         }
-    }, []); const handleInputChange = (field, value) => {
+    }, []);    const handleInputChange = (field, value) => {
         setTodayData(prev => ({
             ...prev,
             [field]: value
         }));
-    }; const handleSubmit = () => {
+    };    const handleSubmit = () => {
         // Lưu dữ liệu vào localStorage
         const today = new Date().toISOString().split('T')[0];
         const isUpdate = localStorage.getItem(`checkin_${today}`) !== null;
@@ -229,36 +219,23 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
     
     return (
         <div className="daily-checkin">
-            <div className="checkin-header">
-                <div className="header-content">
-                    <FaCalendarCheck className="header-icon" />                    <div className="header-text">
-                        <h2>{isToday ? 'Checkin hôm nay' : 'Checkin ngày đã chọn'}</h2>
-                        <p>Ghi nhận tiến trình cai thuốc ngày {new Date(selectedDate).toLocaleDateString('vi-VN')}</p>
-                        {currentPlan && (
-                            <p className="plan-week-info">
-                                Tuần {currentWeek} - Mục tiêu: {todayData.targetCigarettes} điếu/ngày
-                            </p>
-                        )}
+            <div className="checkin-header">                <div className="header-content">
+                    <div className="header-icon">
+                        <FaCalendarCheck />
+                    </div>
+                    <div className="header-text">
+                        <h2>Ghi nhận hôm nay</h2>
+                        <p>Ghi nhận tiến trình cai thuốc ngày {new Date().toLocaleDateString('vi-VN')}</p>
                     </div>
                 </div>
 
-                <div className="header-actions">
-                    {/* Calendar button */}
-                    <button
-                        className="calendar-button"
-                        onClick={() => setShowCalendar(true)}
-                        title="Chọn ngày khác"
-                    >
-                        <FaCalendarAlt />
-                    </button>
-
-                    {/* Streak counter */}
-                    <div className="streak-badge">
-                        <span className="streak-number">{streakDays}</span>
-                        <span className="streak-text">ngày liên tiếp</span>
-                    </div>
+                {/* Streak counter */}                <div className="streak-badge">
+                    <span className="streak-number">{streakDays}</span>
+                    <span className="streak-text">ngày liên tiếp</span>
                 </div>
             </div>
+            
+            <div className="checkin-separator"></div>
             
             {/* Toast Notification */}
             {toast.show && (
@@ -324,7 +301,7 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
                             className="submit-btn"
                         >
                             <FaSave className="btn-icon" />
-                            {isToday ? 'Lưu checkin hôm nay' : `Lưu checkin ngày ${new Date(selectedDate).toLocaleDateString('vi-VN')}`}
+                            Lưu checkin hôm nay
                         </button>
                     ) : (
                         <button
@@ -334,42 +311,8 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
                             <FaSave className="btn-icon" />
                             Cập nhật số điếu hôm nay
                         </button>
-                    )}
-
-                    {isSubmitted && (
-                        <button
-                            onClick={handleEdit}
-                            className="edit-btn"
-                        >
-                            Chỉnh sửa
-                        </button>
-                    )}
-                </div>                {/* Summary Card */}
-                {isSubmitted && (
-                    <div className="checkin-summary">
-                        <h3>Tóm tắt ngày {new Date(selectedDate).toLocaleDateString('vi-VN')}</h3>
-                        <div className="summary-grid">
-                            <div className="summary-item">
-                                <span className="label">Mục tiêu:</span>
-                                <span className="value">{todayData.targetCigarettes} điếu</span>
-                            </div>
-                            <div className="summary-item">
-                                <span className="label">Thực tế:</span>
-                                <span className="value">{todayData.actualCigarettes} điếu</span>
-                            </div>
-                            <div className="summary-item">
-                                <span className="label">Kết quả:</span>
-                                <span className={`value ${isTargetAchieved ? 'success' : 'warning'}`}>
-                                    {isTargetAchieved ? 'Đạt mục tiêu' : 'Chưa đạt'}
-                                </span>
-                            </div>
-                            <div className="summary-item">
-                                <span className="label">Tuần:</span>
-                                <span className="value">Tuần {currentWeek}</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    )}                </div>
+                {/* Summary Card đã được xóa vì dư thừa */}
             </div>
         </div>
     );

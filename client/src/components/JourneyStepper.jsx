@@ -151,14 +151,14 @@ export default function JourneyStepper() {
         selectedPlan: completeSelectedPlan // Lưu object kế hoạch đầy đủ thay vì chỉ ID
       },
       lastEdited: new Date().toISOString() // Cập nhật thời gian chỉnh sửa
-    };
-    localStorage.setItem('quitPlanCompletion', JSON.stringify(completionData));
+    };    localStorage.setItem('quitPlanCompletion', JSON.stringify(completionData));
     
     // Cập nhật kế hoạch đang hoạt động
     const activePlan = {
       ...completeSelectedPlan,
       startDate: new Date().toISOString().split('T')[0],
       initialCigarettes: formData.cigarettesPerDay,
+      packPrice: formData.packPrice,
       lastEdited: new Date().toISOString()
     };
     localStorage.setItem('activePlan', JSON.stringify(activePlan));
@@ -171,17 +171,11 @@ export default function JourneyStepper() {
     setCurrentStep(4);
     setShowCompletionScreen(true);
   };
-
-  // Function to animate the progress bar when changing steps
+  // Function to update active steps
   const animateProgressBar = (newStep) => {
-    document.querySelectorAll('.step-line').forEach((line, index) => {
-      if (index < newStep - 1) {
-        line.classList.add('active');
-      } else {
-        line.classList.remove('active');
-      }
-    });
-  };  const handleSubmit = () => {
+    // No longer need to animate step-line since it has been removed
+    // Only update other elements if necessary
+  };const handleSubmit = () => {
     // Add animation to the submit button
     const submitButton = document.querySelector('.btn-submit');
     submitButton.classList.add('loading');
@@ -190,13 +184,7 @@ export default function JourneyStepper() {
     // Simulate loading/processing
     setTimeout(() => {
       submitButton.classList.remove('loading');
-      submitButton.classList.add('success');
-      submitButton.innerHTML = '<div class="checkmark">✓</div>';
-      
-      // Cập nhật progress bar để step 4 cũng được đánh dấu là hoàn thành
-      document.querySelectorAll('.step-line').forEach((line) => {
-        line.classList.add('active');
-      });
+      submitButton.classList.add('success');      submitButton.innerHTML = '<div class="checkmark">✓</div>';
       document.querySelectorAll('.step-item').forEach((item) => {
         item.classList.add('completed');
       });
@@ -257,8 +245,7 @@ export default function JourneyStepper() {
         lastEdited: now // Cập nhật thời gian chỉnh sửa gần nhất
       };
       localStorage.setItem('quitPlanCompletion', JSON.stringify(completionData));
-      
-      // Đánh dấu là đã ghé thăm trong phiên này
+        // Đánh dấu là đã ghé thăm trong phiên này
       sessionStorage.setItem('lastVisit', Date.now().toString());
       
       // Lưu kế hoạch đang hoạt động với startDate
@@ -266,6 +253,7 @@ export default function JourneyStepper() {
         ...(completeSelectedPlan || formData.selectedPlan),
         startDate: now.split('T')[0],
         initialCigarettes: formData.cigarettesPerDay,
+        packPrice: formData.packPrice,
         lastEdited: now
       };
       localStorage.setItem('activePlan', JSON.stringify(activePlan));
@@ -344,9 +332,28 @@ export default function JourneyStepper() {
 
   // Xử lý khi người dùng muốn xóa kế hoạch đã lưu
   const handleClearPlan = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa kế hoạch cai thuốc? Hành động này không thể hoàn tác.')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa kế hoạch cai thuốc và toàn bộ tiến trình? Hành động này không thể hoàn tác.')) {
+      // Xóa thông tin kế hoạch
       localStorage.removeItem('quitPlanCompletion');
       localStorage.removeItem('activePlan');
+      
+      // Xóa tất cả dữ liệu check-in hàng ngày
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('checkin_')) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Xóa từng key đã thu thập
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`Đã xóa dữ liệu check-in: ${key}`);
+      });
+      
+      // Xóa thống kê dashboard
+      localStorage.removeItem('dashboardStats');
       
       // Reset lại trạng thái
       setFormData({
@@ -371,6 +378,9 @@ export default function JourneyStepper() {
         });
         document.querySelector('.step-item:first-child').classList.add('active');
       }, 100);
+      
+      // Thông báo thành công
+      alert('Đã xóa toàn bộ kế hoạch cai thuốc và tiến trình của bạn. Bạn có thể bắt đầu lại từ đầu.');
     }
   };
 
@@ -774,9 +784,10 @@ export default function JourneyStepper() {
         <h1 className="stepper-title">Kế Hoạch Cai Thuốc</h1>
         {/* Stepper header */}
         <div className="steps-container">
-          {steps.map((step, index) => (
-            <React.Fragment key={step.id}>              <div className={`step-item ${currentStep >= step.id ? 'active' : ''} ${currentStep > step.id || isCompleted ? 'completed' : ''}`}
-              onClick={() => {
+          {steps.map((step, index) => (            <React.Fragment key={step.id}>
+              <div 
+                className={`step-item ${currentStep >= step.id ? 'active' : ''} ${currentStep > step.id || isCompleted ? 'completed' : ''}`}
+                onClick={() => {
                 if (step.id <= currentStep || isCompleted) {
                   // Add animation for progress bar and step changes
                   setCurrentStep(step.id);
@@ -802,12 +813,8 @@ export default function JourneyStepper() {
             >
               <div className="step-circle">
                 {currentStep > step.id || isCompleted ? '✓' : step.id}
-              </div>
-              <div className="step-name">{step.name}</div>
+              </div>              <div className="step-name">{step.name}</div>
             </div>
-              {index < steps.length - 1 && (
-                <div className={`step-line ${currentStep > index + 1 || isCompleted ? 'active' : ''}`}></div>
-              )}
             </React.Fragment>
           ))}
         </div>        {/* Form content */}
@@ -1626,9 +1633,8 @@ export default function JourneyStepper() {
           )}
         </div>
         <div className="stepper-footer">
-          © 2024 Kế Hoạch Cai Thuốc • Nền tảng hỗ trợ sức khỏe cộng đồng
-        </div>
-      </div>
+          © 2025 Kế Hoạch Cai Thuốc • Nền tảng hỗ trợ sức khỏe cộng đồng
+        </div>      </div>
     </div>
   );
 }

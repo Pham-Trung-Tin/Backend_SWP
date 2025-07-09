@@ -60,7 +60,8 @@ class User {
             gender,
             age,          // Thêm trường age 
             quit_reason,  // Thêm trường quit_reason
-            role = 'user'
+            role = 'user',
+            membership = 'free'  // Thêm trường membership với giá trị mặc định là 'free'
         } = userData;
 
         try {
@@ -69,11 +70,11 @@ class User {
             const [result] = await pool.query(
                 `INSERT INTO users (
                     username, email, password_hash, full_name, phone, 
-                    date_of_birth, gender, role, age, quit_reason
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    date_of_birth, gender, role, age, quit_reason, membership
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     username, email, password_hash, full_name, phone, 
-                    date_of_birth, gender, role, age || null, quit_reason || null
+                    date_of_birth, gender, role, age || null, quit_reason || null, membership
                 ]
             );
             

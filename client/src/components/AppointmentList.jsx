@@ -127,22 +127,27 @@ function AppointmentList() {
     const appointmentDay = new Date(appointmentDate);
     appointmentDay.setHours(0, 0, 0, 0);
     
-    // Đã hủy chỉ hiển thị trong "Tất cả" và "Đã qua", không hiển thị trong "Sắp tới"
-    if (appointment.status === 'cancelled') {
+    // Kiểm tra xem lịch hẹn đã hoàn thành chưa
+    const isCompleted = appointment.status === 'completed' || appointment.completed === true;
+    
+    // Đã hủy hoặc đã hoàn thành chỉ hiển thị trong "Tất cả" và "Đã qua", không hiển thị trong "Sắp tới"
+    if (appointment.status === 'cancelled' || isCompleted) {
       if (filter === 'upcoming') {
-        return false; // Lịch đã hủy không hiển thị trong "Sắp tới"
+        return false; // Lịch đã hủy hoặc đã hoàn thành không hiển thị trong "Sắp tới"
+      } else if (filter === 'past') {
+        return true; // Hiển thị trong "Đã qua"
       } else {
-        return true; // Hiển thị trong "Tất cả" và "Đã qua"
+        return true; // Hiển thị trong "Tất cả"
       }
     }
 
-    // Logic lọc dựa trên ngày, giờ và trạng thái
+    // Logic lọc dựa trên ngày, giờ và trạng thái cho các lịch hẹn chưa hoàn thành
     if (filter === 'upcoming') {
-      // Filter "Sắp tới": Hiển thị tất cả lịch hẹn có thời gian >= thời gian hiện tại
+      // Filter "Sắp tới": Hiển thị tất cả lịch hẹn chưa hoàn thành có thời gian >= thời gian hiện tại
       return appointmentDate >= now;
     } else if (filter === 'past') {
-      // Filter "Đã qua": Hiển thị lịch hẹn có thời gian < thời gian hiện tại hoặc đã hủy
-      return appointmentDate < now || appointment.status === 'cancelled';
+      // Filter "Đã qua": Hiển thị lịch hẹn có thời gian < thời gian hiện tại hoặc đã hủy hoặc đã hoàn thành
+      return appointmentDate < now || appointment.status === 'cancelled' || isCompleted;
     }
     
     return true; // 'all' filter: hiển thị tất cả
@@ -185,28 +190,11 @@ function AppointmentList() {
   const getStatusClass = (appointment) => {
     if (appointment.status === 'cancelled') {
       return 'cancelled';
+    } else if (appointment.status === 'completed' || appointment.completed) {
+      return 'completed';
     } else if (appointment.status === 'confirmed') {
-      // Lấy thời gian hiện tại (bao gồm giờ phút giây)
-      const now = new Date();
-      
-      // Lấy thời gian lịch hẹn (bao gồm ngày và giờ)
-      // Chuyển đổi giờ từ định dạng "HH:mm" sang giá trị thời gian
-      const [hours, minutes] = appointment.time.split(':').map(Number);
-      
-      // Tạo đối tượng Date từ ngày và giờ của lịch hẹn
-      const appointmentDate = new Date(appointment.date);
-      appointmentDate.setHours(hours, minutes, 0, 0);
-      
-      console.log('Thời gian hiện tại:', now);
-      console.log('Thời gian lịch hẹn:', appointmentDate);
-      console.log('So sánh:', now > appointmentDate);
-      
-      // Lịch hẹn chỉ được đánh dấu hoàn thành nếu thời gian hiện tại đã vượt qua thời gian của cuộc hẹn
-      if (now > appointmentDate) {
-        return 'completed';
-      } else {
-        return 'confirmed';
-      }
+      // Always return confirmed regardless of time
+      return 'confirmed';
     }
     
     return '';
@@ -214,6 +202,8 @@ function AppointmentList() {
   const getStatusText = (appointment) => {
     if (appointment.status === 'cancelled') {
       return 'Đã hủy';
+    } else if (appointment.status === 'completed' || appointment.completed) {
+      return 'Đã hoàn thành';
     } else if (appointment.status === 'confirmed') {
       // Lấy ngày hiện tại
       const today = new Date();
@@ -224,12 +214,7 @@ function AppointmentList() {
       const appointmentDay = new Date(appointmentDate);
       appointmentDay.setHours(0, 0, 0, 0);
       
-      // Lịch hẹn chỉ được đánh dấu hoàn thành nếu ngày hẹn < ngày hiện tại
-      if (appointmentDay < today) {
-        return 'Đã hoàn thành';
-      } else {
-        return 'Đã xác nhận';
-      }
+      return 'Đã xác nhận';
     }
     
     return 'Chờ xác nhận';
@@ -436,6 +421,49 @@ function AppointmentList() {
     }
   };
 
+  // Handle complete appointment
+  const handleCompleteAppointment = (appointmentId) => {
+    const updatedAppointments = appointments.map(appointment => {
+      if (appointment.id === appointmentId) {
+        return { 
+          ...appointment, 
+          status: 'completed',
+          completed: true,
+          completedAt: new Date().toISOString()
+        };
+      }
+      return appointment;
+    });
+    
+    setAppointments(updatedAppointments);
+    localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+    
+    // Show toast notification
+    setToastMessage('Buổi tư vấn đã được xác nhận hoàn thành!');
+    setShowToast(true);
+    
+    // Hide toast after 3 seconds
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
+  // Handle navigate to chat in navigation
+  const handleNavigateToChat = (appointment) => {
+    // Store chat info for navigation
+    const chatInfo = {
+      appointmentId: appointment.id,
+      coachName: appointment.coachName,
+      coachAvatar: appointment.coachAvatar,
+      coachRole: appointment.coachRole
+    };
+    
+    localStorage.setItem('navChatInfo', JSON.stringify(chatInfo));
+    
+    // Navigate to chat section (assuming there's a chat page/section)
+    navigate('/chat');
+  };
+
   return (
     <div className="appointments-container">
       <div className="appointments-header">
@@ -535,31 +563,43 @@ function AppointmentList() {
                     </div>
                   )}
                 </div>
-              </div>
-                <div className="appointment-footer">                {getStatusClass(appointment) === 'confirmed' && (
+              </div>                <div className="appointment-footer">                {getStatusClass(appointment) === 'confirmed' && (
                   <>
-                    <button 
-                      className={`chat-button ${(!user?.membership || user?.membership === 'free') ? 'premium-feature' : ''}`}
-                      onClick={() => handleOpenChat(appointment)}
-                    >
-                      <FaComments className="chat-button-icon" /> 
-                      Chat với Coach
-                      {(!user?.membership || user?.membership === 'free') && (
-                        <span className="premium-badge">Premium</span>
-                      )}
-                      {hasUnreadMessages(appointment.id) && <span className="chat-notification">!</span>}
-                    </button>
                     <button 
                       className="reschedule-button"
                       onClick={() => handleRescheduleAppointment(appointment)}
                     >
                       Thay đổi lịch
-                    </button><button 
+                    </button>
+                    
+                    <button 
                       className="cancel-button"
                       onClick={() => openCancelModal(appointment.id)}
                     >
                       Hủy lịch hẹn
                     </button>
+                    
+                    <button 
+                      className={`chat-button ${(!user?.membership || user?.membership === 'free') ? 'premium-feature' : ''}`}
+                      onClick={() => handleOpenChat(appointment)}
+                    >
+                      <FaComments className="chat-button-icon" /> 
+                      Nhắn tin
+                      {(!user?.membership || user?.membership === 'free') && (
+                        <span className="premium-badge">Premium</span>
+                      )}
+                      {hasUnreadMessages(appointment.id) && <span className="chat-notification">!</span>}
+                    </button>
+                    
+                    {/* Nút xác nhận hoàn thành */}
+                    <button 
+                      className="complete-button"
+                      onClick={() => handleCompleteAppointment(appointment.id)}
+                    >
+                      <FaCheck className="complete-icon" /> Xác nhận hoàn thành
+                    </button>
+                    
+
                   </>
                 )}                {getStatusClass(appointment) === 'completed' && (
                   <>
@@ -786,8 +826,15 @@ function AppointmentList() {
                 {isSubmittingRating ? 'Đang gửi...' : 'Gửi đánh giá'}
               </button>
             </div>
-          </div>
-        </div>      )}
+          </div>        </div>      )}
+      
+      {/* Toast notification for completion confirmation */}
+      {showToast && (
+        <div className="toast-notification">
+          <FaCheck />
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

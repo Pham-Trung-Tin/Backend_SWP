@@ -234,6 +234,21 @@
   transform: translateX(5px);
 }
 
+/* Thêm CSS cho badge premium */
+.premium-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: linear-gradient(45deg, #f5a623, #f8c300);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px rgba(245, 166, 35, 0.3);
+}
+
 /* Responsive styles */
 @media (max-width: 992px) {
   .features-grid {

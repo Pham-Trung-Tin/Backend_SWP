@@ -2,10 +2,17 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaHome, FaToolbox, FaChartLine, FaBlog, FaCalendarAlt } from 'react-icons/fa';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWebAwesome } from '@fortawesome/free-brands-svg-icons';
+import { useAuth } from '../context/AuthContext';
 
 export default function Nav() {
   const location = useLocation();
   const { pathname } = location;
+  const { user } = useAuth();
+
+  // Don't show navigation for coaches
+  if (user && user.role === 'coach') {
+    return null;
+  }
 
   return (    <nav className="nosmoke-nav">
       <div className="container">

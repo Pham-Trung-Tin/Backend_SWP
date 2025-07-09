@@ -5,7 +5,8 @@ import path from 'path';
 
 // Get user profile
 export const getProfile = async (req, res) => {
-    try {        const user = await User.findById(req.user.id);
+    try {        
+        const user = await User.findById(req.user.id);
         
         if (!user) {
             return res.status(404).json({
@@ -18,6 +19,13 @@ export const getProfile = async (req, res) => {
         // Remove sensitive information
         delete user.password_hash;
         delete user.refresh_token;
+        
+        // Đảm bảo membership được trả về đúng
+        if (user.membership === null || user.membership === undefined) {
+            user.membership = 'free'; // Giá trị mặc định nếu không có
+        }
+        
+        console.log('🔍 Get profile - User membership:', user.membership);
         
         res.status(200).json({
             success: true,
@@ -48,7 +56,8 @@ export const updateProfile = async (req, res) => {
             gender, 
             address, 
             dateOfBirth, date_of_birth, 
-            quitReason, quit_reason 
+            quitReason, quit_reason,
+            membership
         } = req.body;
         
         const userId = req.user.id;
@@ -94,6 +103,18 @@ export const updateProfile = async (req, res) => {
             // Truyền giá trị trực tiếp, kể cả khi là chuỗi rỗng hoặc null
             updateData.quit_reason = quit_reason;
             console.log('📝 Setting quit_reason from quit_reason:', quit_reason, typeof quit_reason);
+        }
+        
+        // Xử lý membership nếu có
+        if (membership !== undefined) {
+            // Kiểm tra giá trị membership hợp lệ
+            if (['free', 'premium', 'pro'].includes(membership)) {
+                updateData.membership = membership;
+                console.log('🎭 Setting membership:', membership);
+            } else {
+                console.log('⚠️ Membership không hợp lệ, sử dụng giá trị mặc định "free"');
+                updateData.membership = 'free';
+            }
         }
         
         console.log('🔄 Final update data:', updateData);

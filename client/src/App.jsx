@@ -7,16 +7,25 @@ import BackToTop from "./components/BackToTop.jsx";
 import Home from "./page/Home.jsx";
 import ProfilePage from "./page/Profile.jsx"; // Đổi tên từ Tools sang ProfilePage
 import ProgressPage from "./page/Progress.jsx"; // Import component Progress
+import MembershipDebugger from "./components/MembershipDebugger.jsx"; // Import component để debug membership
+import TestPage from "./page/TestPage.jsx"; // Thêm trang test đơn giản
 import Blog from "./page/Blog.jsx"; // Import component Blog
 import Login from "./page/Login.jsx"; // Import component Login
 import Register from "./page/Register.jsx"; // Import component Register
 import ForgotPassword from "./page/ForgotPassword.jsx"; // Import component ForgotPassword
-import EmailVerification from "./page/EmailVerification.jsx"; // Import component EmailVerification
+import ResetPassword from "./page/ResetPassword.jsx"; // Import component ResetPassword
+import ChangePassword from "./page/ChangePassword.jsx"; // Import component ChangePassword
 import MembershipPackage from "./page/MembershipPackage.jsx"; // Import component MembershipPackage
 import BookAppointment from "./page/BookAppointment.jsx"; // Import component BookAppointment
+import BackendConnectionTest from "./components/BackendConnectionTest.jsx"; // Import BackendConnectionTest
 import ProtectedRoute from "./components/ProtectedRoute.jsx"; // Import ProtectedRoute
+import RoleBasedRoute from "./components/RoleBasedRoute.jsx"; // Import RoleBasedRoute
+import CoachRedirect from "./components/CoachRedirect.jsx"; // Import CoachRedirect
 import AccessDenied from "./page/AccessDenied.jsx"; // Import AccessDenied
 import UserProfile from "./page/User.jsx"; // Import UserProfile component
+import CoachLayout from "./components/CoachLayout.jsx"; // Import CoachLayout
+import CoachDashboard from "./page/coach/CoachDashboard.jsx"; // Import CoachDashboard
+import CoachBookings from "./page/coach/CoachBookings.jsx"; // Import CoachBookings
 import { AuthProvider } from "./context/AuthContext.jsx"; // Import AuthProvider
 import { MembershipProvider } from "./context/MembershipContext.jsx"; // Import MembershipProvider
 import "./style.css";
@@ -25,6 +34,8 @@ import Notification from "./page/Notification.jsx"; // Import component Notifica
 import SettingsPage from "./page/Settings.jsx"; // Import component Settings
 import Pay from "./page/Pay.jsx";
 import PaymentSuccess from "./page/PaymentSuccess.jsx";
+import MembershipTest from "./components/MembershipTest.jsx";
+import EmailVerification from "./page/EmailVerification.jsx"; // Import EmailVerification
 /**
  * App - Component chính của ứng dụng
  *
@@ -57,7 +68,9 @@ const router = createBrowserRouter([
     path: "/",
     element: (
       <Layout>
-        <Home />
+        <CoachRedirect>
+          <Home />
+        </CoachRedirect>
       </Layout>
     ),
   },
@@ -72,7 +85,9 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <ProtectedRoute>
-          <UserProfile isStandalone={true} />
+          <CoachRedirect>
+            <UserProfile isStandalone={true} />
+          </CoachRedirect>
         </ProtectedRoute>
       </Layout>
     ),
@@ -82,7 +97,9 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <ProtectedRoute>
-          <ProfilePage />
+          <CoachRedirect>
+            <ProfilePage />
+          </CoachRedirect>
         </ProtectedRoute>
       </Layout>
     ),
@@ -92,8 +109,18 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <ProtectedRoute>
-          <ProgressPage />
+          <CoachRedirect>
+            <ProgressPage />
+          </CoachRedirect>
         </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
+    path: "/test",
+    element: (
+      <Layout>
+        <TestPage />
       </Layout>
     ),
   },
@@ -109,9 +136,21 @@ const router = createBrowserRouter([
     path: "/journey",
     element: (
       <Layout>
-        <JourneyStepper />
+        <ProtectedRoute>
+          <JourneyStepper />
+        </ProtectedRoute>
       </Layout>
     ), // Sử dụng JourneyStepper cho trang Công Cụ
+  },
+  {
+    path: "/plan",
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <JourneyStepper />
+        </ProtectedRoute>
+      </Layout>
+    ), // Route alias cho /journey
   },
   {
     path: "/blog",
@@ -226,6 +265,14 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: "/reset-password",
+    element: (
+      <Layout>
+        <ResetPassword />
+      </Layout>
+    ),
+  },
+  {
     path: "/payment",
     element: (
       <Layout>
@@ -253,7 +300,9 @@ const router = createBrowserRouter([
     path: "/membership",
     element: (
       <Layout>
-        <MembershipPackage />
+        <ProtectedRoute>
+          <MembershipPackage />
+        </ProtectedRoute>
       </Layout>
     ), // Đường dẫn đến trang gói thành viên
   },
@@ -268,6 +317,16 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: "/change-password",
+    element: (
+      <Layout>
+        <ProtectedRoute>
+          <ChangePassword />
+        </ProtectedRoute>
+      </Layout>
+    ),
+  },
+  {
     path: "/appointment",
     element: (
       <Layout>
@@ -277,61 +336,30 @@ const router = createBrowserRouter([
       </Layout>
     ),
   },
+  // Coach Routes
   {
-    path: "/feedback",
+    path: "/coach",
     element: (
-      <Layout>
-        <ComingSoon title="Góp ý" />
-      </Layout>
+      <RoleBasedRoute allowedRoles={['coach']}>
+        <CoachLayout />
+      </RoleBasedRoute>
     ),
+    children: [
+      {
+        index: true,
+        element: <CoachDashboard />
+      },
+      {
+        path: "bookings",
+        element: <CoachBookings />
+      }
+    ]
   },
   {
-    path: "/privacy",
+    path: "/api-test",
     element: (
       <Layout>
-        <ComingSoon title="Chính sách bảo mật" />
-      </Layout>
-    ),
-  },
-  {
-    path: "/terms",
-    element: (
-      <Layout>
-        <ComingSoon title="Điều khoản sử dụng" />
-      </Layout>
-    ),
-  },
-  {
-    path: "/sitemap",
-    element: (
-      <Layout>
-        <ComingSoon title="Sơ đồ trang" />
-      </Layout>
-    ),
-  },
-  {
-    path: "/login",
-    element: (
-      <Layout>
-        <Login />
-      </Layout>
-    ),
-  },
-  {
-    path: "/signup",
-    element: (
-      <Layout>
-        <Register />
-      </Layout>
-    ),
-  },
-  {
-    path: "/settings",
-    element: (
-      <Layout>
-        <ProtectedRoute>
-          <SettingsPage />
-        </ProtectedRoute>
+        <BackendConnectionTest />
       </Layout>
     ),
   },
@@ -340,7 +368,8 @@ const router = createBrowserRouter([
     element: (
       <Layout>
         <AccessDenied />
-      </Layout>),
+      </Layout>
+    ),
   },
   {
     path: "/verify-email",

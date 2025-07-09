@@ -11,16 +11,14 @@
   margin-bottom: 20px;
 }
 
-.plan-strategy h3,
-.plan-goal h3 {
+.plan-strategy h3 {
   font-size: 16px;
   margin: 0 0 8px;
   color: #333;
   font-weight: 600;
 }
 
-.plan-strategy p,
-.plan-goal p {
+.plan-strategy p {
   font-size: 15px;
   color: #444;
   margin: 0;
@@ -55,10 +53,6 @@
   margin-left: 25px;
 }
 
-.plan-goal {
-  margin-bottom: 25px;
-}
-
 /* Milestones */
 .milestones {
   margin-bottom: 30px;
@@ -73,19 +67,51 @@
   border-bottom: 1px solid #eee;
 }
 
+.milestones-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+@media (max-width: 768px) {
+  .milestones-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .milestone-item {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 18px;
+  gap: 12px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #ddd;
   transition: all 0.2s ease;
 }
 
 .milestone-item:hover {
-  transform: translateX(5px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.milestone-item:has(.status-circle.completed) {
+  border-left-color: #28a745;
+  background-color: #f8fff8;
+}
+
+.milestone-item:has(.status-circle.in-progress) {
+  border-left-color: #2570e8;
+  background-color: #f0f7ff;
+}
+
+.milestone-item:has(.status-circle.upcoming) {
+  border-left-color: #6c757d;
+  background-color: #f8f9fa;
 }
 
 .milestone-status {
-  margin-right: 15px;
+  flex-shrink: 0;
   padding-top: 3px;
 }
 
@@ -141,4 +167,40 @@
 .edit-plan-btn:hover {
   background-color: #2570e8;
   color: #fff;
+}
+
+.edit-link {
+  color: #2570e8;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.edit-link:hover {
+  color: #1a56b8;
+}
+
+.plan-initial {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #28a745;
+}
+
+.plan-initial h3 {
+  font-size: 16px;
+  margin: 0 0 10px;
+  color: #333;
+  font-weight: 600;
+}
+
+.plan-initial p {
+  font-size: 14px;
+  margin: 5px 0;
+  color: #555;
 }

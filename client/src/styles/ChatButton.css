@@ -1,0 +1,39 @@
+/* Styles for Chat Button */
+.chat-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 100px; /* Điều chỉnh vị trí sang phải để không trùng với nút Back to Top */
+  width: 50px;
+  height: 50px;
+  background-color: #2570e8;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  transition: all 0.3s ease;
+}
+
+.chat-btn:hover {
+  background-color: #1e59be;
+  transform: scale(1.05);
+}
+
+.chat-btn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .chat-btn {
+    width: 45px;
+    height: 45px;
+    bottom: 15px;
+    right: 80px; /* Điều chỉnh vị trí trên mobile */
+    font-size: 20px;
+  }
+}

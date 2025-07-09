@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import membershipApi from '../utils/membershipApi';
 
 // Tạo context cho quản lý membership
 const MembershipContext = createContext(null);
@@ -10,6 +11,10 @@ export const useMembership = () => useContext(MembershipContext);
 // Provider component
 export const MembershipProvider = ({ children }) => {
   const { user, updateUser } = useAuth();
+  const [currentPackage, setCurrentPackage] = useState(null);
+  const [membershipHistory, setMembershipHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Danh sách các gói thành viên
   const membershipTiers = {
@@ -73,28 +78,27 @@ export const MembershipProvider = ({ children }) => {
     }
     
     try {
-      // Cập nhật membership của người dùng
-      const result = await updateUser({ membership: targetMembership });
+      // Xác định packageId dựa trên targetMembership
+      const packageId = targetMembership === 'premium' ? 2 : targetMembership === 'pro' ? 3 : 1;
       
-      if (result.success) {
-        // Thêm transaction vào lịch sử
-        const transactions = JSON.parse(localStorage.getItem('membership_transactions') || '[]');
-        transactions.push({
-          id: Date.now().toString(),
-          userId: user.id,
-          membershipType: targetMembership,
-          amount: membershipTiers[targetMembership].price,
-          date: new Date().toISOString(),
-          status: 'completed'
-        });
-        localStorage.setItem('membership_transactions', JSON.stringify(transactions));
-        
-        return { success: true };
-      } else {
-        return result; // Trả về kết quả từ updateUser
+      // Gọi API để mua gói membership mới
+      const response = await membershipApi.purchasePackage(packageId, 'momo');
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Không thể nâng cấp gói thành viên');
       }
+      
+      // API purchasePackage đã cập nhật localStorage, chỉ cần gọi updateUser để cập nhật state
+      await updateUser({ membership: targetMembership, membershipType: targetMembership });
+      
+      return { success: true };
     } catch (error) {
-      return { success: false, error: 'Có lỗi xảy ra khi nâng cấp gói thành viên' };
+      console.error('Upgrade membership error:', error);
+      
+      return { 
+        success: false, 
+        error: error.message || 'Có lỗi xảy ra khi nâng cấp gói thành viên' 
+      };
     }
   };
     // Kiểm tra xem người dùng có quyền truy cập tính năng không
@@ -118,13 +122,175 @@ export const MembershipProvider = ({ children }) => {
     return userLevel >= requiredLevel;
   };
 
+  // Lấy thông tin membership hiện tại từ API
+  useEffect(() => {
+    const fetchCurrentMembership = async () => {
+      if (user && user.id) {
+        setLoading(true);
+        setError(null);
+        try {
+          console.log('MembershipContext - Fetching current membership data...');
+          const response = await membershipApi.getCurrentMembership();
+          
+          if (response.success && response.data) {
+            console.log('MembershipContext - Membership data fetched successfully:', response.data);
+            setCurrentPackage(response.data);
+            
+            // Cập nhật thông tin user nếu có sự khác biệt về membership
+            if (response.data.package_name) {
+              let membershipValue = 'free';
+              const packageName = response.data.package_name.toLowerCase();
+              
+              if (packageName.includes('pro')) {
+                membershipValue = 'pro';
+              } else if (packageName.includes('premium')) {
+                membershipValue = 'premium';
+              } else if (response.data.package_id !== 1) {
+                membershipValue = 'premium';
+              }
+              
+              console.log('MembershipContext - Determined membership value:', membershipValue);
+              console.log('MembershipContext - Current user membership:', user.membership);
+              
+              if (user.membership !== membershipValue) {
+                console.log('MembershipContext - Updating user with new membership:', membershipValue);
+                updateUser({ 
+                  membership: membershipValue, 
+                  membershipType: membershipValue,
+                  packageDetails: response.data
+                });
+              }
+            }
+          } else {
+            console.warn('MembershipContext - Failed to fetch membership data:', response.message);
+            setError(response.message || 'Không thể lấy thông tin gói thành viên');
+          }
+        } catch (err) {
+          console.error('MembershipContext - Error fetching membership:', err);
+          setError(err.message || 'Đã xảy ra lỗi khi lấy thông tin gói thành viên');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchCurrentMembership();
+    
+    // Thiết lập interval để tự động refresh membership data
+    const intervalId = setInterval(() => {
+      if (user && user.id) {
+        console.log('MembershipContext - Auto refreshing membership data...');
+        fetchCurrentMembership();
+      }
+    }, 180000); // 3 phút
+    
+    // Lắng nghe sự kiện membership-updated
+    const handleMembershipUpdate = (event) => {
+      if (event.detail && event.detail.membership) {
+        console.log('MembershipContext - Membership update event received:', event.detail);
+        
+        // Cập nhật package details nếu có
+        if (event.detail.packageDetails) {
+          setCurrentPackage(event.detail.packageDetails);
+        }
+        
+        // Force refresh membership data
+        fetchCurrentMembership();
+      }
+    };
+    
+    // Đăng ký lắng nghe sự kiện
+    window.addEventListener('membership-updated', handleMembershipUpdate);
+    
+    // Cleanup function
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('membership-updated', handleMembershipUpdate);
+    };
+    
+    // Hàm này sẽ được gọi khi component được mount hoặc khi user thay đổi
+  }, [user, updateUser]);
+
+  // Lấy lịch sử gói thành viên
+  const fetchMembershipHistory = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await membershipApi.getMembershipHistory();
+      if (response.success && response.data) {
+        setMembershipHistory(response.data);
+      } else {
+        setError(response.message || 'Không thể lấy lịch sử gói thành viên');
+      }
+    } catch (err) {
+      setError(err.message || 'Đã xảy ra lỗi khi lấy lịch sử gói thành viên');
+      console.error('Error fetching membership history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mua gói thành viên
+  const purchasePackage = async (packageId, paymentMethod) => {
+    if (!user) return { success: false, error: 'Chưa đăng nhập' };
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await membershipApi.purchasePackage(packageId, paymentMethod);
+      
+      if (response.success && response.data) {
+        // Cập nhật thông tin gói hiện tại
+        setCurrentPackage(response.data);
+        
+        // Cập nhật trạng thái membership trong user
+        let membershipValue = 'free';
+        if (response.data.packageName) {
+          const packageName = response.data.packageName.toLowerCase();
+          if (packageName.includes('pro')) {
+            membershipValue = 'pro';
+          } else if (packageName.includes('premium')) {
+            membershipValue = 'premium';
+          } else if (response.data.packageId !== 1) {
+            membershipValue = 'premium';
+          }
+        }
+        
+        // Cập nhật user trong auth context
+        await updateUser({ 
+          membership: membershipValue, 
+          membershipType: membershipValue 
+        });
+        
+        return { success: true, data: response.data };
+      } else {
+        setError(response.message || 'Không thể mua gói thành viên');
+        return { success: false, error: response.message };
+      }
+    } catch (err) {
+      setError(err.message || 'Đã xảy ra lỗi khi mua gói thành viên');
+      console.error('Error purchasing package:', err);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Giá trị context
   const value = {
     membershipTiers,
     getCurrentMembershipInfo,
     upgradeMembership,
     checkFeatureAccess,
-    currentMembership: user?.membership || 'free'
+    purchasePackage,
+    fetchMembershipHistory,
+    currentMembership: user?.membership || 'free',
+    currentPackage,
+    membershipHistory,
+    loading,
+    error
   };
 
   return <MembershipContext.Provider value={value}>{children}</MembershipContext.Provider>;
