@@ -1,164 +1,174 @@
+import User from '../models/User.js';
 import { pool } from '../config/database.js';
-import bcrypt from 'bcryptjs';
-import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
-
-// Configure multer for avatar uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = 'public/uploads/avatars';
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'avatar-' + req.user.id + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed!'), false);
-    }
-};
-
-export const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
-    }
-});
+import path from 'path';
 
 // Get user profile
-export const getUserProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        const [users] = await pool.execute(
-            `SELECT 
-                id, username, email, full_name, phone, date_of_birth, 
-                gender, role, email_verified, avatar_url, 
-                created_at, updated_at 
-             FROM users WHERE id = ?`,
-            [userId]
-        );
-
-        if (users.length === 0) {
+export const getProfile = async (req, res) => {
+    try {        
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
             return res.status(404).json({
                 success: false,
-                message: 'User not found'
+                message: 'User not found',
+                data: null
             });
         }
 
-        const user = users[0];
-
-        // Get smoking status
-        const [smokingStatus] = await pool.execute(
-            `SELECT * FROM user_smoking_status WHERE UserID = ? ORDER BY LastUpdated DESC LIMIT 1`,
-            [userId]
-        );
-
-        res.json({
+        // Remove sensitive information
+        delete user.password_hash;
+        delete user.refresh_token;
+        
+        // Đảm bảo membership được trả về đúng
+        if (user.membership === null || user.membership === undefined) {
+            user.membership = 'free'; // Giá trị mặc định nếu không có
+        }
+        
+        console.log('🔍 Get profile - User membership:', user.membership);
+        
+        res.status(200).json({
             success: true,
-            message: 'Profile retrieved successfully',
-            data: {
-                user,
-                smokingStatus: smokingStatus[0] || null
-            }
+            message: 'User profile retrieved successfully',
+            data: user
         });
     } catch (error) {
-        console.error('Get profile error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error retrieving profile'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
 
 // Update user profile
-export const updateUserProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
     try {
+        console.log('📝 Update profile request:', req.body);
+        
+        // Nhận dữ liệu từ request
+        const { 
+            name, fullName, full_name, 
+            email, 
+            phone, 
+            age, 
+            gender, 
+            address, 
+            dateOfBirth, date_of_birth, 
+            quitReason, quit_reason,
+            membership
+        } = req.body;
+        
         const userId = req.user.id;
-        const { full_name, phone, date_of_birth, gender } = req.body;
-
-        // Validate input
-        if (date_of_birth && isNaN(Date.parse(date_of_birth))) {
+        console.log('👤 User ID:', userId);
+        
+        // Check if email already exists for another user
+        if (email) {
+            const existingUser = await User.findByEmail(email);
+            if (existingUser && existingUser.id !== userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already in use',
+                    data: null
+                });
+            }
+        }
+        
+        // Prepare update data - hỗ trợ nhiều định dạng đầu vào khác nhau
+        const updateData = {};
+        
+        // Xử lý trường full_name (có thể truyền vào với nhiều tên khác nhau)
+        if (name) updateData.full_name = name;
+        else if (fullName) updateData.full_name = fullName;
+        else if (full_name) updateData.full_name = full_name;
+        
+        if (email) updateData.email = email;
+        if (phone) updateData.phone = phone;
+        if (age !== undefined) updateData.age = parseInt(age);
+        if (gender) updateData.gender = gender;
+        if (address !== undefined) updateData.address = address;
+        
+        // Xử lý trường date_of_birth (có thể truyền vào dạng camelCase hoặc snake_case)
+        if (dateOfBirth) updateData.date_of_birth = dateOfBirth;
+        else if (date_of_birth) updateData.date_of_birth = date_of_birth;
+        
+        // Xử lý trường quit_reason đặc biệt - đảm bảo xử lý cả khi giá trị rỗng hoặc null
+        if (quitReason !== undefined) {
+            // Truyền giá trị trực tiếp, kể cả khi là chuỗi rỗng hoặc null
+            // Model User.js sẽ xử lý việc chuyển đổi chuỗi rỗng thành null
+            updateData.quit_reason = quitReason;
+            console.log('📝 Setting quit_reason from quitReason:', quitReason, typeof quitReason);
+        } else if (quit_reason !== undefined) {
+            // Truyền giá trị trực tiếp, kể cả khi là chuỗi rỗng hoặc null
+            updateData.quit_reason = quit_reason;
+            console.log('📝 Setting quit_reason from quit_reason:', quit_reason, typeof quit_reason);
+        }
+        
+        // Xử lý membership nếu có
+        if (membership !== undefined) {
+            // Kiểm tra giá trị membership hợp lệ
+            if (['free', 'premium', 'pro'].includes(membership)) {
+                updateData.membership = membership;
+                console.log('🎭 Setting membership:', membership);
+            } else {
+                console.log('⚠️ Membership không hợp lệ, sử dụng giá trị mặc định "free"');
+                updateData.membership = 'free';
+            }
+        }
+        
+        console.log('🔄 Final update data:', updateData);
+        
+        // Kiểm tra xem có dữ liệu cập nhật không
+        if (Object.keys(updateData).length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid date format'
+                message: 'No data provided for update',
+                data: null
             });
         }
-
-        if (gender && !['male', 'female', 'other'].includes(gender)) {
-            return res.status(400).json({
+        
+        // Update user in database
+        const updated = await User.update(userId, updateData);
+        console.log('✅ Update result:', updated);
+        
+        // Kiểm tra kết quả cập nhật
+        if (!updated) {
+            return res.status(404).json({
                 success: false,
-                message: 'Invalid gender value'
+                message: 'Failed to update user or user not found',
+                data: null
             });
         }
-
-        const updateFields = [];
-        const updateValues = [];
-
-        if (full_name !== undefined) {
-            updateFields.push('full_name = ?');
-            updateValues.push(full_name);
-        }
-
-        if (phone !== undefined) {
-            updateFields.push('phone = ?');
-            updateValues.push(phone);
-        }
-
-        if (date_of_birth !== undefined) {
-            updateFields.push('date_of_birth = ?');
-            updateValues.push(date_of_birth);
-        }
-
-        if (gender !== undefined) {
-            updateFields.push('gender = ?');
-            updateValues.push(gender);
-        }
-
-        if (updateFields.length === 0) {
-            return res.status(400).json({
+        
+        // Đợi một chút để đảm bảo DB đã cập nhật xong
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Get updated user
+        const updatedUser = await User.findById(userId);
+        if (!updatedUser) {
+            return res.status(404).json({
                 success: false,
-                message: 'No fields to update'
+                message: 'User not found after update',
+                data: null
             });
         }
-
-        updateValues.push(userId);
-
-        await pool.execute(
-            `UPDATE users SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            updateValues
-        );
-
-        // Get updated user data
-        const [users] = await pool.execute(
-            `SELECT 
-                id, username, email, full_name, phone, date_of_birth, 
-                gender, role, email_verified, avatar_url, 
-                created_at, updated_at 
-             FROM users WHERE id = ?`,
-            [userId]
-        );
-
-        res.json({
+        
+        // Loại bỏ thông tin nhạy cảm
+        delete updatedUser.password_hash;
+        delete updatedUser.refresh_token;
+        
+        res.status(200).json({
             success: true,
             message: 'Profile updated successfully',
-            data: users[0]
+            data: updatedUser
         });
     } catch (error) {
-        console.error('Update profile error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error updating profile'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
@@ -169,47 +179,40 @@ export const uploadAvatar = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'No file uploaded'
+                message: 'No file uploaded',
+                data: null
             });
         }
-
+        
         const userId = req.user.id;
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-
-        // Get old avatar to delete
-        const [users] = await pool.execute(
-            'SELECT avatar_url FROM users WHERE id = ?',
-            [userId]
-        );
-
-        const oldAvatarUrl = users[0]?.avatar_url;
-
-        // Update avatar URL in database
-        await pool.execute(
-            'UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [avatarUrl, userId]
-        );
-
-        // Delete old avatar file if exists
-        if (oldAvatarUrl && oldAvatarUrl !== avatarUrl) {
-            const oldFilePath = path.join('public', oldAvatarUrl);
-            if (fs.existsSync(oldFilePath)) {
-                fs.unlinkSync(oldFilePath);
-            }
+        const avatarPath = `/uploads/avatars/${req.file.filename}`;
+          // Get user's current avatar
+        const currentUser = await User.findById(userId);
+        const oldAvatarPath = currentUser.profile_image;
+          // Update user's avatar in database
+        await User.update(userId, { profile_image: avatarPath });
+        
+        // Delete old avatar file if it exists and is not a default avatar
+        if (oldAvatarPath && !oldAvatarPath.includes('default') && fs.existsSync(path.join(process.cwd(), 'public', oldAvatarPath))) {
+            fs.unlinkSync(path.join(process.cwd(), 'public', oldAvatarPath));
         }
-
-        res.json({
+        
+        res.status(200).json({
             success: true,
             message: 'Avatar uploaded successfully',
-            data: {
-                avatarUrl
-            }
+            data: { avatarUrl: avatarPath }
         });
     } catch (error) {
-        console.error('Upload avatar error:', error);
+        // Delete uploaded file if there's an error
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+        
         res.status(500).json({
             success: false,
-            message: 'Error uploading avatar'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
@@ -218,22 +221,40 @@ export const uploadAvatar = async (req, res) => {
 export const getSmokingStatus = async (req, res) => {
     try {
         const userId = req.user.id;
-
-        const [results] = await pool.execute(
-            `SELECT * FROM user_smoking_status WHERE UserID = ? ORDER BY LastUpdated DESC LIMIT 1`,
-            [userId]
-        );
-
-        res.json({
+        
+        // Get user's smoking status from database
+        const query = `
+            SELECT 
+                SmokingStatus,
+                CigarettesPerDay,
+                YearsSmoked,
+                QuitDate,
+                LastUpdated
+            FROM user_smoking_status
+            WHERE UserID = ?
+        `;
+        
+        const [rows] = await pool.query(query, [userId]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Smoking status not found',
+                data: null
+            });
+        }
+        
+        res.status(200).json({
             success: true,
             message: 'Smoking status retrieved successfully',
-            data: results[0] || null
+            data: rows[0]
         });
     } catch (error) {
-        console.error('Get smoking status error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error retrieving smoking status'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
@@ -241,148 +262,116 @@ export const getSmokingStatus = async (req, res) => {
 // Update smoking status
 export const updateSmokingStatus = async (req, res) => {
     try {
+        const { smokingStatus, cigarettesPerDay, yearsSmoked, quitDate } = req.body;
         const userId = req.user.id;
-        const {
-            is_smoker,
-            cigarettes_per_day,
-            years_smoking,
-            quit_date,
-            quit_attempts,
-            motivation_level,
-            quit_reasons
-        } = req.body;
-
-        console.log('Update Smoking Status Request:', JSON.stringify(req.body));
-
-        // Validate required fields
-        if (is_smoker === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: 'is_smoker field is required'
-            });
-        }
-
-        // Create or update smoking status
-        const [existing] = await pool.execute(
-            'SELECT id FROM user_smoking_status WHERE UserID = ?',
-            [userId]
-        );
-
-        // Set smoking status based on is_smoker
-        const smokingStatus = is_smoker ? 'active' : 'quit';
-
-        // Use null for any undefined values
-        const cpd = cigarettes_per_day || null;
-        const ys = years_smoking || null;
-        const qd = quit_date || null;
-
-        console.log('Parameters for SQL:', {
-            userId,
-            smokingStatus,
-            cpd,
-            ys,
-            qd
-        });
-
-        if (existing.length > 0) {
-            // Update existing record
-            console.log('Updating existing record');
-            await pool.execute(
-                `UPDATE user_smoking_status SET 
-                    SmokingStatus = ?, 
-                    CigarettesPerDay = ?, 
-                    YearsSmoked = ?, 
-                    QuitDate = ?,
-                    LastUpdated = CURRENT_TIMESTAMP 
-                 WHERE UserID = ?`,
-                [smokingStatus, cpd, ys, qd, userId]
-            );
-        } else {
+        
+        // Check if user already has a smoking status record
+        const checkQuery = `SELECT UserID FROM user_smoking_status WHERE UserID = ?`;
+        const [checkRows] = await pool.query(checkQuery, [userId]);
+        
+        let query, params;
+        
+        if (checkRows.length === 0) {
             // Insert new record
-            console.log('Inserting new record');
-            await pool.execute(
-                `INSERT INTO user_smoking_status 
+            query = `
+                INSERT INTO user_smoking_status 
                     (UserID, SmokingStatus, CigarettesPerDay, YearsSmoked, QuitDate, LastUpdated) 
-                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-                [userId, smokingStatus, cpd, ys, qd]
-            );
+                VALUES (?, ?, ?, ?, ?, NOW())
+            `;
+            params = [userId, smokingStatus, cigarettesPerDay, yearsSmoked, quitDate || null];
+        } else {
+            // Update existing record
+            query = `
+                UPDATE user_smoking_status
+                SET 
+                    SmokingStatus = ?,
+                    CigarettesPerDay = ?,
+                    YearsSmoked = ?,
+                    QuitDate = ?,
+                    LastUpdated = NOW()
+                WHERE UserID = ?
+            `;
+            params = [smokingStatus, cigarettesPerDay, yearsSmoked, quitDate || null, userId];
         }
-
+        
+        await pool.query(query, params);
+        
         // Get updated smoking status
-        const [results] = await pool.execute(
-            'SELECT * FROM user_smoking_status WHERE UserID = ? ORDER BY LastUpdated DESC LIMIT 1',
-            [userId]
-        );
-
-        res.json({
+        const getQuery = `
+            SELECT 
+                SmokingStatus,
+                CigarettesPerDay,
+                YearsSmoked,
+                QuitDate,
+                LastUpdated
+            FROM user_smoking_status
+            WHERE UserID = ?
+        `;
+        
+        const [rows] = await pool.query(getQuery, [userId]);
+        
+        res.status(200).json({
             success: true,
             message: 'Smoking status updated successfully',
-            data: results[0]
+            data: rows[0]
         });
     } catch (error) {
-        console.error('Update smoking status error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error updating smoking status'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
 
 // Delete user account
-export const deleteUserAccount = async (req, res) => {
+export const deleteAccount = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { password } = req.body;
-
-        if (!password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Password is required to delete account'
-            });
+          // Get user's avatar
+        const user = await User.findById(userId);
+        const avatarPath = user.profile_image;
+        
+        // Begin transaction to ensure all related data is deleted
+        await pool.query('START TRANSACTION');
+        
+        // Delete user's smoking status
+        await pool.query('DELETE FROM user_smoking_status WHERE UserID = ?', [userId]);
+        
+        // Delete user's refresh tokens
+        await pool.query('DELETE FROM refresh_tokens WHERE UserID = ?', [userId]);
+        
+        // Delete any other related data...
+        // For example:
+        // await pool.query('DELETE FROM user_progress WHERE UserID = ?', [userId]);
+        // await pool.query('DELETE FROM user_goals WHERE UserID = ?', [userId]);
+        
+        // Finally delete the user
+        await pool.query('DELETE FROM users WHERE UserID = ?', [userId]);
+        
+        // Commit transaction
+        await pool.query('COMMIT');
+        
+        // Delete avatar file if it exists and is not a default avatar
+        if (avatarPath && !avatarPath.includes('default') && fs.existsSync(path.join(process.cwd(), 'public', avatarPath))) {
+            fs.unlinkSync(path.join(process.cwd(), 'public', avatarPath));
         }
-
-        // Verify password
-        const [users] = await pool.execute(
-            'SELECT password_hash, avatar_url FROM users WHERE id = ?',
-            [userId]
-        );
-
-        if (users.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const isValidPassword = await bcrypt.compare(password, users[0].password_hash);
-        if (!isValidPassword) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid password'
-            });
-        }
-
-        // Delete avatar file if exists
-        const avatarUrl = users[0].avatar_url;
-        if (avatarUrl) {
-            const filePath = path.join('public', avatarUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-
-        // Delete user account (cascade delete will handle related records)
-        await pool.execute('DELETE FROM users WHERE id = ?', [userId]);
-
-        res.json({
+        
+        res.status(200).json({
             success: true,
-            message: 'Account deleted successfully'
+            message: 'Account deleted successfully',
+            data: null
         });
     } catch (error) {
-        console.error('Delete account error:', error);
+        // Rollback transaction if error
+        await pool.query('ROLLBACK');
+        
         res.status(500).json({
             success: false,
-            message: 'Error deleting account'
+            message: 'Server error',
+            error: error.message,
+            data: null
         });
     }
 };
