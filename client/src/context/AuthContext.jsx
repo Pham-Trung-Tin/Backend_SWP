@@ -42,8 +42,9 @@ const COACH_ACCOUNTS = [
 
 // Provider component
 export const AuthProvider = ({ children }) => {
-  // Khởi tạo trạng thái từ localStorage (nếu có)
+  // Khởi tạo trạng thái từ localStorage hoặc sessionStorage (nếu có)
   const [user, setUser] = useState(() => {
+    // Ưu tiên localStorage (ghi nhớ), sau đó mới sessionStorage (không ghi nhớ)
     const storedUser = localStorage.getItem('nosmoke_user') || sessionStorage.getItem('nosmoke_user');
     if (storedUser) {
       const userData = JSON.parse(storedUser);
@@ -60,10 +61,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Lưu user vào localStorage khi thay đổi
+  // Lưu user vào storage khi thay đổi
   useEffect(() => {
     if (user) {
-      localStorage.setItem('nosmoke_user', JSON.stringify(user));
+      // Kiểm tra xem có token trong localStorage không (tức là có ghi nhớ)
+      const hasRememberMe = localStorage.getItem('auth_token');
+      if (hasRememberMe) {
+        localStorage.setItem('nosmoke_user', JSON.stringify(user));
+      } else {
+        sessionStorage.setItem('nosmoke_user', JSON.stringify(user));
+      }
     }
   }, [user]);
 
@@ -133,12 +140,13 @@ export const AuthProvider = ({ children }) => {
         };
 
         // Lưu token và user data
-        localStorage.setItem('auth_token', token);
-        localStorage.setItem('refresh_token', refreshToken);
-
         if (rememberMe) {
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('refresh_token', refreshToken);
           localStorage.setItem('nosmoke_user', JSON.stringify(normalizedUser));
         } else {
+          sessionStorage.setItem('auth_token', token);
+          sessionStorage.setItem('refresh_token', refreshToken);
           sessionStorage.setItem('nosmoke_user', JSON.stringify(normalizedUser));
         }
 
@@ -159,8 +167,13 @@ export const AuthProvider = ({ children }) => {
   // Hàm đăng xuất
   const logout = () => {
     setUser(null);
-    // Xóa thông tin user khỏi localStorage
+    // Xóa thông tin user và token khỏi cả localStorage và sessionStorage
     localStorage.removeItem('nosmoke_user');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('nosmoke_user');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('refresh_token');
     return { success: true };
   };
   // Đảm bảo rằng membership luôn là một giá trị hợp lệ
