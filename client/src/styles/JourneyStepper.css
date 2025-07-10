@@ -1053,6 +1053,11 @@
   background-color: #34a853;
 }
 
+.btn-submit.error {
+  background-color: #ea4335;
+  animation: shake 0.5s ease-in-out;
+}
+
 .loader {
   width: 20px;
   height: 20px;
@@ -1066,6 +1071,12 @@
   color: white;
   font-size: 16px;
   animation: checkmarkIn 0.5s ease-in-out;
+}
+
+.error-mark {
+  color: white;
+  font-size: 16px;
+  animation: errorIn 0.5s ease-in-out;
 }
 
 @keyframes spin {
@@ -1109,6 +1120,32 @@
 
   100% {
     box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes errorIn {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
   }
 }
 
@@ -1600,6 +1637,7 @@
     transform: translateY(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;

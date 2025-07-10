@@ -263,6 +263,8 @@ export const getUserPlans = async (req, res) => {
                 end_date: plan.end_date,
                 status: plan.status,
                 created_at: plan.created_at,
+                // Add is_active based on status
+                is_active: plan.status === 'ongoing' || plan.status === 'active',
                 // Extract data from plan_details JSON
                 strategy: planDetails.strategy || 'gradual',
                 planType: planDetails.strategy || 'gradual',
@@ -272,7 +274,13 @@ export const getUserPlans = async (req, res) => {
                 initial_cigarettes: planDetails.initialCigarettes || 10,
                 totalWeeks: planDetails.totalWeeks || 8,
                 total_weeks: planDetails.totalWeeks || 8,
-                weeks: planDetails.weeks || []
+                weeks: planDetails.weeks || [],
+                // Add metadata for frontend compatibility
+                metadata: planDetails.metadata || {
+                    packPrice: planDetails.packPrice || 25000,
+                    smokingYears: planDetails.smokingYears || 5,
+                    selectedPlanId: planDetails.selectedPlanId || 1
+                }
             };
         });
 
