@@ -1,8 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useMembership } from '../context/MembershipContext';
 import './FeatureSection.css';
 
-export default function FeatureSection() {  return (
+export default function FeatureSection() {
+  const { checkFeatureAccess, currentMembership } = useMembership();
+  const hasCoachAccess = checkFeatureAccess('premium');
+
+  return (
     <section className="feature-section">
       <div className="container">
         <h2>Tính năng nổi bật</h2>
@@ -36,13 +41,16 @@ export default function FeatureSection() {  return (
             <span className="feature-link">Tạo kế hoạch <i className="fas fa-arrow-right"></i></span>
           </Link>
           
-          <Link to="/appointment" className="feature-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+          <Link to={hasCoachAccess ? "/coach" : "/membership"} className="feature-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
             <div className="feature-icon purple">
               <i className="fas fa-users"></i>
             </div>
             <h3>Kết nối huấn luyện viên hỗ trợ</h3>
             <p>Được kết nối với huấn luyện viên chuyên nghiệp giúp bạn vượt qua những thách thức trong quá trình cai thuốc.</p>
-            <span className="feature-link">Đặt lịch ngay <i className="fas fa-arrow-right"></i></span>
+            <span className="feature-link">
+              {hasCoachAccess ? "Đặt lịch ngay" : "Nâng cấp để sử dụng"} <i className="fas fa-arrow-right"></i>
+              {!hasCoachAccess && <span className="premium-badge">Premium</span>}
+            </span>
           </Link>
           
           <Link to="/blog" className="feature-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>

@@ -67,29 +67,55 @@ const DailyCheckin = ({ onProgressUpdate, currentPlan }) => {
         }
     };
 
-    // Tính streak days
+    // Tính streak days (chỉ tính từ ngày bắt đầu kế hoạch)
     const calculateStreakDays = () => {
         let streak = 0;
         const today = new Date();
         
-        for (let i = 0; i < 30; i++) {
+        // Nếu có kế hoạch, chỉ tính từ ngày bắt đầu kế hoạch
+        let startDate = today;
+        if (currentPlan && currentPlan.startDate) {
+            const planStartDate = new Date(currentPlan.startDate);
+            if (!isNaN(planStartDate.getTime())) {
+                startDate = planStartDate;
+            }
+        }
+        
+        // Tính số ngày từ start date đến hôm nay
+        const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+        const maxDaysToCheck = Math.min(daysSinceStart + 1, 30); // Không quá 30 ngày và không quá số ngày từ khi bắt đầu
+        
+        console.log(`Tính streak từ ${startDate.toISOString().split('T')[0]} (${maxDaysToCheck} ngày để kiểm tra)`);
+        
+        for (let i = 0; i < maxDaysToCheck; i++) {
             const checkDate = new Date(today);
             checkDate.setDate(checkDate.getDate() - i);
-            const dateStr = checkDate.toISOString().split('T')[0];
             
+            // Không kiểm tra những ngày trước khi bắt đầu kế hoạch
+            if (checkDate < startDate) {
+                console.log(`Bỏ qua ngày ${checkDate.toISOString().split('T')[0]} vì trước ngày bắt đầu kế hoạch`);
+                break;
+            }
+            
+            const dateStr = checkDate.toISOString().split('T')[0];
             const savedData = localStorage.getItem(`checkin_${dateStr}`);
+            
             if (savedData) {
                 const data = JSON.parse(savedData);
                 if (data.actualCigarettes <= data.targetCigarettes) {
                     streak++;
+                    console.log(`✅ Ngày ${dateStr}: ${data.actualCigarettes}/${data.targetCigarettes} - Streak: ${streak}`);
                 } else {
+                    console.log(`❌ Ngày ${dateStr}: ${data.actualCigarettes}/${data.targetCigarettes} - Streak bị phá`);
                     break; // Streak bị phá
                 }
             } else {
+                console.log(`⚪ Ngày ${dateStr}: Không có dữ liệu - Streak dừng`);
                 break; // Không có dữ liệu
             }
         }
         
+        console.log(`Streak days cuối cùng: ${streak}`);
         setStreakDays(streak);
     };
 

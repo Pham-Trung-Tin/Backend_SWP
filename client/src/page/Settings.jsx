@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './Settings.css';
+import { useAuth } from '../context/AuthContext';
+import profileApi from '../utils/profileApi';
 
 export default function SettingsPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
@@ -10,6 +15,10 @@ export default function SettingsPage() {
     language: 'vi',
     privacy: 'public'
   });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSettingsChange = (key, value) => {
     setSettings(prev => ({
@@ -21,6 +30,43 @@ export default function SettingsPage() {
   const handleSaveSettings = () => {
     console.log('Cài đặt mới:', settings);
     alert('Đã lưu cài đặt của bạn!');
+  };
+  
+  const confirmDeleteAccount = () => {
+    setIsDeleting(true);
+    setDeleteError('');
+  };
+  
+  const cancelDelete = () => {
+    setIsDeleting(false);
+    setDeleteConfirmation('');
+    setDeleteError('');
+  };
+  
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      setDeleteError('Vui lòng nhập "DELETE" để xác nhận');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await profileApi.deleteAccount();
+      
+      if (result.success) {
+        alert('Tài khoản của bạn đã được xóa thành công');
+        await logout();
+        navigate('/');
+      } else {
+        setDeleteError(result.message || 'Không thể xóa tài khoản');
+      }
+    } catch (err) {
+      setDeleteError('Có lỗi xảy ra, vui lòng thử lại');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -114,6 +160,17 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <div className="settings-group security-zone">
+          <h2>Bảo mật</h2>
+          <div className="settings-item">
+            <div className="setting-info">
+              <h3>Đổi mật khẩu</h3>
+              <p>Cập nhật mật khẩu mới cho tài khoản của bạn</p>
+            </div>
+            <Link to="/change-password" className="settings-btn">Đổi mật khẩu</Link>
+          </div>
+        </div>
+        
         <div className="settings-group danger-zone">
           <h2>Vùng nguy hiểm</h2>
           <div className="settings-item">
@@ -121,7 +178,41 @@ export default function SettingsPage() {
               <h3>Xóa tài khoản</h3>
               <p>Xóa vĩnh viễn tài khoản và toàn bộ dữ liệu</p>
             </div>
-            <button className="settings-btn danger">Xóa tài khoản</button>
+            {isDeleting ? (
+              <div className="delete-confirmation">
+                <p className="delete-warning">Hành động này không thể khôi phục. Nhập "DELETE" để xác nhận xóa tài khoản.</p>
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Nhập DELETE để xác nhận"
+                />
+                {deleteError && <p className="delete-error">{deleteError}</p>}
+                <div className="delete-actions">
+                  <button 
+                    className="settings-btn danger" 
+                    onClick={handleDeleteAccount}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Đang xử lý...' : 'Xác nhận xóa tài khoản'}
+                  </button>
+                  <button 
+                    className="settings-btn cancel" 
+                    onClick={cancelDelete}
+                    disabled={isLoading}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button 
+                className="settings-btn danger" 
+                onClick={confirmDeleteAccount}
+              >
+                Xóa tài khoản
+              </button>
+            )}
           </div>
         </div>
 

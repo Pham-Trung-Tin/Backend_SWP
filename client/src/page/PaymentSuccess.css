@@ -305,3 +305,72 @@
   border-radius: 50%;
   z-index: -1;
 }
+
+.transaction-id {
+  font-family: monospace;
+  font-weight: 600;
+  color: #444;
+}
+
+.back-home-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 20px;
+  display: block;
+  width: 100%;
+}
+
+.back-home-button:hover {
+  background-color: #43A047;
+}
+
+/* Styles for different payment statuses */
+.payment-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.payment-status.completed {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.payment-status.pending {
+  background-color: #fff8e1;
+  color: #f57c00;
+  border: 1px solid #ffe082;
+}
+
+.payment-status.failed {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.payment-status.refunded {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+/* Warning message styling */
+.warning-message {
+  background-color: #fffde7;
+  border-left: 4px solid #fbc02d;
+  padding: 12px;
+  margin: 15px 0;
+  border-radius: 4px;
+  color: #424242;
+  font-size: 14px;
+}

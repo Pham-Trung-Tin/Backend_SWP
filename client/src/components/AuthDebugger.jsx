@@ -5,7 +5,7 @@ const AuthDebugger = () => {
   const { user, isAuthenticated } = useAuth();
   
   // Only show in development
-  if (process.env.NODE_ENV === 'production') return null;
+  if (import.meta.env.MODE === 'production') return null;
   
   return (
     <div style={{

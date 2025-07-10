@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMembership } from '../context/MembershipContext';
 import '../styles/RequireMembership.css';
-import { FaLock, FaCrown } from 'react-icons/fa';
+import { FaLock, FaCrown, FaSpinner } from 'react-icons/fa';
 import { hasAccessToFeature, getMinimumRequiredMembership, formatMembershipName } from '../utils/membershipUtils';
+import { checkFeatureAccessFromBackend } from '../utils/membershipApi';
 
 /**
  * Higher-Order Component (HOC) để giới hạn truy cập các tính năng dựa trên gói thành viên
@@ -18,33 +19,84 @@ const RequireMembership = ({ allowedMemberships = [], showModal = false, feature
   const { user } = useAuth();
   const { checkFeatureAccess } = useMembership();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [accessInfo, setAccessInfo] = useState(null);
   
   // Lấy membership của user hiện tại (mặc định là 'free' nếu không có)
   const userMembership = user?.membership || 'free';
   
-  // Xác định membership level tối thiểu cần thiết
+  // Xác định membership level tối thiểu cần thiết (dự phòng nếu API chưa trả kết quả)
   const minRequiredMembership = allowedMemberships.sort((a, b) => {
     const levels = { 'free': 0, 'premium': 1, 'pro': 2 };
     return levels[a] - levels[b];
   })[0];
-    // Kiểm tra xem user có quyền truy cập không dựa trên phân cấp membership
-  // Ghi log để debug
-  console.log('User membership:', userMembership);
-  console.log('Allowed memberships:', allowedMemberships);
-  console.log('Min required membership:', minRequiredMembership);
   
-  // Thiết lập mảng cấp độ thành viên để so sánh
-  const membershipLevels = ['free', 'premium', 'pro'];
-  const userLevel = membershipLevels.indexOf(userMembership);
-  const requiredLevel = membershipLevels.indexOf(minRequiredMembership);
+  // Kiểm tra quyền truy cập từ backend
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) {
+        setAccessInfo({ hasAccess: false, userMembership: 'free', requiredMembership: minRequiredMembership });
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        console.log('Kiểm tra quyền truy cập từ backend cho:', allowedMemberships);
+        const result = await checkFeatureAccessFromBackend(allowedMemberships);
+        
+        console.log('Kết quả kiểm tra quyền từ backend:', result);
+        
+        if (result.success) {
+          setAccessInfo(result);
+        } else {
+          // Fallback sang kiểm tra local nếu backend không khả dụng
+          const membershipLevels = ['free', 'premium', 'pro'];
+          const userLevel = membershipLevels.indexOf(userMembership);
+          const requiredLevel = membershipLevels.indexOf(minRequiredMembership);
+          
+          setAccessInfo({
+            hasAccess: userLevel >= requiredLevel,
+            userMembership: userMembership,
+            requiredMembership: minRequiredMembership
+          });
+        }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra quyền truy cập:', error);
+        // Fallback sang kiểm tra local
+        const membershipLevels = ['free', 'premium', 'pro'];
+        const userLevel = membershipLevels.indexOf(userMembership);
+        const requiredLevel = membershipLevels.indexOf(minRequiredMembership);
+        
+        setAccessInfo({
+          hasAccess: userLevel >= requiredLevel,
+          userMembership: userMembership,
+          requiredMembership: minRequiredMembership
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAccess();
+  }, [user, userMembership, minRequiredMembership, allowedMemberships]);
   
-  // Người dùng có quyền nếu họ có membership cấp cao hơn hoặc bằng yêu cầu
-  const hasAccess = userLevel >= requiredLevel;  // Component modal hiển thị khi không có quyền truy cập
+  // Khi đang tải dữ liệu, hiển thị trạng thái loading
+  if (loading) {
+    return (
+      <div className="membership-loading">
+        <FaSpinner className="spinner" />
+        <p>Đang kiểm tra quyền truy cập...</p>
+      </div>
+    );
+  }
+  
+  // Sử dụng kết quả kiểm tra từ backend
+  const hasAccess = accessInfo?.hasAccess || false;  // Component modal hiển thị khi không có quyền truy cập
   const AccessDeniedModal = () => {
     const { membershipTiers } = useMembership();
-      // Sử dụng utility function để lấy tên hiển thị của gói thành viên
-    const requiredMembershipName = formatMembershipName(minRequiredMembership);
-    const currentMembershipName = formatMembershipName(userMembership);
+    // Sử dụng utility function để lấy tên hiển thị của gói thành viên
+    const requiredMembershipName = formatMembershipName(accessInfo?.requiredMembership || minRequiredMembership);
+    const currentMembershipName = formatMembershipName(accessInfo?.userMembership || userMembership);
     
     return (
       <div className="membership-modal-overlay">
@@ -54,7 +106,7 @@ const RequireMembership = ({ allowedMemberships = [], showModal = false, feature
             <h3>Tính năng bị giới hạn</h3>
           </div>          <div className="membership-modal-body">
             <p>
-              {userMembership === 'free' ? (
+              {(accessInfo?.userMembership === 'free' || userMembership === 'free') ? (
                 <>
                   {featureName === 'huy hiệu' ? (
                     <>
@@ -80,14 +132,15 @@ const RequireMembership = ({ allowedMemberships = [], showModal = false, feature
             <div className="membership-info">
               <div className="membership-item">
                 <h4>Gói hiện tại</h4>
-                <span className={`membership-badge current-badge ${userMembership}`}>
-                  {userMembership === 'free' ? '○' : userMembership === 'premium' ? '✓' : '★'} {currentMembershipName}
+                <span className={`membership-badge current-badge ${accessInfo?.userMembership || userMembership}`}>
+                  {(accessInfo?.userMembership || userMembership) === 'free' ? '○' : 
+                   (accessInfo?.userMembership || userMembership) === 'premium' ? '✓' : '★'} {currentMembershipName}
                 </span>
               </div>
                 <div className="membership-item">
                 <h4>Yêu cầu tối thiểu</h4>
                 <span className="membership-badge required-badge">
-                  {minRequiredMembership === 'premium' ? '✓' : '★'} {requiredMembershipName}
+                  {(accessInfo?.requiredMembership || minRequiredMembership) === 'premium' ? '✓' : '★'} {requiredMembershipName}
                 </span>
               </div>
             </div>
@@ -95,7 +148,7 @@ const RequireMembership = ({ allowedMemberships = [], showModal = false, feature
           <div className="membership-modal-footer">
             <button className="membership-cancel-button" onClick={() => navigate(-1)}>
               Quay lại
-            </button>            {userMembership === 'free' && (
+            </button>            {(accessInfo?.userMembership === 'free' || userMembership === 'free') && (
               <button className="membership-upgrade-button" onClick={() => navigate('/membership')}>
                 <FaCrown /> Nâng cấp ngay
               </button>
@@ -119,8 +172,8 @@ const RequireMembership = ({ allowedMemberships = [], showModal = false, feature
   // Nếu không có quyền truy cập và không hiển thị modal, chuyển hướng đến trang access-denied
   navigate('/access-denied', { 
     state: { 
-      userMembership,
-      requiredMembership: allowedMemberships[0] || 'premium',
+      userMembership: accessInfo?.userMembership || userMembership,
+      requiredMembership: accessInfo?.requiredMembership || allowedMemberships[0] || 'premium',
       from: window.location.pathname
     } 
   });

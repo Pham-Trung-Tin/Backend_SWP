@@ -19,7 +19,7 @@ export default function Hero() {
     console.log("Image slider initialized with images:", heroImages);
     
     // Remove debug logs in production
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.MODE !== 'production') {
       heroImages.forEach(img => {
         const path = getHeroImagePath(img);
         console.log(`Image path for ${img}:`, path);
