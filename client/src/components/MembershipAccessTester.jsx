@@ -180,7 +180,7 @@ export default MembershipAccessTester;
 // Function to initialize the tester
 export const initMembershipTester = () => {
   // Only run in development mode
-  if (import.meta.env.MODE !== 'production') {
+  if (process.env.NODE_ENV !== 'production') {
     const testerRoot = document.createElement('div');
     testerRoot.id = 'membership-tester';
     document.body.appendChild(testerRoot);
