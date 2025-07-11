@@ -19,6 +19,25 @@ router.post('/zalopay/create', requireAuth, createZaloPayment);
 router.post('/zalopay/callback', zaloPayCallback);
 
 /**
+ * @route GET /api/payments/zalopay/test-callback
+ * @desc Test endpoint to verify ngrok is working
+ * @access Public - For testing purposes
+ */
+router.get('/zalopay/test-callback', (req, res) => {
+    console.log('=== Test Callback Endpoint Hit ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Request IP:', req.ip || req.connection.remoteAddress);
+    console.log('Request headers:', req.headers);
+    
+    res.json({
+        success: true,
+        message: 'Test callback endpoint is working',
+        timestamp: new Date().toISOString(),
+        ip: req.ip || req.connection.remoteAddress
+    });
+});
+
+/**
  * @route GET /api/payments/zalopay/status/:transactionId
  * @desc Get ZaloPay payment status
  * @access Private - Requires authentication

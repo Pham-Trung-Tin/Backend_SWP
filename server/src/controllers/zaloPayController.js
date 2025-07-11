@@ -132,8 +132,11 @@ export const createZaloPayment = async (req, res) => {
 export const zaloPayCallback = async (req, res) => {
     try {
         console.log('=== ZaloPay Callback Received ===');
+        console.log('Timestamp:', new Date().toISOString());
+        console.log('Request IP:', req.ip || req.connection.remoteAddress);
         console.log('Request body:', req.body);
         console.log('Request headers:', req.headers);
+        console.log('========================================');
         
         // Process callback data from ZaloPay
         const callbackResult = zaloPayService.processCallback(req.body);
@@ -158,6 +161,7 @@ export const zaloPayCallback = async (req, res) => {
                     
                     // Update payment status to completed
                     await Payment.updatePaymentStatus(payment.id, 'completed');
+                    console.log(`✅ Payment status updated to completed`);
                     
                     // Update transaction status and save callback data
                     await PaymentTransaction.updateTransactionStatus(
@@ -165,10 +169,11 @@ export const zaloPayCallback = async (req, res) => {
                         'completed',
                         callbackResult.data
                     );
+                    console.log(`✅ Transaction status updated to completed`);
                     
                     // Update user membership if not already done
                     try {
-                        console.log(`Updating membership for user ${payment.user_id} with package ${payment.package_id}`);
+                        console.log(`🔄 Updating membership for user ${payment.user_id} with package ${payment.package_id}`);
                         // Use the existing purchasePackage function to update membership
                         const membershipResult = await Membership.purchasePackage(
                             payment.user_id,
@@ -186,23 +191,30 @@ export const zaloPayCallback = async (req, res) => {
                 }
             } else {
                 console.error(`❌ No payment found for transaction: ${appTransId}`);
+                // Log all pending payments to help debug
+                console.log('Searching for similar transactions...');
+                try {
+                    const allPendingPayments = await Payment.getUserPayments();
+                    console.log('Recent payments in system:', allPendingPayments.slice(0, 5));
+                } catch (e) {
+                    console.log('Could not fetch payments for debugging');
+                }
             }
         } else {
             console.log(`Callback not successful. Return code: ${callbackResult.return_code}, Message: ${callbackResult.return_message}`);
         }
         
         // Return the response required by ZaloPay
-        console.log('Returning response to ZaloPay:', {
+        const response = {
             return_code: callbackResult.return_code,
             return_message: callbackResult.return_message
-        });
+        };
+        console.log('Returning response to ZaloPay:', response);
         
-        return res.json({
-            return_code: callbackResult.return_code,
-            return_message: callbackResult.return_message
-        });
+        return res.json(response);
     } catch (error) {
         console.error('❌ Error processing ZaloPay callback:', error);
+        console.error('Error stack:', error.stack);
         return res.status(500).json({
             return_code: 0, // Tell ZaloPay to retry
             return_message: error.message
