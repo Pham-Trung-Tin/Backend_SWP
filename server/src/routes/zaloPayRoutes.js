@@ -1,5 +1,5 @@
 import express from 'express';
-import { createZaloPayment, zaloPayCallback, getZaloPayStatus } from '../controllers/zaloPayController.js';
+import { createZaloPayment, zaloPayCallback, getZaloPayStatus, manualUpdateZaloPayStatus } from '../controllers/zaloPayController.js';
 import { requireAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -24,5 +24,12 @@ router.post('/zalopay/callback', zaloPayCallback);
  * @access Private - Requires authentication
  */
 router.get('/zalopay/status/:transactionId', requireAuth, getZaloPayStatus);
+
+/**
+ * @route POST /api/payments/zalopay/manual-update/:transactionId
+ * @desc Manually update ZaloPay payment status (when callback fails)
+ * @access Private - Requires authentication
+ */
+router.post('/zalopay/manual-update/:transactionId', requireAuth, manualUpdateZaloPayStatus);
 
 export default router;

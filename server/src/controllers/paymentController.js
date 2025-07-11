@@ -285,6 +285,60 @@ export const getPaymentById = async (req, res) => {
 };
 
 /**
+ * Lấy chi tiết thanh toán theo transaction ID
+ * @route GET /api/payments/transaction/:transactionId
+ * @access Private
+ */
+export const getPaymentByTransactionId = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const userId = req.user.id;
+    
+    if (!transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID is required',
+        data: null
+      });
+    }
+    
+    const payment = await Payment.getPaymentByTransactionId(transactionId);
+    
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: `Payment with transaction ID ${transactionId} not found`,
+        data: null
+      });
+    }
+    
+    // Kiểm tra xem người dùng có quyền xem thanh toán này không
+    // Chỉ admin hoặc chủ sở hữu thanh toán mới được xem
+    if (payment.user_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this payment',
+        data: null
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Payment details retrieved successfully',
+      data: payment
+    });
+  } catch (error) {
+    console.error('❌ Error getting payment by transaction ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve payment details',
+      error: error.message,
+      data: null
+    });
+  }
+};
+
+/**
  * Hoàn tiền cho thanh toán
  * @route POST /api/payments/:id/refund
  * @access Private - Chỉ admin mới có quyền hoàn tiền
@@ -486,5 +540,6 @@ export default {
   verifyPayment,
   getUserPaymentHistory,
   getPaymentById,
-  refundPayment
+  refundPayment,
+  getPaymentByTransactionId
 };

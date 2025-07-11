@@ -59,6 +59,13 @@ router.get('/user/history', requireAuth, paymentController.getUserPaymentHistory
 router.get('/:id', requireAuth, paymentController.getPaymentById);
 
 /**
+ * @route GET /api/payments/transaction/:transactionId
+ * @desc Lấy chi tiết thanh toán theo transaction ID
+ * @access Private - Yêu cầu đăng nhập
+ */
+router.get('/transaction/:transactionId', requireAuth, paymentController.getPaymentByTransactionId);
+
+/**
  * @route POST /api/payments/:id/refund
  * @desc Hoàn tiền cho thanh toán
  * @access Private - Chỉ admin có quyền

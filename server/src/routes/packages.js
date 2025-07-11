@@ -13,11 +13,25 @@ const router = express.Router();
 router.get('/', packageController.getAllPackages);
 
 /**
+ * @route GET /api/packages/features
+ * @desc Lấy tính năng của một gói theo ID
+ * @access Public
+ */
+router.get('/features', packageController.getPackageFeatures);
+
+/**
  * @route GET /api/packages/:id
  * @desc Lấy chi tiết một gói dịch vụ theo ID
  * @access Public
  */
 router.get('/:id', packageController.getPackageById);
+
+/**
+ * @route GET /api/packages/:id/features
+ * @desc Lấy tính năng của một gói theo ID
+ * @access Public
+ */
+router.get('/:id/features', packageController.getPackageFeatures);
 
 /**
  * @route POST /api/packages/purchase

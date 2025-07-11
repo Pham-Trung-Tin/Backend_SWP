@@ -56,7 +56,9 @@ class ZaloPayService {
             amount,
             description: `NoSmoke - Gói ${packageName} [${app_trans_id}]`,
             bank_code: "",
-            callback_url: `${process.env.API_BASE_URL || 'http://localhost:5000'}/api/payments/zalopay/callback`
+            // Use ngrok URL for callback in development
+            callback_url: process.env.ZALOPAY_CALLBACK_URL || 
+                         'https://cd9dbe1b921e.ngrok-free.app/api/payments/zalopay/callback'
         };
         
         // Create MAC signature
@@ -64,17 +66,19 @@ class ZaloPayService {
         order.mac = CryptoJS.HmacSHA256(data, this.config.key1).toString();
         
         try {
+            console.log('=== ZaloPay Payment Creation ===');
+            console.log('Callback URL được sử dụng:', order.callback_url);
             console.log('Gửi request tới ZaloPay API:', this.config.endpoint);
             console.log('Dữ liệu gửi đi:', order);
             
-            // Option 1: Call ZaloPay Sandbox API directly
-            // const result = await axios.post(this.config.endpoint, null, { params: order });
+            // Option 1: Call ZaloPay Sandbox API directly (PRODUCTION)
+            const result = await axios.post(this.config.endpoint, null, { params: order });
             
-            // Option 2: Call local ZaloPay server running on port 5001
-            console.log('Gọi ZaloPay local server trên port 5001');
-            const result = await axios.post('http://localhost:5001/payment', order, {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            // Option 2: Call local ZaloPay server running on port 5001 (DEVELOPMENT ONLY)
+            // console.log('Gọi ZaloPay local server trên port 5001');
+            // const result = await axios.post('http://localhost:5001/payment', order, {
+            //     headers: { 'Content-Type': 'application/json' }
+            // });
             
             console.log('ZaloPay API Response:', result.data);
             

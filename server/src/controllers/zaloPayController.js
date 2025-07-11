@@ -131,52 +131,78 @@ export const createZaloPayment = async (req, res) => {
  */
 export const zaloPayCallback = async (req, res) => {
     try {
+        console.log('=== ZaloPay Callback Received ===');
+        console.log('Request body:', req.body);
+        console.log('Request headers:', req.headers);
+        
         // Process callback data from ZaloPay
         const callbackResult = zaloPayService.processCallback(req.body);
         
         // Log the callback
-        console.log('ZaloPay callback received:', callbackResult);
+        console.log('ZaloPay callback processed:', callbackResult);
         
         // If the callback is valid and payment is successful
         if (callbackResult.return_code === 1 && callbackResult.data) {
             const appTransId = callbackResult.data.app_trans_id;
+            console.log(`Processing successful payment for transaction: ${appTransId}`);
             
             // Find the payment by transaction_id
             const payment = await Payment.getPaymentByTransactionId(appTransId);
             
             if (payment) {
-                // Update payment status to completed
-                await Payment.updatePaymentStatus(payment.id, 'completed');
+                console.log(`Found payment record:`, payment);
                 
-                // Update transaction status and save callback data
-                await PaymentTransaction.updateTransactionStatus(
-                    appTransId, 
-                    'completed',
-                    callbackResult.data
-                );
-                
-                // Update user membership if not already done
-                try {
-                    // Use the existing purchasePackage function to update membership
-                    await Membership.purchasePackage(
-                        payment.user_id,
-                        payment.package_id,
-                        payment.payment_method
+                // Only update if not already completed
+                if (payment.payment_status !== 'completed') {
+                    console.log(`Updating payment status to completed for payment ID: ${payment.id}`);
+                    
+                    // Update payment status to completed
+                    await Payment.updatePaymentStatus(payment.id, 'completed');
+                    
+                    // Update transaction status and save callback data
+                    await PaymentTransaction.updateTransactionStatus(
+                        appTransId, 
+                        'completed',
+                        callbackResult.data
                     );
-                    console.log(`User membership updated for user ${payment.user_id} with package ${payment.package_id}`);
-                } catch (membershipError) {
-                    console.error('Error updating user membership:', membershipError);
+                    
+                    // Update user membership if not already done
+                    try {
+                        console.log(`Updating membership for user ${payment.user_id} with package ${payment.package_id}`);
+                        // Use the existing purchasePackage function to update membership
+                        const membershipResult = await Membership.purchasePackage(
+                            payment.user_id,
+                            payment.package_id,
+                            payment.payment_method
+                        );
+                        console.log(`✅ User membership updated successfully:`, membershipResult);
+                    } catch (membershipError) {
+                        console.error('❌ Error updating user membership:', membershipError);
+                        // Don't fail the callback even if membership update fails
+                        // This can be retried later
+                    }
+                } else {
+                    console.log(`Payment already completed for transaction: ${appTransId}`);
                 }
+            } else {
+                console.error(`❌ No payment found for transaction: ${appTransId}`);
             }
+        } else {
+            console.log(`Callback not successful. Return code: ${callbackResult.return_code}, Message: ${callbackResult.return_message}`);
         }
         
         // Return the response required by ZaloPay
+        console.log('Returning response to ZaloPay:', {
+            return_code: callbackResult.return_code,
+            return_message: callbackResult.return_message
+        });
+        
         return res.json({
             return_code: callbackResult.return_code,
             return_message: callbackResult.return_message
         });
     } catch (error) {
-        console.error('Error processing ZaloPay callback:', error);
+        console.error('❌ Error processing ZaloPay callback:', error);
         return res.status(500).json({
             return_code: 0, // Tell ZaloPay to retry
             return_message: error.message
@@ -254,6 +280,154 @@ export const getZaloPayStatus = async (req, res) => {
         });
     } catch (error) {
         console.error('Error querying ZaloPay payment status:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message,
+            data: null
+        });
+    }
+};
+
+/**
+ * Manual update of ZaloPay payment status - useful when callback fails
+ * @route POST /api/payments/zalopay/manual-update/:transactionId
+ * @access Private - Requires authentication
+ */
+export const manualUpdateZaloPayStatus = async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        
+        if (!transactionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Transaction ID is required',
+                data: null
+            });
+        }
+
+        console.log(`=== Manual Update Requested ===`);
+        console.log(`Transaction ID: ${transactionId}`);
+        console.log(`Requested by user: ${req.user?.id || 'Unknown'}`);
+        
+        // Step 1: Find payment in our system
+        const payment = await Payment.getPaymentByTransactionId(transactionId);
+        
+        if (!payment) {
+            console.log(`❌ No payment found with transaction ID: ${transactionId}`);
+            return res.status(404).json({
+                success: false,
+                message: `No payment found with transaction ID: ${transactionId}`,
+                data: null
+            });
+        }
+
+        console.log(`✅ Found payment record:`, {
+            id: payment.id,
+            user_id: payment.user_id,
+            package_id: payment.package_id,
+            amount: payment.amount,
+            payment_status: payment.payment_status
+        });
+        
+        // Step 2: Verify with ZaloPay first
+        console.log(`📡 Querying ZaloPay API for transaction status...`);
+        const statusResult = await zaloPayService.queryPaymentStatus(transactionId);
+        
+        if (!statusResult.success) {
+            console.log(`❌ Failed to query ZaloPay status: ${statusResult.error}`);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to query payment status from ZaloPay',
+                error: statusResult.error,
+                data: null
+            });
+        }
+        
+        console.log(`✅ ZaloPay status response:`, statusResult.data);
+        
+        // Step 3: Check if payment is actually successful on ZaloPay
+        if (statusResult.data.return_code === 1) {
+            console.log(`✅ ZaloPay confirms payment is successful`);
+            
+            // Only proceed if payment is still pending in our system
+            if (payment.payment_status !== 'completed') {
+                console.log(`🔄 Updating payment status from ${payment.payment_status} to completed...`);
+                
+                // Manually update payment status
+                const updatedPayment = await Payment.updatePaymentStatus(payment.id, 'completed');
+                
+                // Update transaction status if exists
+                const transaction = await PaymentTransaction.getTransactionById(transactionId);
+                if (transaction) {
+                    console.log(`🔄 Updating transaction status...`);
+                    await PaymentTransaction.updateTransactionStatus(
+                        transactionId,
+                        'completed',
+                        { 
+                            manual_update: true, 
+                            timestamp: new Date().toISOString(),
+                            zalopay_data: statusResult.data
+                        }
+                    );
+                }
+                
+                // Step 4: Update user membership
+                try {
+                    console.log(`🔄 Updating user membership for user ${payment.user_id} with package ${payment.package_id}...`);
+                    // Use the existing purchasePackage function to update membership
+                    const membershipResult = await Membership.purchasePackage(
+                        payment.user_id,
+                        payment.package_id,
+                        payment.payment_method
+                    );
+                    console.log(`✅ User membership manually updated successfully:`, membershipResult);
+                    
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Payment status manually updated to completed',
+                        data: {
+                            payment: updatedPayment,
+                            membership: membershipResult,
+                            zalopay_status: statusResult.data
+                        }
+                    });
+                } catch (membershipError) {
+                    console.error('❌ Error updating user membership:', membershipError);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Payment status updated but membership update failed',
+                        error: membershipError.message,
+                        data: { 
+                            payment: updatedPayment,
+                            zalopay_status: statusResult.data
+                        }
+                    });
+                }
+            } else {
+                console.log(`ℹ️ Payment already completed`);
+                return res.status(200).json({
+                    success: true,
+                    message: 'Payment already completed',
+                    data: { 
+                        payment,
+                        zalopay_status: statusResult.data
+                    }
+                });
+            }
+        } else {
+            console.log(`❌ ZaloPay reports payment not successful. Return code: ${statusResult.data.return_code}`);
+            return res.status(400).json({
+                success: false,
+                message: `Payment not successful on ZaloPay. Status: ${statusResult.data.return_message || 'Unknown'}`,
+                data: {
+                    payment,
+                    zalopay_status: statusResult.data
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error manually updating ZaloPay payment status:', error);
         return res.status(500).json({
             success: false,
             message: 'Internal server error',

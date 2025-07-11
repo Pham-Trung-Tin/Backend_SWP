@@ -210,8 +210,31 @@
   transition: all 0.3s ease;
 }
 
-.auto-redirect:hover {
-  background-color: #e3f2fd;
+.payment-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.update-payment-button {
+  background-color: #ff9500;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.update-payment-button:hover {
+  background-color: #e68200;
+}
+
+.update-payment-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 .countdown {
@@ -364,13 +387,38 @@
   border: 1px solid #90caf9;
 }
 
+/* Loading status styles */
+.loading-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border-left-color: #007bff;
+  animation: spin 1s ease infinite;
+  margin-right: 10px;
+}
+
 /* Warning message styling */
 .warning-message {
-  background-color: #fffde7;
-  border-left: 4px solid #fbc02d;
-  padding: 12px;
-  margin: 15px 0;
-  border-radius: 4px;
-  color: #424242;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  color: #856404;
+  font-weight: 500;
 }

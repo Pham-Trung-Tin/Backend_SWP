@@ -79,7 +79,65 @@ export const getPackageById = async (req, res) => {
   }
 };
 
+/**
+ * Lấy tính năng cho một gói cụ thể
+ * @route GET /api/packages/features
+ * @route GET /api/packages/:id/features
+ */
+export const getPackageFeatures = async (req, res) => {
+  try {
+    // Ưu tiên lấy packageId từ params (nếu route là /api/packages/:id/features)
+    // Nếu không có, lấy từ query (package_id hoặc packageId)
+    let packageId = req.params.id;
+    if (!packageId) {
+      packageId = req.query.package_id || req.query.packageId;
+    }
+    
+    console.log(`🔍 Fetching features for package ID: ${packageId}`);
+    
+    if (!packageId || isNaN(parseInt(packageId))) {
+      return sendError(res, 'Invalid package ID', 400);
+    }
+    
+    const package_data = await Package.getPackageById(packageId);
+    
+    if (!package_data) {
+      return sendError(res, 'Package not found', 404);
+    }
+    
+    // Tạo response phù hợp với cấu trúc mà frontend đang mong đợi
+    const features = [];
+    
+    // Thêm các tính năng được bật
+    if (Array.isArray(package_data.features)) {
+      package_data.features.forEach(feature => {
+        features.push({
+          feature_name: feature,
+          enabled: 1
+        });
+      });
+    }
+    
+    // Thêm các tính năng bị tắt
+    if (Array.isArray(package_data.disabledFeatures)) {
+      package_data.disabledFeatures.forEach(feature => {
+        features.push({
+          feature_name: feature,
+          enabled: 0
+        });
+      });
+    }
+    
+    console.log(`✅ Found ${features.length} features for package ${package_data.name}`);
+    sendSuccess(res, 'Package features retrieved successfully', features);
+  } catch (error) {
+    console.error(`❌ Error getting package features:`, error);
+    sendError(res, 'Failed to retrieve package features: ' + error.message, 500);
+  }
+};
+
 export default {
   getAllPackages,
-  getPackageById
+  getPackageById,
+  getPackageFeatures
 };

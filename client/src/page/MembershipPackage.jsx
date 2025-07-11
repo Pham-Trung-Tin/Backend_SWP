@@ -27,11 +27,31 @@ export default function MembershipPackage() {
         console.log('Đang gọi API để lấy danh sách gói thành viên...');
         
         // Sử dụng URL đầy đủ thay vì URL tương đối
-        const res = await fetch('http://localhost:5000/api/packages');
+        // Thử nhiều URL để đảm bảo kết nối được đến API
+        const urls = [
+          'http://localhost:5000/api/packages',
+          '/api/packages'
+        ];
         
-        // Kiểm tra response trước khi parse JSON
-        if (!res.ok) {
-          throw new Error(`Lỗi API packages: ${res.status} ${res.statusText}`);
+        let res = null;
+        let success = false;
+        
+        for (const url of urls) {
+          try {
+            console.log(`Thử gọi API với URL: ${url}`);
+            res = await fetch(url);
+            if (res.ok) {
+              console.log(`✅ Gọi API thành công với URL: ${url}`);
+              success = true;
+              break;
+            }
+          } catch (urlError) {
+            console.log(`❌ Lỗi với URL ${url}:`, urlError.message);
+          }
+        }
+        
+        if (!success || !res) {
+          throw new Error(`Không thể kết nối đến API packages với tất cả các URL`);
         }
         
         const json = await res.json();
@@ -40,23 +60,24 @@ export default function MembershipPackage() {
         if (json.success && json.data && Array.isArray(json.data)) {
           console.log('Số lượng gói nhận được:', json.data.length);
           
-          // Lưu các gói đã nhận từ API
+          // Lưu các gói đã nhận từ API, đã bao gồm thông tin features
           const receivedPackages = json.data;
           
-          // Lấy tính năng cho từng gói
-          for (const pkg of receivedPackages) {
+          // Tạo packageFeatures từ thông tin packages
+          const featuresMap = {};
+          receivedPackages.forEach(pkg => {
             if (pkg.id) {
-              try {
-                // Lấy features cho gói hiện tại
-                await fetchFeatures(pkg.id);
-              } catch (featureError) {
-                console.error(`Lỗi khi lấy features cho gói ${pkg.id}:`, featureError);
-                // Không dừng xử lý nếu không lấy được features cho một gói
-              }
+              featuresMap[pkg.id] = {
+                features: Array.isArray(pkg.features) ? pkg.features : [],
+                disabledFeatures: Array.isArray(pkg.disabledFeatures) ? pkg.disabledFeatures : []
+              };
             }
-          }
+          });
           
-          // Cập nhật state packages sau khi đã lấy xong features
+          // Cập nhật state packageFeatures
+          setPackageFeatures(featuresMap);
+          
+          // Cập nhật state packages
           setPackages(receivedPackages);
         } else {
           throw new Error(json.message || 'Không nhận được dữ liệu hợp lệ từ server');
@@ -116,10 +137,22 @@ export default function MembershipPackage() {
       return;
     }
     
+    // Xác định ID gói đúng
+    let packageId;
+    if (pkg.id) {
+      // Nếu có ID, giữ nguyên ID đó
+      packageId = pkg.id;
+    } else {
+      // Nếu không có ID, xác định dựa trên membershipType
+      packageId = membershipType === 'free' ? 1 : membershipType === 'premium' ? 2 : 3;
+    }
+    
+    console.log(`Gói được chọn: ${pkg.name || membershipType}, ID: ${packageId}, Type: ${membershipType}`);
+    
     // Đảm bảo dữ liệu gói đầy đủ trước khi chuyển sang trang thanh toán
     const packageToSend = {
       ...pkg,
-      id: pkg.id?.toString() || membershipType === 'free' ? '1' : membershipType === 'premium' ? '2' : '3',
+      id: packageId, // Sử dụng ID đã xác định
       membershipType: membershipType,
       name: pkg.name || (membershipType === 'free' ? 'Free' : membershipType === 'premium' ? 'Premium' : 'Pro'),
       price: pkg.price !== undefined ? Number(pkg.price) : (membershipType === 'premium' ? 99000 : 999000),
@@ -127,10 +160,27 @@ export default function MembershipPackage() {
     };
     
     console.log('Đang chuyển hướng đến trang thanh toán với gói:', packageToSend);
+    console.log('Chi tiết gói thanh toán:', {
+      id: packageToSend.id,
+      type: typeof packageToSend.id,
+      membershipType: packageToSend.membershipType,
+      name: packageToSend.name,
+      price: packageToSend.price
+    });
     
     // Lưu thông tin gói vào localStorage để đề phòng chuyển trang bị lỗi
     try {
-      localStorage.setItem('selectedPackage', JSON.stringify(packageToSend));
+      const packageJson = JSON.stringify(packageToSend);
+      console.log('Chuỗi JSON trước khi lưu vào localStorage:', packageJson);
+      localStorage.setItem('selectedPackage', packageJson);
+      
+      // Kiểm tra lại dữ liệu đã lưu
+      const savedPackage = localStorage.getItem('selectedPackage');
+      console.log('Dữ liệu đã lưu trong localStorage:', savedPackage);
+      
+      // Parse lại để kiểm tra
+      const parsedPackage = JSON.parse(savedPackage);
+      console.log('Dữ liệu sau khi parse lại:', parsedPackage);
     } catch (error) {
       console.error('Lỗi khi lưu gói vào localStorage:', error);
     }
@@ -148,23 +198,28 @@ export default function MembershipPackage() {
   const fetchFeatures = async (packageId) => {
     try {
       console.log(`Đang lấy tính năng cho gói có ID: ${packageId}`);
-      const res = await fetch(`http://localhost:5000/api/packages/features?package_id=${packageId}`);
+      
+      // Chúng ta sẽ lấy tính năng từ gói cụ thể API /api/packages/:id
+      const packageUrl = `http://localhost:5000/api/packages/${packageId}`;
+      console.log(`Gọi API để lấy thông tin gói và tính năng: ${packageUrl}`);
+      
+      const res = await fetch(packageUrl);
       
       if (!res.ok) {
-        throw new Error(`Lỗi khi lấy features: ${res.status}`);
+        console.log(`❌ Gọi API package bị lỗi: ${res.status} ${res.statusText}`);
+        throw new Error(`API trả về lỗi: ${res.status} ${res.statusText}`);
       }
       
       const json = await res.json();
       
       if (json.success && json.data) {
-        // Lọc ra features được bật và tắt
-        const enabledFeatures = json.data
-          .filter(feature => feature.enabled === 1)
-          .map(feature => feature.feature_name);
-          
-        const disabledFeatures = json.data
-          .filter(feature => feature.enabled === 0)
-          .map(feature => feature.feature_name);
+        // Lấy features và disabledFeatures trực tiếp từ response
+        // Backend đã xử lý việc phân loại tính năng cho chúng ta
+        const packageData = json.data;
+        
+        // Sử dụng features và disabledFeatures từ API
+        const enabledFeatures = Array.isArray(packageData.features) ? packageData.features : [];
+        const disabledFeatures = Array.isArray(packageData.disabledFeatures) ? packageData.disabledFeatures : [];
           
         console.log(`Đã lấy được ${enabledFeatures.length} features bật và ${disabledFeatures.length} features tắt cho gói ID ${packageId}`);
         
@@ -183,18 +238,38 @@ export default function MembershipPackage() {
         };
       }
       
-      return null;
+      // Nếu không lấy được dữ liệu từ API, sử dụng tính năng mặc định
+      console.log(`Không nhận được dữ liệu hợp lệ từ API, sử dụng tính năng mặc định cho gói ${packageId}`);
+      const defaultFeatures = getDefaultFeaturesForPackage(packageId);
+      
+      setPackageFeatures(prev => ({
+        ...prev,
+        [packageId]: defaultFeatures
+      }));
+      
+      return defaultFeatures;
     } catch (err) {
       console.error(`Lỗi khi lấy tính năng cho gói ${packageId}:`, err);
-      return null;
+      
+      // Sử dụng tính năng mặc định khi có lỗi
+      console.log(`Sử dụng tính năng mặc định cho gói ${packageId} do lỗi API`);
+      const defaultFeatures = getDefaultFeaturesForPackage(packageId);
+      
+      setPackageFeatures(prev => ({
+        ...prev,
+        [packageId]: defaultFeatures
+      }));
+      
+      return defaultFeatures;
     }
   };
 
   // Hàm để tạo dữ liệu gói mặc định nếu không có dữ liệu từ API
   const getDefaultPackages = () => {
+    // Gói mặc định với ID là số
     return [
       {
-        id: 1,
+        id: 1, // Đảm bảo id là số, không phải chuỗi
         name: "Free",
         price: 0,
         period: "tháng",
@@ -204,7 +279,7 @@ export default function MembershipPackage() {
         disabledFeatures: ["Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"]
       },
       {
-        id: 2,
+        id: 2, // Đảm bảo id là số, không phải chuỗi
         name: "Premium",
         price: 99000,
         period: "tháng",
@@ -215,7 +290,7 @@ export default function MembershipPackage() {
         disabledFeatures: []
       },
       {
-        id: 3,
+        id: 3, // Đảm bảo id là số, không phải chuỗi
         name: "Pro",
         price: 999000,
         period: "năm",
@@ -227,8 +302,43 @@ export default function MembershipPackage() {
     ];
   };
 
+  // Hàm để lấy tính năng mặc định cho từng gói khi API thất bại
+  const getDefaultFeaturesForPackage = (packageId) => {
+    const defaultFeaturesByPackageId = {
+      1: { // Free
+        features: ["Theo dõi cai thuốc", "Lập kế hoạch cá nhân"],
+        disabledFeatures: ["Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"]
+      },
+      2: { // Premium
+        features: ["Theo dõi cai thuốc", "Lập kế hoạch cá nhân", "Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"],
+        disabledFeatures: []
+      },
+      3: { // Pro
+        features: ["Theo dõi cai thuốc", "Lập kế hoạch cá nhân", "Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"],
+        disabledFeatures: []
+      }
+    };
+
+    // Chuyển packageId sang số nếu là chuỗi
+    const id = typeof packageId === 'string' ? parseInt(packageId) : packageId;
+    
+    return defaultFeaturesByPackageId[id] || {
+      features: ["Theo dõi cai thuốc"],
+      disabledFeatures: []
+    };
+  };
+
   // Quyết định sử dụng dữ liệu nào - từ API hoặc fallback
   const displayPackages = packages.length > 0 ? packages : getDefaultPackages();
+  
+  // Log thông tin gói để debug
+  console.log('Gói thành viên được hiển thị:', displayPackages.map(pkg => ({
+    id: pkg.id,
+    type: typeof pkg.id,
+    name: pkg.name,
+    membershipType: pkg.membershipType,
+    price: pkg.price
+  })));
 
   return (
     <div className="membership-page-wrapper">
@@ -266,6 +376,8 @@ export default function MembershipPackage() {
               <p className="pricing-subtitle">Chọn gói phù hợp với bạn</p>
               <div className="pricing-grid">
                 {displayPackages.map(pkg => {
+                  console.log(`Rendering package: ID=${pkg.id} (${typeof pkg.id}), Name=${pkg.name}, Type=${pkg.membershipType}`);
+                  
                   // Đảm bảo membershipType luôn tồn tại
                   const membershipType = pkg.membershipType || (
                     pkg.id === 1 ? 'free' : 
@@ -299,36 +411,30 @@ export default function MembershipPackage() {
                     'Hỗ trợ toàn diện'
                   );
 
-                  // Lấy features từ state packageFeatures nếu có
+                  // Lấy features từ pkg trực tiếp hoặc từ state packageFeatures nếu có
                   let features = [];
                   let disabledFeatures = [];
                   
-                  if (packageFeatures[pkg.id]) {
+                  if (Array.isArray(pkg.features) && pkg.features.length > 0) {
+                    // Ưu tiên sử dụng features từ pkg object
+                    features = pkg.features;
+                    disabledFeatures = Array.isArray(pkg.disabledFeatures) ? pkg.disabledFeatures : [];
+                  } else if (packageFeatures[pkg.id]) {
+                    // Nếu không có trong pkg, thử lấy từ packageFeatures
                     features = packageFeatures[pkg.id].features || [];
                     disabledFeatures = packageFeatures[pkg.id].disabledFeatures || [];
-                  } else {
-                    // Nếu không có trong packageFeatures, thử lấy từ pkg object
-                    features = Array.isArray(pkg.features) ? pkg.features : [];
-                    disabledFeatures = Array.isArray(pkg.disabledFeatures) ? pkg.disabledFeatures : [];
                   }
                   
-                  // Nếu không có features, tạo mặc định theo loại gói
-                  const defaultFeatures = () => {
-                    if (membershipType === 'free') {
-                      return {
-                        enabled: ["Theo dõi cai thuốc", "Lập kế hoạch cá nhân"],
-                        disabled: ["Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"]
-                      };
-                    } else {
-                      return {
-                        enabled: ["Theo dõi cai thuốc", "Lập kế hoạch cá nhân", "Huy hiệu & cộng đồng", "Chat huấn luyện viên", "Video call tư vấn"],
-                        disabled: []
-                      };
-                    }
-                  };
+                  // Nếu vẫn không có features, sử dụng mặc định
+                  if (features.length === 0) {
+                    const defaultFeatures = getDefaultFeaturesForPackage(pkg.id);
+                    features = defaultFeatures.features;
+                    disabledFeatures = defaultFeatures.disabledFeatures;
+                  }
                   
-                  const displayFeatures = features.length > 0 ? features : defaultFeatures().enabled;
-                  const displayDisabledFeatures = disabledFeatures.length > 0 ? disabledFeatures : defaultFeatures().disabled;
+                  // Đảm bảo luôn có các mảng hợp lệ
+                  const displayFeatures = Array.isArray(features) ? features : [];
+                  const displayDisabledFeatures = Array.isArray(disabledFeatures) ? disabledFeatures : [];
 
                   return (
                     <div
@@ -357,11 +463,29 @@ export default function MembershipPackage() {
                         className={`pricing-btn ${disabled ? 'disabled-btn' : ''}`}
                         onClick={(e) => {
                           if (!disabled) {
-                            console.log('Chọn gói thành viên:', pkg);
+                            console.log('Chọn gói thành viên:', {
+                              id: pkg.id,
+                              type: typeof pkg.id,
+                              membershipType,
+                              name: pkg.name,
+                              price: pkg.price
+                            });
+                            
+                            // Tạo package data với id là số, không phải string
                             const packageData = {
                               ...pkg,
+                              id: typeof pkg.id === 'string' ? parseInt(pkg.id) : pkg.id,
                               membershipType: membershipType
                             };
+                            
+                            console.log('Gói đã chuẩn hóa trước khi gửi:', {
+                              id: packageData.id,
+                              type: typeof packageData.id,
+                              membershipType: packageData.membershipType,
+                              name: packageData.name,
+                              price: packageData.price
+                            });
+                            
                             handlePackageSelection(packageData, e);
                           }
                         }}
