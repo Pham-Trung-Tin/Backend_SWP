@@ -3,13 +3,12 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import QuitProgressChart from '../components/QuitProgressChart';
 import DailyCheckin from '../components/DailyCheckin';
-import MoodTracking from '../components/MoodTracking';
 import ProgressDashboard from '../components/ProgressDashboard';
 import ResetCheckinData from '../components/ResetCheckinData';
 import { FaCalendarCheck, FaLeaf, FaCoins, FaHeart } from 'react-icons/fa';
+import progressService from '../services/progressService';
 import './Progress.css';
 import '../styles/DailyCheckin.css';
-import '../styles/MoodTracking.css';
 import '../styles/ProgressDashboard.css';
 
 export default function Progress() {
@@ -32,9 +31,17 @@ export default function Progress() {
     healthProgress: 0
   });
   
-  // Load user plan and progress from localStorage
+  // Removed health benefits function - now handled by ProgressDashboard component
+
+  // Load user plan and progress from localStorage and API
   useEffect(() => {
     loadUserPlanAndProgress();
+    
+    // Force refresh of data after component mounts to ensure we have latest data
+    const refreshTimer = setTimeout(() => {
+      console.log("Auto-refreshing data after 1 second to ensure we have latest data");
+      recalculateStatistics();
+    }, 1000);
     
     // Thử load dashboard stats từ localStorage trước
     const savedStats = localStorage.getItem('dashboardStats');
@@ -57,6 +64,31 @@ export default function Progress() {
       }
     }
     
+    // Lấy dữ liệu từ API
+    const fetchAPIData = async () => {
+      try {
+        // Lấy thống kê từ API
+        const statsResponse = await progressService.getProgressStats();
+        if (statsResponse.data) {
+          console.log("Đã nhận thống kê từ API:", statsResponse.data);
+          
+          // Cập nhật bổ sung thông tin từ API
+          setDashboardStats(prevStats => ({
+            ...prevStats,
+            maxStreak: statsResponse.data.max_streak || 0,
+            currentStreak: statsResponse.data.current_streak || 0,
+            totalCheckins: statsResponse.data.total_checkins || 0,
+            goalsMetRate: statsResponse.data.success_rate || 0,
+            healthProgress: statsResponse.data.avg_health_score || 0
+          }));
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu từ API:", error);
+      }
+    };
+    
+    fetchAPIData();
+    
     // Nếu không có dữ liệu từ localStorage hoặc dữ liệu không hợp lệ, tính toán lại
     if (shouldRecalculate) {
       console.log("Không tìm thấy dữ liệu hoặc dữ liệu không hợp lệ, tính toán lại thống kê...");
@@ -68,25 +100,63 @@ export default function Progress() {
     }
   }, []);
   
-  const loadUserPlanAndProgress = () => {
+  const loadUserPlanAndProgress = async () => {
     console.log("LOADING USER PLAN...");
     
     // KHÔNG xóa thống kê cũ khi load lại trang để duy trì dữ liệu giữa các phiên
     console.log("Giữ lại thống kê cũ để duy trì dữ liệu giữa các lần chuyển trang");
     
+    // Thử tải kế hoạch từ DATABASE trước
+    let planFromDatabase = null;
+    const auth_token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    
+    if (auth_token) {
+      try {
+        console.log("🔄 Đang tải kế hoạch từ DATABASE...");
+        const quitPlanService = await import('../services/quitPlanService');
+        const response = await quitPlanService.getUserActivePlan();
+        
+        if (response && response.success && response.plan) {
+          planFromDatabase = response.plan;
+          console.log("✅ Đã tải kế hoạch từ DATABASE:", planFromDatabase);
+          
+          // Cập nhật localStorage với kế hoạch từ database
+          localStorage.setItem('activePlan', JSON.stringify(planFromDatabase));
+          
+          // Set state với kế hoạch từ database
+          setUserPlan(planFromDatabase);
+          setHasPlan(true);
+          
+          // Load progress và return sớm
+          await loadActualProgressFromCheckins(planFromDatabase);
+          return;
+        } else {
+          console.log("ℹ️ Không tìm thấy kế hoạch active trong database");
+        }
+      } catch (error) {
+        console.error("❌ Lỗi khi tải kế hoạch từ database:", error);
+      }
+    } else {
+      console.log("⚠️ Không có auth token, không thể tải từ database");
+    }
+
+    // Fallback: Thử tải từ localStorage nếu không có trong database
     const savedActivePlan = localStorage.getItem('activePlan');
     
     // Kiểm tra xem có kế hoạch active thực sự không
     let hasActivePlan = false;
+    let localPlan = null;
+    
     if (savedActivePlan) {
       try {
         const parsedPlan = JSON.parse(savedActivePlan);
         if (parsedPlan && Array.isArray(parsedPlan.weeks) && parsedPlan.weeks.length > 0) {
-          console.log("Đã tìm thấy kế hoạch active:", parsedPlan.name);
+          console.log("📱 Đã tìm thấy kế hoạch trong localStorage:", parsedPlan.name);
           hasActivePlan = true;
+          localPlan = parsedPlan;
         }
       } catch (e) {
-        console.error("Lỗi khi kiểm tra kế hoạch active:", e);
+        console.error("❌ Lỗi khi parse kế hoạch từ localStorage:", e);
       }
     }
     
@@ -100,29 +170,26 @@ export default function Progress() {
           setUserPlan(completion.userPlan);
           setShowCompletionDashboard(true);
           setHasPlan(true);
-          console.log("Đã tải kế hoạch từ completion data");
+          console.log("✅ Đã tải kế hoạch từ completion data");
         } else {
           console.warn('Found saved completion data but it was incomplete');
-          const activePlan = getActivePlan();
-          setUserPlan(activePlan);
+          setUserPlan(localPlan);
           setHasPlan(hasActivePlan);
         }
       } catch (error) {
         console.error('Error parsing completion data:', error);
-        const activePlan = getActivePlan();
-        setUserPlan(activePlan);
+        setUserPlan(localPlan);
         setHasPlan(hasActivePlan);
       }
     } else {
-      // Nếu chưa có completion data, tìm plan đang thực hiện
-      const activePlan = getActivePlan();
-      setUserPlan(activePlan);
+      // Nếu chưa có completion data, sử dụng plan từ localStorage hoặc null
+      setUserPlan(localPlan);
       setHasPlan(hasActivePlan);
-      console.log("Không tìm thấy completion data, sử dụng active plan:", hasActivePlan);
+      console.log("📱 Sử dụng kế hoạch từ localStorage hoặc null:", localPlan);
     }
 
     // Load actual progress từ daily check-ins
-    loadActualProgressFromCheckins();
+    await loadActualProgressFromCheckins(localPlan || getDefaultPlan());
   };
   
   const getActivePlan = () => {
@@ -144,10 +211,15 @@ export default function Progress() {
       console.error('Error loading saved plan:', error);
     }
     
-    // Trả về kế hoạch mặc định nếu không có hoặc có lỗi
-    console.log("Trả về kế hoạch mặc định");
+    // Trả về null thay vì kế hoạch mặc định để phân biệt rõ ràng
+    console.log("Không có kế hoạch thực tế - trả về null");
+    return null;
+  };
+  
+  // Hàm tạo kế hoạch mặc định chỉ khi cần
+  const getDefaultPlan = () => {
     return {
-      name: "Kế hoạch mặc định (chưa lập)",
+      name: "Kế hoạch mặc định",
       startDate: new Date().toISOString().split('T')[0],
       weeks: [
         { week: 1, amount: 22, phase: "Thích nghi" },
@@ -161,19 +233,20 @@ export default function Progress() {
       initialCigarettes: 22
     };
   };
-  const loadActualProgressFromCheckins = () => {
+  const loadActualProgressFromCheckins = async (providedActivePlan = null) => {
     const actualData = [];
     const today = new Date();
     
     // Log start of loading
-    console.log("Đang tải dữ liệu thực tế từ check-ins...");
+    console.log("🔄 Đang tải dữ liệu thực tế từ DATABASE...");
     
     // Lấy ngày bắt đầu kế hoạch từ activePlan
     let planStartDate = null;
+    let activePlan = providedActivePlan;
     try {
       const activePlanData = localStorage.getItem('activePlan');
       if (activePlanData) {
-        const activePlan = JSON.parse(activePlanData);
+        activePlan = JSON.parse(activePlanData);
         planStartDate = activePlan.startDate ? new Date(activePlan.startDate) : null;
       }
     } catch (error) {
@@ -188,11 +261,52 @@ export default function Progress() {
     
     console.log(`Kế hoạch bắt đầu từ: ${planStartDate.toISOString().split('T')[0]}`);
     
+    // Tạo bảng tra cứu mục tiêu hàng ngày từ kế hoạch
+    const dailyTargets = {};
+    if (activePlan && Array.isArray(activePlan.weeks) && activePlan.weeks.length > 0) {
+      const startDate = new Date(activePlan.startDate || new Date());
+      activePlan.weeks.forEach((week, weekIndex) => {
+        // Mỗi tuần có 7 ngày
+        for (let day = 0; day < 7; day++) {
+          const date = new Date(startDate);
+          date.setDate(date.getDate() + (weekIndex * 7) + day);
+          const dateStr = date.toISOString().split('T')[0];
+          dailyTargets[dateStr] = week.amount;
+        }
+      });
+      console.log("Đã tạo bảng tra cứu mục tiêu hàng ngày từ kế hoạch");
+    }
+    
+    // Thử load TẤT CẢ dữ liệu từ DATABASE trước
+    let databaseData = {};
+    try {
+      const userId = localStorage.getItem('user_id') || localStorage.getItem('userId') || 
+                    JSON.parse(localStorage.getItem('user') || '{}')?.id;
+      
+      if (userId) {
+        console.log(`📊 Đang load tất cả dữ liệu progress từ database cho user ${userId}...`);
+        const response = await fetch(`/api/progress/${userId}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data && result.data.length > 0) {
+            // Chuyển đổi thành object với key là date để tra cứu nhanh
+            result.data.forEach(item => {
+              const dateStr = item.date.split('T')[0];
+              databaseData[dateStr] = item;
+            });
+            console.log(`✅ Đã load ${result.data.length} bản ghi từ database`);
+          }
+        }
+      }
+    } catch (dbError) {
+      console.log(`ℹ️ Không thể load từ database:`, dbError.message);
+    }
+    
     // Tính số ngày từ khi bắt đầu kế hoạch đến hôm nay
     const daysSincePlanStart = Math.floor((today - planStartDate) / (1000 * 60 * 60 * 24));
-    const maxDaysToLoad = Math.max(0, daysSincePlanStart + 1); // +1 để bao gồm ngày bắt đầu
+    const maxDaysToLoad = Math.max(0, daysSincePlanStart + 1);
     
-    console.log(`Tải dữ liệu cho ${maxDaysToLoad} ngày từ khi bắt đầu kế hoạch`);
+    console.log(`Xử lý dữ liệu cho ${maxDaysToLoad} ngày từ khi bắt đầu kế hoạch`);
     
     // Duyệt từ ngày bắt đầu kế hoạch đến hôm nay
     for (let i = maxDaysToLoad - 1; i >= 0; i--) {
@@ -201,29 +315,110 @@ export default function Progress() {
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
         
-        // Chỉ tải dữ liệu nếu ngày đó >= ngày bắt đầu kế hoạch
+        // Chỉ xử lý dữ liệu nếu ngày đó >= ngày bắt đầu kế hoạch
         if (date >= planStartDate) {
-          const checkinData = localStorage.getItem(`checkin_${dateStr}`);
-          if (checkinData) {
-            const data = JSON.parse(checkinData);
+          let checkinFound = false;
+          
+          // Kiểm tra trong database data trước
+          if (databaseData[dateStr]) {
+            const dbData = databaseData[dateStr];
+            const targetCigs = dbData.target_cigarettes || dailyTargets[dateStr] || 
+                              (activePlan?.initialCigarettes || 0);
+            
             actualData.push({
               date: dateStr,
-              actualCigarettes: data.actualCigarettes,
-              targetCigarettes: data.targetCigarettes,
-              mood: data.mood,
-              achievements: data.achievements || [],
-              challenges: data.challenges || []
+              actualCigarettes: dbData.actual_cigarettes,
+              targetCigarettes: targetCigs,
+              mood: dbData.mood,
+              achievements: dbData.achievements || [],
+              challenges: dbData.challenges || []
             });
-            console.log(`Đã tải dữ liệu cho ngày ${dateStr}: ${data.actualCigarettes} điếu`);
+            
+            console.log(`✅ DATABASE: ${dateStr} -> ${dbData.actual_cigarettes} điếu (target: ${targetCigs})`);
+            checkinFound = true;
+          } else {
+            // Fallback: Load từ localStorage nếu không tìm thấy trong database
+            const checkinData = localStorage.getItem(`checkin_${dateStr}`);
+            if (checkinData) {
+              const data = JSON.parse(checkinData);
+              
+              const targetCigs = data.targetCigarettes || dailyTargets[dateStr] || 
+                                (activePlan?.initialCigarettes || 0);
+              
+              actualData.push({
+                date: dateStr,
+                actualCigarettes: data.actualCigarettes,
+                targetCigarettes: targetCigs,
+                mood: data.mood,
+                achievements: data.achievements || [],
+                challenges: data.challenges || []
+              });
+              console.log(`📱 LOCALSTORAGE: ${dateStr} -> ${data.actualCigarettes} điếu (target: ${targetCigs})`);
+              checkinFound = true;
+            }
+          }
+          
+          // Nếu vẫn không có dữ liệu nhưng có mục tiêu, thêm mục tiêu vào
+          if (!checkinFound && dailyTargets[dateStr] !== undefined) {
+            actualData.push({
+              date: dateStr,
+              actualCigarettes: null,
+              targetCigarettes: dailyTargets[dateStr],
+              mood: null
+            });
+            console.log(`⚪ TARGET ONLY: ${dateStr} -> target: ${dailyTargets[dateStr]} điếu`);
           }
         }
       } catch (error) {
-        console.error(`Error loading check-in data for day -${i}:`, error);
+        console.error(`Error processing data for day -${i}:`, error);
       }
     }
     
     // Đảm bảo dữ liệu được sắp xếp theo ngày tăng dần
     actualData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Thêm dữ liệu từ API nếu người dùng đã đăng nhập
+    try {
+      const auth_token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+      if (auth_token) {
+        console.log("Người dùng đã đăng nhập, lấy thêm dữ liệu từ API...");
+        const apiProgress = await progressService.getUserProgress();
+        if (apiProgress && apiProgress.data && Array.isArray(apiProgress.data)) {
+          console.log("Đã nhận dữ liệu từ API:", apiProgress.data.length, "bản ghi");
+          
+          // Tạo map của dữ liệu hiện có theo ngày
+          const existingDataMap = {};
+          actualData.forEach(item => {
+            existingDataMap[item.date] = item;
+          });
+          
+          // Thêm hoặc cập nhật dữ liệu từ API
+          apiProgress.data.forEach(apiItem => {
+            if (existingDataMap[apiItem.date]) {
+              // Cập nhật dữ liệu hiện có
+              const existingItem = existingDataMap[apiItem.date];
+              existingItem.actualCigarettes = apiItem.actualCigarettes;
+              if (!existingItem.targetCigarettes || existingItem.targetCigarettes === 0) {
+                existingItem.targetCigarettes = apiItem.targetCigarettes;
+              }
+            } else {
+              // Thêm mới
+              actualData.push({
+                date: apiItem.date,
+                actualCigarettes: apiItem.actualCigarettes,
+                targetCigarettes: apiItem.targetCigarettes || dailyTargets[apiItem.date] || 0,
+                mood: null
+              });
+            }
+          });
+          
+          // Sắp xếp lại
+          actualData.sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy dữ liệu từ API:", error);
+    }
     
     console.log(`Đã tải ${actualData.length} bản ghi dữ liệu thực tế`);
     setActualProgress(actualData);
@@ -352,7 +547,7 @@ export default function Progress() {
   }, [actualProgress]);
   
   // Không chuyển hướng tự động, chỉ hiển thị nút cho người dùng
-  useEffect(() => {
+  useEffect(() => {    
     if (userPlan) {
       // Chỉ kiểm tra xem có kế hoạch và cập nhật state
       console.log("Đã kiểm tra kế hoạch:", hasPlan ? "Có kế hoạch" : "Không có kế hoạch");
@@ -541,7 +736,7 @@ export default function Progress() {
     );
   }
     // Kiểm tra xem có cần hiển thị thông báo cần lập kế hoạch
-  if (userPlan && !hasPlan) {
+  if (!hasPlan) {
     return (
       <div className="progress-container">
         <div style={{ 
@@ -629,38 +824,23 @@ export default function Progress() {
       {/* Daily Checkin Section - Luôn hiển thị để người dùng có thể nhập số điếu đã hút */}
       <DailyCheckin 
         onProgressUpdate={handleProgressUpdate}
-        currentPlan={userPlan || {
-          name: "Kế hoạch mặc định",
-          startDate: new Date().toISOString().split('T')[0],
-          weeks: [
-            { week: 1, amount: 22, phase: "Thích nghi" },
-            { week: 2, amount: 17, phase: "Thích nghi" },
-            { week: 3, amount: 12, phase: "Tăng tốc" },
-            { week: 4, amount: 8, phase: "Tăng tốc" },
-            { week: 5, amount: 5, phase: "Hoàn thiện" },
-            { week: 6, amount: 2, phase: "Hoàn thiện" },
-            { week: 7, amount: 0, phase: "Mục tiêu đạt được" }
-          ],
-          initialCigarettes: 22
-        }}
       />
-        {/* Conditional Rendering based on Plan Completion */}      {showCompletionDashboard ? (
-        <>
-          {console.log("🎯 HIỂN THỊ COMPLETION DASHBOARD")}
-          {console.log("PROGRESS DEBUG: Truyền vào ProgressDashboard:", { userPlan, actualProgress: actualProgress.length })}
-          <ProgressDashboard 
-            userPlan={userPlan} 
-            completionDate={completionData?.completionDate || new Date().toISOString()}
-            dashboardStats={dashboardStats}
-            actualProgress={actualProgress} // Truyền dữ liệu thực tế vào ProgressDashboard
-            onDataReset={() => {
-              // Reset data & recalculate
-              localStorage.removeItem('dashboardStats');
-              loadActualProgressFromCheckins();
-              recalculateStatistics();
-            }}
-          />
-        </>      ) : (
+        {/* Luôn hiển thị ProgressDashboard */}
+        <ProgressDashboard 
+          userPlan={userPlan} 
+          completionDate={completionData?.completionDate || new Date().toISOString()}
+          dashboardStats={dashboardStats}
+          actualProgress={actualProgress} // Truyền dữ liệu thực tế vào ProgressDashboard
+          onDataReset={() => {
+            // Reset data & recalculate
+            localStorage.removeItem('dashboardStats');
+            loadActualProgressFromCheckins();
+            recalculateStatistics();
+          }}
+        />
+        
+        {/* Additional Sections - Chỉ hiển thị khi không phải dashboard hoàn thành */}
+        {!showCompletionDashboard && (
         <>
           {console.log("📊 HIỂN THỊ CHART SECTION BÌNH THƯỜNG")}
           {console.log("PROGRESS DEBUG: actualProgress cho chart:", actualProgress.length)}
@@ -736,6 +916,8 @@ export default function Progress() {
               </div>
             </div>
             
+            {/* Phần thống kê sức khỏe đã được xóa - Sử dụng giao diện từ ProgressDashboard thay thế */}
+
             {/* Additional Stats */}
             <div className="extra-stats">
               <h3>Chi tiết tiến trình</h3>

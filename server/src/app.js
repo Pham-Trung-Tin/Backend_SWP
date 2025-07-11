@@ -6,6 +6,7 @@ import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import quitPlanRoutes from './routes/quitPlanRoutes.js';
 import progressRoutes from './routes/progressRoutes.js';
+// Health routes removed - functionality now in ProgressDashboard component
 import ensureTablesExist from './ensureTables.js';
 
 // Load environment variables
@@ -61,6 +62,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/quit-plans', quitPlanRoutes);
 app.use('/api/progress', progressRoutes);
+// Health routes removed - functionality now in ProgressDashboard component
 
 // Test database connection
 await testConnection();

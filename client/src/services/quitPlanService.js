@@ -13,7 +13,7 @@ const getAuthHeaders = () => {
 // Create a new quit plan
 export const createQuitPlan = async (planData) => {
     try {
-        console.log('🚀 Creating quit plan:', planData);
+        logDebug('QuitPlan', '🚀 Creating quit plan in database', planData);
 
         const response = await fetch(`${API_BASE_URL}/api/quit-plans`, {
             method: 'POST',
@@ -26,24 +26,26 @@ export const createQuitPlan = async (planData) => {
         if (!response.ok) {
             // Nếu lỗi 401 (Unauthorized), có thể token hết hạn
             if (response.status === 401) {
-                console.warn('⚠️ Token không hợp lệ hoặc đã hết hạn. Lưu kế hoạch locally.');
-                throw new Error('Token không hợp lệ. Vui lòng đăng nhập lại.');
+                logDebug('QuitPlan', '⚠️ Token không hợp lệ hoặc đã hết hạn. Yêu cầu đăng nhập lại.', null, true);
+                throw new Error('Token không hợp lệ. Vui lòng đăng nhập lại để lưu kế hoạch.');
             }
             throw new Error(data.message || 'Failed to create quit plan');
         }
 
-        console.log('✅ Quit plan created successfully:', data);
+        logDebug('QuitPlan', '✅ Quit plan created successfully in database', data);
         return data.data || data;
     } catch (error) {
-        console.error('❌ Error creating quit plan:', error);
+        logDebug('QuitPlan', '❌ Error creating quit plan in database', error, true);
         throw error;
     }
 };
 
 // Get all quit plans for the current user
+import { logDebug } from '../utils/debugHelpers';
+
 export const getUserPlans = async () => {
     try {
-        console.log('🚀 Fetching user quit plans...');
+        logDebug('QuitPlan', '🚀 Fetching user quit plans from database...');
 
         const response = await fetch(`${API_BASE_URL}/api/quit-plans/user`, {
             method: 'GET',
@@ -56,12 +58,19 @@ export const getUserPlans = async () => {
             throw new Error(data.message || 'Failed to fetch quit plans');
         }
 
-        console.log('✅ User quit plans fetched:', data);
+        logDebug('QuitPlan', '✅ User quit plans fetched from database', data);
         // Backend trả về { success: true, message: "...", data: [...] }
-        // Cần trả về data.data thay vì data
-        return data.data || data;
+        const plansData = data.data || data;
+        
+        if (plansData.length > 0) {
+            logDebug('QuitPlan', `✅ Tìm thấy ${plansData.length} kế hoạch trong database`);
+        } else {
+            logDebug('QuitPlan', 'ℹ️ Không tìm thấy kế hoạch nào trong database', null, true); // Force print này
+        }
+        
+        return plansData;
     } catch (error) {
-        console.error('❌ Error fetching user plans:', error);
+        console.error('❌ Error fetching user plans from database:', error);
         throw error;
     }
 };
@@ -87,6 +96,52 @@ export const getQuitPlan = async (planId) => {
     } catch (error) {
         console.error('❌ Error fetching quit plan:', error);
         throw error;
+    }
+};
+
+// Get user's active quit plan
+export const getUserActivePlan = async () => {
+    try {
+        console.log('🚀 Fetching user active quit plan from database...');
+
+        const response = await fetch(`${API_BASE_URL}/api/quit-plans/active`, {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                // Không có kế hoạch active là một tình huống bình thường
+                console.log('ℹ️ User has no active quit plan');
+                return { success: false, message: 'No active plan found' };
+            }
+            throw new Error(data.message || 'Failed to fetch active quit plan');
+        }
+
+        console.log('✅ User active quit plan fetched:', data);
+        
+        // Process data to ensure proper structure
+        const planData = data.data || data;
+        
+        // Ensure weeks data is properly parsed if it's a string
+        if (planData.weeks && typeof planData.weeks === 'string') {
+            try {
+                planData.weeks = JSON.parse(planData.weeks);
+            } catch (e) {
+                console.error('Error parsing weeks data:', e);
+            }
+        }
+        
+        return { 
+            success: true,
+            plan: planData,
+            message: 'Active plan retrieved successfully'
+        };
+    } catch (error) {
+        console.error('❌ Error fetching active quit plan:', error);
+        return { success: false, message: error.message };
     }
 };
 
@@ -143,6 +198,7 @@ export default {
     createQuitPlan,
     getUserPlans,
     getQuitPlan,
+    getUserActivePlan,
     updateQuitPlan,
     deletePlan
 };

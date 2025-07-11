@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/JourneyStepper.css';
 import { createQuitPlan, updateQuitPlan, getUserPlans, deletePlan } from '../services/quitPlanService';
+import { logDebug } from '../utils/debugHelpers';
 
 // Debug function to check authentication status
 const checkAuthStatus = () => {
@@ -86,11 +87,15 @@ export default function JourneyStepper() {
             reasonToQuit: planToUse.goal || prevData.reasonToQuit,
             // Cập nhật selectedPlan để có thể chỉnh sửa
             selectedPlan: {
-              id: planToUse.metadata?.selectedPlanId || 1,
+              id: planToUse.metadata?.selectedPlanId || planToUse.id, // Sử dụng ID từ database nếu không có selectedPlanId
               name: planToUse.plan_name || planToUse.planName,
               title: planToUse.plan_name || planToUse.planName,
               totalWeeks: planToUse.total_weeks || planToUse.totalWeeks,
-              weeks: planToUse.weeks || []
+              weeks: planToUse.weeks || [],
+              // Thêm thông tin thời gian từ database
+              createdAt: planToUse.created_at || planToUse.createdAt,
+              updatedAt: planToUse.updated_at || planToUse.updatedAt,
+              databaseId: planToUse.id // Lưu ID từ database để dễ dàng cập nhật sau này
             }
           }));
         }
@@ -291,21 +296,6 @@ export default function JourneyStepper() {
       // Lấy thời gian hiện tại
       const now = new Date().toISOString();
 
-      // Kiểm tra xem đã có kế hoạch từ trước chưa để giữ nguyên thời gian tạo ban đầu
-      let originalCompletionDate = now;
-      try {
-        const savedData = localStorage.getItem('quitPlanCompletion');
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          if (parsedData && parsedData.completionDate) {
-            originalCompletionDate = parsedData.completionDate;
-            console.log('Giữ nguyên thời gian tạo ban đầu:', originalCompletionDate);
-          }
-        }
-      } catch (error) {
-        console.error('Lỗi khi đọc dữ liệu cũ:', error);
-      }
-
       // Lấy kế hoạch đầy đủ dựa vào ID đã chọn
       let completeSelectedPlan = null;
 
@@ -325,8 +315,6 @@ export default function JourneyStepper() {
           : formData.selectedPlan;
 
         completeSelectedPlan = plans.find(plan => plan.id === selectedPlanId);
-
-        console.log('Kế hoạch đầy đủ được chọn khi submit:', completeSelectedPlan);
       }
 
       // Đảm bảo completeSelectedPlan không null
@@ -349,11 +337,11 @@ export default function JourneyStepper() {
           packPrice: formData.packPrice,
           smokingYears: formData.smokingYears,
           selectedPlanId: completeSelectedPlan?.id,
-          completionDate: originalCompletionDate
+          completionDate: now
         }
       };
 
-      console.log('📤 Gửi dữ liệu lên API:', planDataForAPI);
+      logDebug('QuitPlan', '📤 Gửi dữ liệu lên API', planDataForAPI);
 
       // Gọi API để lưu kế hoạch lên database
       const apiResponse = await createQuitPlan(planDataForAPI);
@@ -379,7 +367,7 @@ export default function JourneyStepper() {
       }, 1000);
 
     } catch (error) {
-      console.error('❌ Lỗi khi lưu kế hoạch lên database:', error);
+      logDebug('QuitPlan', '❌ Lỗi khi lưu kế hoạch lên database', error, true);
 
       // Nếu API lỗi, hiển thị thông báo
       setTimeout(() => {
@@ -439,38 +427,19 @@ export default function JourneyStepper() {
         if (userPlans && userPlans.length > 0) {
           // Xóa tất cả kế hoạch của user từ database
           for (const plan of userPlans) {
-            console.log('🗑️ Deleting plan from database:', plan.id);
+            logDebug('QuitPlan', '🗑️ Deleting plan from database', plan.id);
             await deletePlan(plan.id);
           }
-          console.log('✅ All plans deleted from database successfully');
+          logDebug('QuitPlan', '✅ All plans deleted from database successfully', null, true);
         }
       } catch (error) {
-        console.error('❌ Error deleting plans from database:', error);
+        logDebug('QuitPlan', '❌ Error deleting plans from database', error, true);
         alert('Có lỗi khi xóa kế hoạch từ database. Vui lòng thử lại.');
         return;
       }
 
-      // Xóa thông tin kế hoạch từ localStorage (nếu còn)
-      localStorage.removeItem('quitPlanCompletion');
-      localStorage.removeItem('activePlan');
-
-      // Xóa tất cả dữ liệu check-in hàng ngày
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('checkin_')) {
-          keysToRemove.push(key);
-        }
-      }
-
-      // Xóa từng key đã thu thập
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        console.log(`Đã xóa dữ liệu check-in: ${key}`);
-      });
-
-      // Xóa thống kê dashboard
-      localStorage.removeItem('dashboardStats');
+      // Xóa dữ liệu liên quan đến kế hoạch đã hoàn thành
+      logDebug('QuitPlan', '✅ Đã xóa kế hoạch khỏi database thành công', null, true);
 
       // Reset lại trạng thái
       setFormData({
@@ -801,17 +770,13 @@ export default function JourneyStepper() {
         ? formData.selectedPlan.id
         : formData.selectedPlan;
 
-      console.log('Tìm kế hoạch với ID:', selectedPlanId, 'từ các kế hoạch:', plans);
-
+      // Tìm kế hoạch với ID phù hợp
       const selectedPlan = plans.find(plan => plan.id === selectedPlanId);
 
       // Kiểm tra nếu không tìm thấy kế hoạch phù hợp
       if (!selectedPlan) {
-        console.log('Không tìm thấy kế hoạch với ID:', selectedPlanId);
-
         // Nếu selectedPlan là object, sử dụng nó
         if (typeof formData.selectedPlan === 'object' && formData.selectedPlan !== null) {
-          console.log('Sử dụng kế hoạch từ formData:', formData.selectedPlan);
           return {
             weeks: formData.selectedPlan.weeks || [],
             strategy: formData.selectedPlan,
@@ -822,8 +787,6 @@ export default function JourneyStepper() {
 
         return null;
       }
-
-      console.log('Đã tìm thấy kế hoạch:', selectedPlan);
       return {
         weeks: selectedPlan.weeks,
         strategy: selectedPlan,
@@ -933,36 +896,20 @@ export default function JourneyStepper() {
                   <div className="plan-summary-item">
                     <span className="summary-label">Kế hoạch được tạo:</span>
                     <span className="summary-value">
-                      {(() => {
-                        const savedPlan = localStorage.getItem('quitPlanCompletion');
-                        if (savedPlan) {
-                          const { completionDate } = JSON.parse(savedPlan);
-                          const date = new Date(completionDate);
-                          return `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN')}`;
-                        }
-                        return new Date().toLocaleString('vi-VN');
-                      })()}
+                      {formData.selectedPlan && formData.selectedPlan.createdAt ? 
+                        `${new Date(formData.selectedPlan.createdAt).toLocaleDateString('vi-VN')} ${new Date(formData.selectedPlan.createdAt).toLocaleTimeString('vi-VN')}` : 
+                        new Date().toLocaleString('vi-VN')}
                     </span>
                   </div>
-                  {(() => {
-                    const savedPlan = localStorage.getItem('quitPlanCompletion');
-                    if (savedPlan) {
-                      const { lastEdited, completionDate } = JSON.parse(savedPlan);
-                      // Chỉ hiển thị thời gian cập nhật nếu khác với thời gian tạo
-                      if (lastEdited && lastEdited !== completionDate) {
-                        const date = new Date(lastEdited);
-                        return (
-                          <div className="plan-summary-item">
-                            <span className="summary-label">Cập nhật lần cuối:</span>
-                            <span className="summary-value">
-                              {`${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN')}`}
-                            </span>
-                          </div>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
+                  {formData.selectedPlan && formData.selectedPlan.updatedAt && formData.selectedPlan.createdAt !== formData.selectedPlan.updatedAt && (
+                    <div className="plan-summary-item">
+                      <span className="summary-label">Cập nhật lần cuối:</span>
+                      <span className="summary-value">
+                        {new Date(formData.selectedPlan.updatedAt).toLocaleDateString('vi-VN') + ' ' + 
+                         new Date(formData.selectedPlan.updatedAt).toLocaleTimeString('vi-VN')}
+                      </span>
+                    </div>
+                  )}
                 </div>                  <div className="plan-edit-options">
                   <button className="btn-edit-plan" onClick={handleEditAllPlan}>
                     <i className="fas fa-pencil-alt"></i> Chỉnh sửa lại kế hoạch

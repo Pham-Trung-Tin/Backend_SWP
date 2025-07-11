@@ -821,7 +821,6 @@ export default function ProfilePage() {
                 console.log("Dữ liệu cập nhật:", data);
                 alert("Đã lưu cập nhật của bạn!");
               }}
-              currentPlan={activePlan}
             />
           </div>        )}
           {/* Modal chỉnh sửa kế hoạch */}

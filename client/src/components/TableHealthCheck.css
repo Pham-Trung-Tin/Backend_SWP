@@ -1,0 +1,40 @@
+.table-check-card {
+  margin-bottom: 20px;
+}
+
+.table-check-card .ant-card-head {
+  background-color: #f0f5ff;
+  border-bottom: 1px solid #d6e4ff;
+}
+
+.table-check-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+}
+
+.missing-columns {
+  background-color: #fffbe6;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.column-tags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.existing-columns {
+  margin-top: 16px;
+}
+
+.table-info {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed #e8e8e8;
+  text-align: center;
+}
