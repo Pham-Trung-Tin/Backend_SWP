@@ -18,7 +18,7 @@ router.get('/profile', userController.getProfile);
 router.put('/profile', validateProfileUpdate, handleValidationErrors, userController.updateProfile);
 
 // Avatar routes
-router.post('/avatar', upload.single('avatar'), userController.uploadAvatar);
+router.post('/upload-avatar', upload.single('avatar'), userController.uploadAvatar);
 
 // Smoking status routes
 router.get('/smoking-status', userController.getSmokingStatus);
