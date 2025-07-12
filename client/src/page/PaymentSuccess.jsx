@@ -55,7 +55,7 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [packageInfo, setPackageInfo] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUserFromAPI } = useAuth();
   const [countdown, setCountdown] = useState(5);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [windowDimension, setWindowDimension] = useState({
@@ -189,9 +189,10 @@ const PaymentSuccess = () => {
           
           if (payment.payment_status === 'completed') {
             setPaymentStatus('completed');
-            // Cập nhật membership context
+            // Cập nhật membership context với thông tin mới nhất từ server
             try {
-              await updateUser(); // Refresh user info to get latest membership
+              await refreshUserFromAPI(); // Refresh user info to get latest membership from API
+              console.log('User membership updated successfully after payment completion');
               // Lấy thông tin gói
               const savedPackage = JSON.parse(localStorage.getItem('pendingPaymentPackage') || '{}');
               if (savedPackage) {
@@ -232,9 +233,10 @@ const PaymentSuccess = () => {
             console.log('Đã cập nhật thủ công thành công');
             setPaymentStatus('completed');
             
-            // Refresh user info to get latest membership
+            // Refresh user info to get latest membership from API
             try {
-              await updateUser();
+              await refreshUserFromAPI();
+              console.log('User membership updated successfully after manual payment update');
             } catch (userUpdateError) {
               console.error('Lỗi khi refresh user info:', userUpdateError);
             }
@@ -364,72 +366,35 @@ const PaymentSuccess = () => {
   // Update user membership if package info is available
   useEffect(() => {
     if (user && packageInfo && paymentStatus === 'completed') {
-      // Lấy loại membership từ package
-      const membershipType = packageInfo.name.toLowerCase();
-      
-      // Kiểm tra thông tin membership từ backend
-      const fetchUserMembership = async () => {
+      // Refresh user data from API to get latest membership information
+      const updateUserMembership = async () => {
         try {
-          // Lấy token xác thực từ localStorage hoặc sessionStorage
-          const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
-          console.log('Membership fetch - Token status:', token ? 'Token found' : 'No token found');
+          console.log('Refreshing user data from API to get latest membership...');
+          await refreshUserFromAPI();
+          console.log('User membership updated successfully from API');
           
-          if (token) {
-            // Gọi API kiểm tra thông tin người dùng
-            console.log('Đang lấy thông tin người dùng từ API...');
-            const response = await axios.get('/api/users/me', {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            
-            if (response.data.success && response.data.data) {
-              const userData = response.data.data;
-              
-              // Nếu backend đã cập nhật membership, sử dụng thông tin từ backend
-              if (userData.membership || userData.membershipType) {
-                console.log('Đã lấy thông tin membership từ backend:', userData.membership || userData.membershipType);
-                
-                // Cập nhật context với thông tin từ backend
-                updateUser({ 
-                  membership: userData.membership || userData.membershipType,
-                  membershipType: userData.membership || userData.membershipType
-                });
-              } else {
-                // Backend chưa cập nhật, sử dụng thông tin từ frontend
-                updateUser({ 
-                  membership: membershipType,
-                  membershipType: membershipType 
-                });
-                console.log('Đã cập nhật membership từ frontend:', membershipType);
-              }
-            }
-          } else {
-            // Không có token, cập nhật từ frontend
-            updateUser({ 
-              membership: membershipType,
-              membershipType: membershipType 
-            });
-            console.log('Không có token, đã cập nhật membership từ frontend:', membershipType);
-          }
+          // Đánh dấu hiển thị thông báo thành công
+          window.sessionStorage.setItem('membership_updated', 'true');
         } catch (error) {
-          console.error('Lỗi khi kiểm tra thông tin membership từ backend:', error);
+          console.error('Lỗi khi refresh user info từ API:', error);
           
-          // Xảy ra lỗi, cập nhật từ frontend
+          // Fallback: cập nhật membership type từ package info
+          const membershipType = packageInfo.name.toLowerCase();
           updateUser({ 
             membership: membershipType,
             membershipType: membershipType 
           });
+          console.log('Fallback: đã cập nhật membership từ package info:', membershipType);
+          
+          // Đánh dấu hiển thị thông báo thành công
+          window.sessionStorage.setItem('membership_updated', 'true');
         }
       };
       
-      // Gọi hàm kiểm tra
-      fetchUserMembership();
-      
-      // Đánh dấu hiển thị thông báo thành công
-      window.sessionStorage.setItem('membership_updated', 'true');
+      // Gọi hàm cập nhật
+      updateUserMembership();
     }
-  }, [packageInfo, user, updateUser, paymentStatus]);
+  }, [packageInfo, user, refreshUserFromAPI, updateUser, paymentStatus]);
   
   // Countdown timer effect
   useEffect(() => {
