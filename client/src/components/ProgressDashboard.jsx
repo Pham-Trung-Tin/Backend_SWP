@@ -9,40 +9,42 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
   
   // Tạo dữ liệu mẫu cho biểu đồ thực tế
   const generateSampleActualData = (plan) => {
-    if (!plan || !plan.weeks || plan.weeks.length === 0) return [];
+    if (!plan || !plan.weeks || plan.weeks.length === 0) {
+      return [{date: new Date().toISOString().split('T')[0], actualCigarettes: 0, targetCigarettes: 0}];
+    }
     
-    const startDate = new Date(plan.startDate || new Date());
-    const result = [];
+    // Tạo dữ liệu mẫu dựa trên kế hoạch
+    const sampleData = [];
+    const today = new Date();
     
-    // Tạo dữ liệu mẫu cho mỗi tuần trong kế hoạch
-    plan.weeks.forEach((week, weekIndex) => {
-      // Tạo dữ liệu cho 3-5 ngày mỗi tuần
-      const daysToGenerate = Math.floor(Math.random() * 3) + 3; // 3-5 ngày mỗi tuần
+    // Dùng vòng lặp thông thường để tạo dữ liệu mẫu
+    for (let i = 30; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
       
-      for (let i = 0; i < daysToGenerate; i++) {
-        const dayOffset = Math.floor(Math.random() * 7); // Ngẫu nhiên trong tuần
-        const date = new Date(startDate);
-        date.setDate(date.getDate() + (weekIndex * 7) + dayOffset);
-        
-        // Tạo số điếu thực tế, hơi lệch so với kế hoạch một chút
-        const deviation = Math.floor(Math.random() * 5) - 2; // -2 to +2
-        const actualCigs = Math.max(0, week.amount + deviation);
-        
-        // Các trạng thái tâm trạng có thể có
-        const moods = ["good", "challenging", "easy", "difficult"];
-        const randomMood = moods[Math.floor(Math.random() * moods.length)];
-        
-        result.push({
-          date: date.toISOString().split('T')[0],
-          actualCigarettes: actualCigs,
-          targetCigarettes: week.amount,
-          mood: randomMood
-        });
-      }
-    });
+      // Tính tuần tương ứng
+      let weekIndex = Math.floor(i / 7);
+      weekIndex = Math.min(weekIndex, plan.weeks.length - 1);
+      if (weekIndex < 0) weekIndex = 0;
+      
+      // Lấy mục tiêu từ kế hoạch
+      const week = plan.weeks[weekIndex];
+      const plannedAmount = week.cigarettes || week.amount || 0;
+      
+      // Thêm biến động ngẫu nhiên để dữ liệu thực tế khác một chút so với kế hoạch
+      const randomVariation = Math.floor(Math.random() * 3) - 1; // -1, 0, hoặc 1
+      const actualAmount = Math.max(0, plannedAmount + randomVariation);
+      
+      sampleData.push({
+        date: dateStr,
+        actualCigarettes: actualAmount,
+        targetCigarettes: plannedAmount
+      });
+    }
     
-    // Sắp xếp theo ngày tăng dần
-    return result.sort((a, b) => new Date(a.date) - new Date(b.date));
+    console.log("DEBUG: Tạo dữ liệu mẫu cho biểu đồ:", sampleData.length, "ngày");
+    return sampleData;
   };
   
   // Early return if required props are missing
@@ -239,9 +241,19 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
           {console.log("DASHBOARD DEBUG: Trước khi render QuitProgressChart")}
           {console.log("DASHBOARD DEBUG: userPlan:", userPlan)}
           {console.log("DASHBOARD DEBUG: actualProgress:", actualProgress)}
+          {console.log("DASHBOARD DEBUG: actualProgress length:", Array.isArray(actualProgress) ? actualProgress.length : 'not an array')}
+          {console.log("DASHBOARD DEBUG: actualProgress sample:", Array.isArray(actualProgress) && actualProgress.length > 0 ? actualProgress[0] : 'no data')}
+          
+          {/* Thêm giao diện debug thủ công */}
+          {Array.isArray(actualProgress) && actualProgress.length === 0 && (
+            <div style={{marginBottom: '10px', padding: '8px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '4px'}}>
+              Chú ý: Dữ liệu tiến trình trống (actualProgress.length = 0)
+            </div>
+          )}
+          
           <QuitProgressChart
             userPlan={userPlan || { weeks: [], name: 'Kế hoạch cá nhân' }}
-            actualProgress={actualProgress} // Sử dụng dữ liệu thực tế từ props
+            actualProgress={actualProgress && actualProgress.length > 0 ? actualProgress : generateSampleActualData(userPlan)} // Sử dụng dữ liệu thực tế hoặc mẫu nếu không có
             timeFilter="Tất cả"
             height={250}
           />

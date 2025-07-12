@@ -41,6 +41,12 @@ export default function Progress() {
     const refreshTimer = setTimeout(() => {
       console.log("Auto-refreshing data after 1 second to ensure we have latest data");
       recalculateStatistics();
+      
+      // Thêm bảo vệ: nếu không có dữ liệu actualProgress, load lại từ API
+      if (!actualProgress || actualProgress.length === 0) {
+        console.log("Không có dữ liệu actualProgress, load lại từ API...");
+        loadUserPlanAndProgress();
+      }
     }, 1000);
     
     // Thử load dashboard stats từ localStorage trước
@@ -377,6 +383,20 @@ export default function Progress() {
     // Đảm bảo dữ liệu được sắp xếp theo ngày tăng dần
     actualData.sort((a, b) => new Date(a.date) - new Date(b.date));
     
+    // Fix: Chuyển đổi định dạng dữ liệu cho phù hợp với QuitProgressChart
+    const formattedActualData = actualData.map(item => ({
+      date: item.date,
+      actualCigarettes: item.actualCigarettes,
+      targetCigarettes: item.targetCigarettes,
+      mood: item.mood,
+      // Các trường khác nếu cần
+      achievements: item.achievements,
+      challenges: item.challenges
+    }));
+    
+    console.log(`Đã tải và định dạng ${formattedActualData.length} bản ghi dữ liệu thực tế`);
+    setActualProgress(formattedActualData);
+    
     // Thêm dữ liệu từ API nếu người dùng đã đăng nhập
     try {
       const auth_token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
@@ -495,13 +515,15 @@ export default function Progress() {
     
     console.log('Updated actual progress data:', actualData);
     // Cập nhật state để trigger re-render của biểu đồ
-    setActualProgress(actualData);    // Sau khi cập nhật actual progress, tính toán lại các thống kê
-    setTimeout(() => {
-      // Dùng setTimeout để đảm bảo actualProgress đã được cập nhật      const updatedStats = recalculateStatistics();
-      console.log('Đã cập nhật thống kê dashboard:', updatedStats);
+    setActualProgress(actualData);      // Sau khi cập nhật actual progress, tính toán lại các thống kê
+      setTimeout(() => {
+        // Dùng setTimeout để đảm bảo actualProgress đã được cập nhật
+        const updatedStats = recalculateStatistics();
+        console.log('Đã cập nhật thống kê dashboard:', updatedStats);
+        
         // Log để kiểm tra dữ liệu biểu đồ sau khi cập nhật
-      console.log('DEBUG: actualProgress sau khi cập nhật:', actualData);
-      console.log('DEBUG: Dòng xanh lá phải hiển thị với dữ liệu này');
+        console.log('DEBUG: actualProgress sau khi cập nhật:', actualData);
+        console.log('DEBUG: Dòng xanh lá phải hiển thị với dữ liệu này');
       
       // Kiểm tra lại dữ liệu từ localStorage để xác nhận 100%
       const todayDateStr = new Date().toISOString().split('T')[0];
@@ -838,149 +860,6 @@ export default function Progress() {
             recalculateStatistics();
           }}
         />
-        
-        {/* Additional Sections - Chỉ hiển thị khi không phải dashboard hoàn thành */}
-        {!showCompletionDashboard && (
-        <>
-          {console.log("📊 HIỂN THỊ CHART SECTION BÌNH THƯỜNG")}
-          {console.log("PROGRESS DEBUG: actualProgress cho chart:", actualProgress.length)}
-          {/* Chart Section */}
-          <div className="chart-section">
-            <div className="section-header">
-              <h2>Biểu đồ tiến trình</h2>
-              <div className="time-filter">
-                <span 
-                  className={activeTimeFilter === '7 ngày' ? 'active' : ''}
-                  onClick={() => setActiveTimeFilter('7 ngày')}
-                >7 ngày</span>
-                <span 
-                  className={activeTimeFilter === '30 ngày' ? 'active' : ''}
-                  onClick={() => setActiveTimeFilter('30 ngày')}
-                >30 ngày</span>
-                <span 
-                  className={activeTimeFilter === 'Tất cả' ? 'active' : ''}
-                  onClick={() => setActiveTimeFilter('Tất cả')}
-                >Tất cả</span>
-              </div>
-            </div>
-            
-            <QuitProgressChart 
-              userPlan={userPlan} 
-              actualProgress={actualProgress}
-              timeFilter={activeTimeFilter} 
-              height={320}
-            />
-          </div>
-
-          {/* Dashboard Stats */}
-          <div className="dashboard-section">
-            <h2>Thống kê tiến trình</h2>
-            <div className="dashboard-stats grid-4">              <div className="stat-card">
-                <div className="stat-icon">
-                  <FaCalendarCheck />
-                </div>
-                <div className="stat-content">
-                  <h3>{dashboardStats.noSmokingDays}</h3>
-                  <p>Ngày theo dõi</p>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <FaLeaf />
-                </div>
-                <div className="stat-content">
-                  <h3>{dashboardStats.savedCigarettes.toLocaleString()}</h3>
-                  <p>Điếu thuốc đã tránh</p>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <FaCoins />
-                </div>
-                <div className="stat-content">
-                  <h3>{(dashboardStats.savedMoney / 1000).toFixed(0)}K</h3>
-                  <p>VNĐ đã tiết kiệm</p>
-                </div>
-              </div>
-              
-              <div className="stat-card">
-                <div className="stat-icon">
-                  <FaHeart />
-                </div>
-                <div className="stat-content">
-                  <h3>{dashboardStats.healthProgress}%</h3>
-                  <p>Sức khỏe cải thiện</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Phần thống kê sức khỏe đã được xóa - Sử dụng giao diện từ ProgressDashboard thay thế */}
-
-            {/* Additional Stats */}
-            <div className="extra-stats">
-              <h3>Chi tiết tiến trình</h3>
-              <div className="extra-stats-grid">
-                <div className="stat-card">
-                  <div className="stat-value">
-                    {actualProgress.length}
-                  </div>
-                  <div className="stat-label">Ngày đã ghi nhận</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">
-                    {actualProgress.filter(p => p.actualCigarettes <= p.targetCigarettes).length}
-                  </div>
-                  <div className="stat-label">Ngày đạt mục tiêu</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">
-                    {actualProgress.length > 0 ? 
-                      Math.round(actualProgress.reduce((sum, p) => sum + p.actualCigarettes, 0) / actualProgress.length) 
-                      : (userPlan.initialCigarettes || (userPlan.weeks && userPlan.weeks[0]?.amount) || 20)}
-                  </div>
-                  <div className="stat-label">Trung bình điếu/ngày</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-value">
-                    {actualProgress.length > 0 ? 
-                      Math.round((actualProgress.filter(p => p.actualCigarettes <= p.targetCigarettes).length / actualProgress.length) * 100) : 0}%
-                  </div>
-                  <div className="stat-label">Tỷ lệ thành công</div>
-                </div>
-              </div>
-              
-              {/* Công cụ Reset dữ liệu và Reset nhanh Dashboard */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem('dashboardStats');
-                    // Đợi xóa xong rồi mới tính toán lại
-                    setTimeout(() => {
-                      console.log("Đã xóa dashboard stats, đang tính toán lại...");
-                      recalculateStatistics();
-                      alert('Đã reset và tính toán lại thống kê mới');
-                    }, 100);
-                  }}
-                  style={{
-                    backgroundColor: '#e67e22',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 15px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Reset thống kê
-                </button>
-                <ResetCheckinData onDataReset={() => loadUserPlanAndProgress()} />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
