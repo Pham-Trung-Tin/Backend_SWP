@@ -57,12 +57,12 @@ export const createZaloPayment = async (req, res) => {
             });
         }
 
-        // Create payment record in database
+        // Create payment record in database - CHỈ TẠO TRONG BẢNG PAYMENTS
         const paymentData = {
             userId: userId,
             packageId: packageId,
             amount,
-            paymentMethod: 'zalopay', // Now using 'zalopay' as the payment method
+            paymentMethod: 'zalopay',
             paymentStatus: 'pending',
             transactionId: zaloPayResult.transactionId,
             paymentDetails: {
@@ -75,26 +75,8 @@ export const createZaloPayment = async (req, res) => {
             }
         };
 
-        // Create payment record
+        // CHONLY create payment record in payments table
         const paymentResult = await PaymentTransaction.createPayment(paymentData);
-        
-        // Create transaction record
-        const transactionData = {
-            userId: userId,
-            packageId: packageId,
-            amount,
-            paymentMethod: 'zalopay',
-            transactionId: zaloPayResult.transactionId,
-            status: 'pending',
-            paymentDetails: {
-                packageName: packageData.name,
-                price: amount,
-                zp_trans_token: zaloPayResult.data.zp_trans_token,
-                order_url: zaloPayResult.data.order_url
-            }
-        };
-        
-        await PaymentTransaction.createPaymentTransaction(transactionData);
 
         // Đảm bảo order_url được trả về đúng cách
         const responseData = {
@@ -147,27 +129,19 @@ export const zaloPayCallback = async (req, res) => {
             const appTransId = callbackResult.data.app_trans_id;
             console.log(`Processing successful payment for transaction: ${appTransId}`);
             
-            // Find the payment by transaction_id
-            const payment = await PaymentTransaction.getPaymentByTransactionId(appTransId);
+            // Find the payment by transaction_id - SỬ DỤNG ĐÚNG FUNCTION CHO BẢNG PAYMENTS
+            const payment = await PaymentTransaction.findPaymentByTransactionId(appTransId);
             
             if (payment) {
                 console.log(`Found payment record:`, payment);
                 
                 // Only update if not already completed
-                if (payment.status !== 'completed') {
+                if (payment.payment_status !== 'completed') {
                     console.log(`Updating payment status to completed for payment ID: ${payment.id}`);
                     
-                    // Update payment status to completed
+                    // Update payment status to completed - SỬ DỤNG ĐÚNG FIELD CHO BẢNG PAYMENTS
                     await PaymentTransaction.updatePaymentStatus(payment.id, 'completed');
                     console.log(`✅ Payment status updated to completed`);
-                    
-                    // Update transaction status and save callback data
-                    await PaymentTransaction.updateTransactionStatus(
-                        appTransId, 
-                        'completed',
-                        callbackResult.data
-                    );
-                    console.log(`✅ Transaction status updated to completed`);
                     
                     // Update user membership if not already done
                     try {

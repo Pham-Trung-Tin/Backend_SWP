@@ -58,7 +58,7 @@ class ZaloPayService {
             bank_code: "",
             // Use ngrok URL for callback in development
             callback_url: process.env.ZALOPAY_CALLBACK_URL || 
-                         'https://1a71df6069ed.ngrok-free.app/api/payments/zalopay/callback'
+                         'https://c07ed66e8d82.ngrok-free.app/api/payments/zalopay/callback'
         };
         
         // Create MAC signature

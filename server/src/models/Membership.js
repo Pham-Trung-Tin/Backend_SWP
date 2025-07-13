@@ -111,11 +111,8 @@ export const purchasePackage = async (userId, packageId, paymentMethod) => {
       VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'active')
     `, [userId, packageId, endDate]);
     
-    // Tạo giao dịch thanh toán
-    const [paymentResult] = await connection.execute(`
-      INSERT INTO payment_transactions (user_id, package_id, amount, method, status)
-      VALUES (?, ?, ?, ?, 'completed')
-    `, [userId, packageId, packageData.price, paymentMethod]);
+    // Không cần tạo giao dịch thanh toán mới vì đã có rồi
+    // Chỉ cần cập nhật membership
     
     // Cập nhật user.membership_id và membership
     try {
@@ -171,21 +168,10 @@ export const purchasePackage = async (userId, packageId, paymentMethod) => {
         console.error('❌ Lỗi cập nhật cột membership:', membershipError);
       }
       
-      try {
-        await connection.execute(`UPDATE users SET membership_id = ? WHERE id = ?`, [packageId, userId]);
-        console.log(`✅ Đã cập nhật thành công cột membership_id thành "${packageId}"`);
-      } catch (membershipIdError) {
-        console.error('❌ Lỗi cập nhật cột membership_id:', membershipIdError);
-      }
+      // Bỏ qua các cột không tồn tại: membership_id, membership_updated_at
       
-      try {
-        await connection.execute(`UPDATE users SET membership_updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [userId]);
-      } catch (timestampError) {
-        console.error('❌ Lỗi cập nhật cột membership_updated_at:', timestampError);
-      }
-      
-      // Kiểm tra kết quả cập nhật
-      const [updatedUser] = await connection.execute('SELECT id, membership, membership_id FROM users WHERE id = ?', [userId]);
+      // Kiểm tra kết quả cập nhật (chỉ lấy các cột tồn tại)
+      const [updatedUser] = await connection.execute('SELECT id, membership FROM users WHERE id = ?', [userId]);
       console.log('✅ Thông tin user sau khi cập nhật:', updatedUser[0]);
       
     } catch (updateError) {
@@ -197,7 +183,6 @@ export const purchasePackage = async (userId, packageId, paymentMethod) => {
     
     return {
       membershipId: membershipResult.insertId,
-      paymentId: paymentResult.insertId,
       packageId: packageId,
       packageName: packageData.name,
       startDate: new Date(),

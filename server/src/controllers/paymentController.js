@@ -1,4 +1,4 @@
-import * as Payment from '../models/PaymentTransaction.js';
+import * as PaymentTransaction from '../models/PaymentTransaction.js';
 import * as Package from '../models/Package.js';
 
 /**
@@ -260,7 +260,7 @@ export const getPaymentById = async (req, res) => {
     
     // Kiểm tra xem người dùng có quyền xem thanh toán này không
     // Chỉ admin hoặc chủ sở hữu thanh toán mới được xem
-    if (PaymentTransaction.user_id !== userId && req.user.role !== 'admin') {
+    if (payment.user_id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this payment',
@@ -302,7 +302,8 @@ export const getPaymentByTransactionId = async (req, res) => {
       });
     }
     
-    const payment = await PaymentTransaction.getPaymentByTransactionId(transactionId);
+    // Sử dụng findPaymentByTransactionId thay vì getPaymentByTransactionId để dùng đúng bảng payments
+    const payment = await PaymentTransaction.findPaymentByTransactionId(transactionId);
     
     if (!payment) {
       return res.status(404).json({
@@ -314,7 +315,7 @@ export const getPaymentByTransactionId = async (req, res) => {
     
     // Kiểm tra xem người dùng có quyền xem thanh toán này không
     // Chỉ admin hoặc chủ sở hữu thanh toán mới được xem
-    if (PaymentTransaction.user_id !== userId && req.user.role !== 'admin') {
+    if (payment.user_id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this payment',
@@ -378,7 +379,7 @@ export const refundPayment = async (req, res) => {
     }
     
     // Kiểm tra trạng thái thanh toán
-    if (PaymentTransaction.payment_status !== 'completed') {
+    if (payment.payment_status !== 'completed') {
       return res.status(400).json({
         success: false,
         message: 'Can only refund completed payments',
@@ -390,7 +391,7 @@ export const refundPayment = async (req, res) => {
     const refundData = {
       paymentId: id,
       reason,
-      amount: refundAmount || PaymentTransaction.amount,
+      amount: refundAmount || payment.amount,
       refundedBy: req.user.id,
       timestamp: new Date()
     };
@@ -402,8 +403,8 @@ export const refundPayment = async (req, res) => {
       // Hủy gói thành viên
       try {
         const Membership = await import('../models/Membership.js');
-        await Membership.deactivateMembership(PaymentTransaction.user_id, PaymentTransaction.package_id);
-        console.log(`✅ Deactivated membership for user ${PaymentTransaction.user_id}, package ${PaymentTransaction.package_id}`);
+        await Membership.deactivateMembership(payment.user_id, payment.package_id);
+        console.log(`✅ Deactivated membership for user ${payment.user_id}, package ${payment.package_id}`);
       } catch (membershipError) {
         console.error('❌ Error deactivating membership:', membershipError);
         // Vẫn tiếp tục vì hoàn tiền đã thành công
@@ -485,14 +486,14 @@ export const verifyPayment = async (req, res) => {
     
     // Cập nhật trạng thái thanh toán
     const updatedPayment = await PaymentTransaction.updatePaymentStatus(
-      PaymentTransaction.id,
+      payment.id,
       paymentStatus,
       transactionId
     );
     
     // Thêm chi tiết thanh toán nếu có
     if (paymentDetails) {
-      await PaymentTransaction.updatePaymentDetails(PaymentTransaction.id, paymentDetails);
+      await PaymentTransaction.updatePaymentDetails(payment.id, paymentDetails);
     }
     
     // Nếu thanh toán hoàn tất, cập nhật gói thành viên của người dùng
@@ -502,8 +503,8 @@ export const verifyPayment = async (req, res) => {
       
       // Gọi hàm cập nhật membership
       try {
-        await Membership.activateMembership(PaymentTransaction.user_id, PaymentTransaction.package_id);
-        console.log(`✅ Activated membership for user ${PaymentTransaction.user_id}, package ${PaymentTransaction.package_id}`);
+        await Membership.activateMembership(payment.user_id, payment.package_id);
+        console.log(`✅ Activated membership for user ${payment.user_id}, package ${payment.package_id}`);
       } catch (membershipError) {
         console.error('❌ Error activating membership:', membershipError);
         // Vẫn tiếp tục xử lý vì thanh toán đã thành công
@@ -515,7 +516,7 @@ export const verifyPayment = async (req, res) => {
       success: true,
       message: 'Payment verified successfully',
       data: {
-        paymentId: PaymentTransaction.id,
+        paymentId: payment.id,
         transactionId,
         status: paymentStatus
       }

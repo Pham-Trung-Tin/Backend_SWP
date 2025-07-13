@@ -282,28 +282,54 @@ export const getPaymentByTransactionId = async (transactionId) => {
 };
 
 /**
- * Update payment status
+ * Cập nhật trạng thái thanh toán trong bảng payments
+ * @param {number} paymentId - ID của payment
+ * @param {string} status - Trạng thái mới (pending, completed, failed, refunded)
+ * @param {string} transactionId - Transaction ID (tùy chọn)
+ * @returns {Object} - Payment record đã cập nhật
  */
-export const updatePaymentStatus = async (paymentId, status) => {
+export const updatePaymentStatus = async (paymentId, status, transactionId = null) => {
   try {
-    const [result] = await pool.execute(`
-      UPDATE payment_transactions 
-      SET status = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `, [status, paymentId]);
+    console.log(`🔄 Updating payment status: ID=${paymentId}, status=${status}, transactionId=${transactionId}`);
     
-    if (result.affectedRows === 0) {
-      throw new Error(`No payment found with ID: ${paymentId}`);
+    let query = `UPDATE payments SET payment_status = ?, status = ?, updated_at = NOW()`;
+    let params = [status, status];
+    
+    if (transactionId) {
+      query += `, transaction_id = ?`;
+      params.push(transactionId);
     }
     
-    // Get updated payment
-    const [rows] = await pool.execute(`
-      SELECT * FROM payment_transactions WHERE id = ?
-    `, [paymentId]);
+    query += ` WHERE id = ?`;
+    params.push(paymentId);
     
-    return rows[0];
+    const [result] = await pool.execute(query, params);
+    
+    if (result.affectedRows === 0) {
+      throw new Error(`Payment with ID ${paymentId} not found`);
+    }
+    
+    // Lấy lại record đã cập nhật
+    const [rows] = await pool.execute(
+      `SELECT * FROM payments WHERE id = ?`,
+      [paymentId]
+    );
+    
+    const payment = rows[0];
+    
+    // Parse JSON field
+    if (payment.payment_details && typeof payment.payment_details === 'string') {
+      try {
+        payment.payment_details = JSON.parse(payment.payment_details);
+      } catch (e) {
+        // Keep as string if not valid JSON
+      }
+    }
+    
+    console.log(`✅ Payment status updated successfully: ID=${paymentId}, new status=${status}`);
+    return payment;
   } catch (error) {
-    console.error('❌ Error updating payment status:', error);
+    console.error(`❌ Error updating payment status:`, error);
     throw error;
   }
 };
@@ -413,6 +439,72 @@ export const createPayment = async (paymentData) => {
   }
 };
 
+/**
+ * Tìm payment trong bảng payments theo transaction_id  
+ * @param {string} transactionId - Transaction ID cần tìm (có thể có hoặc không có dấu _)
+ * @returns {Object|null} - Payment record hoặc null nếu không tìm thấy
+ */
+export const findPaymentByTransactionId = async (transactionId) => {
+  try {
+    console.log(`🔍 Finding payment by transaction ID: ${transactionId}`);
+    
+    // Thử tìm exact match trước
+    let [rows] = await pool.execute(
+      `SELECT * FROM payments WHERE transaction_id = ? ORDER BY created_at DESC LIMIT 1`,
+      [transactionId]
+    );
+    
+    // Nếu không tìm thấy và transaction ID không có dấu _, thử thêm dấu _
+    if (rows.length === 0 && !transactionId.includes('_')) {
+      console.log(`🔄 Trying with underscore format...`);
+      const datePrefix = transactionId.substring(0, 6); // 250714
+      const orderNumber = transactionId.substring(6); // 400000122
+      const formattedTransactionId = `${datePrefix}_${orderNumber}`;
+      
+      [rows] = await pool.execute(
+        `SELECT * FROM payments WHERE transaction_id = ? ORDER BY created_at DESC LIMIT 1`,
+        [formattedTransactionId]
+      );
+      
+      console.log(`🔍 Trying formatted transaction ID: ${formattedTransactionId}`);
+    }
+    
+    // Nếu vẫn không tìm thấy, thử tìm bằng LIKE với transaction ID không có dấu _
+    if (rows.length === 0) {
+      console.log(`🔄 Trying partial match...`);
+      const cleanTransactionId = transactionId.replace('_', '');
+      [rows] = await pool.execute(
+        `SELECT * FROM payments WHERE REPLACE(transaction_id, '_', '') = ? ORDER BY created_at DESC LIMIT 1`,
+        [cleanTransactionId]
+      );
+      
+      console.log(`🔍 Trying clean transaction ID: ${cleanTransactionId}`);
+    }
+    
+    if (rows.length === 0) {
+      console.log(`❌ No payment found for transaction ID: ${transactionId}`);
+      return null;
+    }
+    
+    const payment = rows[0];
+    
+    // Parse JSON field
+    if (payment.payment_details && typeof payment.payment_details === 'string') {
+      try {
+        payment.payment_details = JSON.parse(payment.payment_details);
+      } catch (e) {
+        // Keep as string if not valid JSON
+      }
+    }
+    
+    console.log(`✅ Found payment: ID=${payment.id}, status=${payment.payment_status}, transaction_id=${payment.transaction_id}`);
+    return payment;
+  } catch (error) {
+    console.error('❌ Error finding payment by transaction ID:', error);
+    throw error;
+  }
+};
+
 export default {
   ensurePaymentTransactionsTable,
   createPaymentTransaction,
@@ -422,5 +514,6 @@ export default {
   getPaymentByTransactionId,
   updatePaymentStatus,
   getUserPayments,
-  createPayment
+  createPayment,
+  findPaymentByTransactionId
 };
