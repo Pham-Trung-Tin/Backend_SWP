@@ -63,17 +63,7 @@
     font-weight: 400;
 }
 
-.streak-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: linear-gradient(135deg, #4285f4, #34a853);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
-    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
-}
+
 
 .streak-number {
     font-size: 20px;
@@ -630,14 +620,7 @@
         grid-template-columns: 1fr;
     }
 
-    .streak-badge {
-        padding: 8px 15px;
-    }    .checkin-header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: center;
-        text-align: center;
-    }
+    
     
     .header-content {
         justify-content: center;

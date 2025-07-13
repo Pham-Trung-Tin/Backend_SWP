@@ -265,14 +265,31 @@ const QuitProgressChart = ({
                 const date = new Date(planItem.date);
                 const label = `${date.getDate()}/${date.getMonth() + 1}`;
                 labels.push(label);
-                
-                // Dữ liệu kế hoạch
-                planData.push(planItem.targetCigarettes);
-                
+
+                // Đường xanh dương: lấy đúng số điếu/ngày từ planItem.amount (nếu có), nếu không thì lấy từ userPlan.weeks
+                let weekAmount = planItem.amount;
+                if (
+                    (weekAmount === undefined || weekAmount === null) &&
+                    userPlan &&
+                    Array.isArray(userPlan.weeks) &&
+                    planItem.week
+                ) {
+                    // Tìm tuần tương ứng trong userPlan.weeks
+                    const weekObj = userPlan.weeks.find(w => w.week === planItem.week);
+                    if (weekObj && typeof weekObj.amount === 'number') {
+                        weekAmount = weekObj.amount;
+                    }
+                }
+                // Fallback nếu vẫn không có amount
+                if (weekAmount === undefined || weekAmount === null) {
+                    weekAmount = planItem.targetCigarettes || 0;
+                }
+                planData.push(weekAmount);
+
                 // Dữ liệu thực tế (lấy từ actualMap)
                 const actualValue = actualMap.get(planItem.date);
                 actualData.push(actualValue !== undefined ? actualValue : null);
-                
+
                 // Log dữ liệu dòng xanh lá (debug)
                 if (actualValue !== undefined) {
                     console.log(`DEBUG CHART: Ngày ${planItem.date} có dữ liệu thực tế: ${actualValue} điếu`);

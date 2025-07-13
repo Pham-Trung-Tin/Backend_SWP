@@ -330,23 +330,26 @@ const DailyCheckin = ({ onProgressUpdate }) => {
                 // Fallback cho testing
                 const fallbackUserId = 13;
                 const result = await progressService.createCheckinByUserId(fallbackUserId, todayData);
-                
+
                 setToast({ 
                     show: true, 
                     message: '✅ Đã lưu dữ liệu vào cơ sở dữ liệu!', 
                     type: 'success' 
                 });
+                // Gọi callback cập nhật dashboard
+                if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
             } else {
                 // Sử dụng userId từ user hiện tại
                 const result = await progressService.createCheckinByUserId(userId, todayData);
-                
+
                 setToast({ 
                     show: true, 
                     message: '✅ Đã lưu dữ liệu vào cơ sở dữ liệu!', 
                     type: 'success' 
                 });
+                // Gọi callback cập nhật dashboard
+                if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
             }
-            
         } catch (error) {
             // Fallback về flow cũ nếu flow mới thất bại
             try {
@@ -354,34 +357,38 @@ const DailyCheckin = ({ onProgressUpdate }) => {
                 try {
                     const existingData = await progressService.getCheckinByDate(today);
                     const result = await progressService.updateCheckin(today, todayData);
-                    
+
                     setToast({ 
                         show: true, 
                         message: '✅ Đã cập nhật dữ liệu lên cơ sở dữ liệu!', 
                         type: 'success' 
                     });
+                    // Gọi callback cập nhật dashboard
+                    if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
                 } catch (checkError) {
                     if (checkError.response && checkError.response.status === 404) {
                         const result = await progressService.createCheckin(todayData);
-                        
+
                         setToast({ 
                             show: true, 
                             message: '✅ Đã lưu dữ liệu mới vào cơ sở dữ liệu!', 
                             type: 'success' 
                         });
+                        // Gọi callback cập nhật dashboard
+                        if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
                     } else {
                         throw checkError;
                     }
                 }
             } catch (fallbackError) {
                 let errorMessage = '❌ Không thể lưu dữ liệu vào cơ sở dữ liệu. Đã lưu cục bộ.';
-                
+
                 if (fallbackError.response?.status === 401) {
                     errorMessage = '❌ Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
                 } else if (fallbackError.response?.status === 500) {
                     errorMessage = '❌ Lỗi máy chủ. Vui lòng thử lại sau.';
                 }
-                
+
                 setToast({ 
                     show: true, 
                     message: errorMessage, 
@@ -392,18 +399,8 @@ const DailyCheckin = ({ onProgressUpdate }) => {
 
         setIsSubmitted(true);
 
-        // Callback để cập nhật component cha
-        if (onProgressUpdate) {
-            onProgressUpdate({
-                week: currentWeek,
-                amount: todayData.actualCigarettes,
-                achieved: todayData.actualCigarettes <= todayData.targetCigarettes
-            });
-        }
-
-        // Không hiển thị toast thêm nữa vì đã hiển thị khi lưu vào database
-        
-        // Auto hide toast sau 5 giây
+        // Callback để cập nhật component cha (đã gọi ở trên)
+        // ...existing code...
         setTimeout(() => {
             setToast(prev => ({ ...prev, show: false }));
         }, 5000);
@@ -465,10 +462,6 @@ const DailyCheckin = ({ onProgressUpdate }) => {
                     </div>
                 </div>
 
-                {/* Streak counter */}                <div className="streak-badge">
-                    <span className="streak-number">{streakDays}</span>
-                    <span className="streak-text">ngày liên tiếp</span>
-                </div>
             </div>
             
             <div className="checkin-separator"></div>
@@ -568,5 +561,6 @@ const DailyCheckin = ({ onProgressUpdate }) => {
         </div>
     );
 };
+
 
 export default DailyCheckin;
