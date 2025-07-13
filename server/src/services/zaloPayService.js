@@ -32,7 +32,7 @@ class ZaloPayService {
             amount = 99000,
             packageName = "Premium",
             userId = "user123",
-            redirectUrl = "http://localhost:5175/payment/success"
+            redirectUrl = "http://localhost:5173/payment/success"
         } = paymentData;
 
         // Create embed data with redirect URL
@@ -58,7 +58,7 @@ class ZaloPayService {
             bank_code: "",
             // Use ngrok URL for callback in development
             callback_url: process.env.ZALOPAY_CALLBACK_URL || 
-                         'https://cd9dbe1b921e.ngrok-free.app/api/payments/zalopay/callback'
+                         'https://1a71df6069ed.ngrok-free.app/api/payments/zalopay/callback'
         };
         
         // Create MAC signature

@@ -9,7 +9,6 @@ export const ensurePaymentTransactionsTable = async () => {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS payment_transactions (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        payment_id INT,
         user_id INT NOT NULL,
         package_id INT NOT NULL,
         amount INT NOT NULL,
@@ -21,8 +20,7 @@ export const ensurePaymentTransactionsTable = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (package_id) REFERENCES package(id),
-        FOREIGN KEY (payment_id) REFERENCES payments(id)
+        FOREIGN KEY (package_id) REFERENCES package(id)
       )
     `);
     
@@ -41,7 +39,6 @@ export const ensurePaymentTransactionsTable = async () => {
 export const createPaymentTransaction = async (transactionData) => {
   try {
     const { 
-      paymentId,
       userId, 
       packageId, 
       amount, 
@@ -70,9 +67,9 @@ export const createPaymentTransaction = async (transactionData) => {
     
     const [result] = await pool.execute(
       `INSERT INTO payment_transactions 
-        (id, user_id, package_id, amount, payment_method, transaction_id, status, payment_details, callback_data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [paymentId, userId, packageId, amount, paymentMethod, transactionId, status, details, callback]
+        (user_id, package_id, amount, payment_method, transaction_id, status, payment_details, callback_data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, packageId, amount, paymentMethod, transactionId, status, details, callback]
     );
     
     // Get the newly created transaction
@@ -265,10 +262,165 @@ export const getUserTransactions = async (userId, options = {}) => {
   }
 };
 
+/**
+ * Get payment by transaction ID
+ */
+export const getPaymentByTransactionId = async (transactionId) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT * FROM payment_transactions 
+      WHERE transaction_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `, [transactionId]);
+    
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.error('❌ Error getting payment by transaction ID:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update payment status
+ */
+export const updatePaymentStatus = async (paymentId, status) => {
+  try {
+    const [result] = await pool.execute(`
+      UPDATE payment_transactions 
+      SET status = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `, [status, paymentId]);
+    
+    if (result.affectedRows === 0) {
+      throw new Error(`No payment found with ID: ${paymentId}`);
+    }
+    
+    // Get updated payment
+    const [rows] = await pool.execute(`
+      SELECT * FROM payment_transactions WHERE id = ?
+    `, [paymentId]);
+    
+    return rows[0];
+  } catch (error) {
+    console.error('❌ Error updating payment status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user payments
+ */
+export const getUserPayments = async (userId = null) => {
+  try {
+    let query = `
+      SELECT * FROM payment_transactions 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `;
+    let params = [];
+    
+    if (userId) {
+      query = `
+        SELECT * FROM payment_transactions 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `;
+      params = [userId];
+    }
+    
+    const [rows] = await pool.execute(query, params);
+    return rows;
+  } catch (error) {
+    console.error('❌ Error getting user payments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Tạo bản ghi thanh toán trong bảng payments
+ * @param {Object} paymentData - Dữ liệu thanh toán
+ * @returns {Object} - Bản ghi thanh toán đã được tạo
+ */
+export const createPayment = async (paymentData) => {
+  try {
+    const { 
+      userId, 
+      packageId, 
+      amount, 
+      paymentMethod, 
+      paymentStatus = 'pending',
+      transactionId,
+      paymentDetails 
+    } = paymentData;
+
+    const query = `
+      INSERT INTO payments (
+        user_id, 
+        package_id, 
+        amount, 
+        payment_method, 
+        payment_status,
+        transaction_id,
+        payment_details
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    let paymentDetailsJson = null;
+    if (paymentDetails) {
+      paymentDetailsJson = typeof paymentDetails === 'object' 
+        ? JSON.stringify(paymentDetails) 
+        : paymentDetails;
+    }
+
+    const [result] = await pool.execute(query, [
+      userId,
+      packageId,
+      amount,
+      paymentMethod,
+      paymentStatus,
+      transactionId,
+      paymentDetailsJson
+    ]);
+
+    // Get the created payment
+    const [rows] = await pool.execute(
+      `SELECT * FROM payments WHERE id = ?`,
+      [result.insertId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error('Failed to retrieve created payment');
+    }
+
+    const payment = rows[0];
+    
+    // Parse JSON field
+    if (payment.payment_details && typeof payment.payment_details === 'string') {
+      try {
+        payment.payment_details = JSON.parse(payment.payment_details);
+      } catch (e) {
+        // Keep as string if not valid JSON
+      }
+    }
+
+    console.log('✅ Payment created successfully:', payment.id);
+    return payment;
+  } catch (error) {
+    console.error('❌ Error creating payment:', error);
+    throw error;
+  }
+};
+
 export default {
   ensurePaymentTransactionsTable,
   createPaymentTransaction,
   updateTransactionStatus,
   getTransactionById,
-  getUserTransactions
+  getUserTransactions,
+  getPaymentByTransactionId,
+  updatePaymentStatus,
+  getUserPayments,
+  createPayment
 };

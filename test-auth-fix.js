@@ -51,7 +51,7 @@ async function testPaymentAPI(token) {
   try {
     // Test tạo payment
     const response = await axios.post(`${API_BASE}/api/payments/zalopay/create`, {
-      package_id: 1,
+      packageId: 1,
       amount: 999000
     }, {
       headers: {

@@ -1,6 +1,6 @@
 import zaloPayService from '../services/zaloPayService.js';
 import * as PaymentTransaction from '../models/PaymentTransaction.js';
-import * as Package from '../models/Package.js';
+import Package from '../models/Package.js';
 import * as Membership from '../models/Membership.js';
 
 /**
@@ -80,7 +80,6 @@ export const createZaloPayment = async (req, res) => {
         
         // Create transaction record
         const transactionData = {
-            paymentId: paymentResult.id,
             userId: userId,
             packageId: packageId,
             amount,
@@ -155,11 +154,11 @@ export const zaloPayCallback = async (req, res) => {
                 console.log(`Found payment record:`, payment);
                 
                 // Only update if not already completed
-                if (PaymentTransaction.payment_status !== 'completed') {
-                    console.log(`Updating payment status to completed for payment ID: ${PaymentTransaction.id}`);
+                if (payment.status !== 'completed') {
+                    console.log(`Updating payment status to completed for payment ID: ${payment.id}`);
                     
                     // Update payment status to completed
-                    await PaymentTransaction.updatePaymentStatus(PaymentTransaction.id, 'completed');
+                    await PaymentTransaction.updatePaymentStatus(payment.id, 'completed');
                     console.log(`✅ Payment status updated to completed`);
                     
                     // Update transaction status and save callback data
@@ -172,12 +171,12 @@ export const zaloPayCallback = async (req, res) => {
                     
                     // Update user membership if not already done
                     try {
-                        console.log(`🔄 Updating membership for user ${PaymentTransaction.user_id} with package ${PaymentTransaction.package_id}`);
+                        console.log(`🔄 Updating membership for user ${payment.user_id} with package ${payment.package_id}`);
                         // Use the existing purchasePackage function to update membership
                         const membershipResult = await Membership.purchasePackage(
-                            PaymentTransaction.user_id,
-                            PaymentTransaction.package_id,
-                            PaymentTransaction.payment_method
+                            payment.user_id,
+                            payment.package_id,
+                            payment.payment_method
                         );
                         console.log(`✅ User membership updated successfully:`, membershipResult);
                     } catch (membershipError) {
@@ -255,9 +254,9 @@ export const getZaloPayStatus = async (req, res) => {
             // Find payment in our system
             const payment = await PaymentTransaction.getPaymentByTransactionId(transactionId);
             
-            if (payment && PaymentTransaction.payment_status !== 'completed') {
+            if (payment && payment.status !== 'completed') {
                 // Update payment status
-                await PaymentTransaction.updatePaymentStatus(PaymentTransaction.id, 'completed');
+                await PaymentTransaction.updatePaymentStatus(payment.id, 'completed');
                 
                 // Get transaction and update if exists
                 const transaction = await PaymentTransaction.getTransactionById(transactionId);
@@ -273,11 +272,11 @@ export const getZaloPayStatus = async (req, res) => {
                 try {
                     // Use the existing purchasePackage function to update membership
                     await Membership.purchasePackage(
-                        PaymentTransaction.user_id,
-                        PaymentTransaction.package_id,
-                        PaymentTransaction.payment_method
+                        payment.user_id,
+                        payment.package_id,
+                        payment.payment_method
                     );
-                    console.log(`User membership updated for user ${PaymentTransaction.user_id} with package ${PaymentTransaction.package_id}`);
+                    console.log(`User membership updated for user ${payment.user_id} with package ${payment.package_id}`);
                 } catch (membershipError) {
                     console.error('Error updating user membership:', membershipError);
                 }
@@ -334,11 +333,11 @@ export const manualUpdateZaloPayStatus = async (req, res) => {
         }
 
         console.log(`✅ Found payment record:`, {
-            id: PaymentTransaction.id,
-            user_id: PaymentTransaction.user_id,
-            package_id: PaymentTransaction.package_id,
-            amount: PaymentTransaction.amount,
-            payment_status: PaymentTransaction.payment_status
+            id: payment.id,
+            user_id: payment.user_id,
+            package_id: payment.package_id,
+            amount: payment.amount,
+            status: payment.status
         });
         
         // Step 2: Verify with ZaloPay first
@@ -362,11 +361,11 @@ export const manualUpdateZaloPayStatus = async (req, res) => {
             console.log(`✅ ZaloPay confirms payment is successful`);
             
             // Only proceed if payment is still pending in our system
-            if (PaymentTransaction.payment_status !== 'completed') {
-                console.log(`🔄 Updating payment status from ${PaymentTransaction.payment_status} to completed...`);
+            if (payment.status !== 'completed') {
+                console.log(`🔄 Updating payment status from ${payment.status} to completed...`);
                 
                 // Manually update payment status
-                const updatedPayment = await PaymentTransaction.updatePaymentStatus(PaymentTransaction.id, 'completed');
+                const updatedPayment = await PaymentTransaction.updatePaymentStatus(payment.id, 'completed');
                 
                 // Update transaction status if exists
                 const transaction = await PaymentTransaction.getTransactionById(transactionId);
@@ -385,12 +384,12 @@ export const manualUpdateZaloPayStatus = async (req, res) => {
                 
                 // Step 4: Update user membership
                 try {
-                    console.log(`🔄 Updating user membership for user ${PaymentTransaction.user_id} with package ${PaymentTransaction.package_id}...`);
+                    console.log(`🔄 Updating user membership for user ${payment.user_id} with package ${payment.package_id}...`);
                     // Use the existing purchasePackage function to update membership
                     const membershipResult = await Membership.purchasePackage(
-                        PaymentTransaction.user_id,
-                        PaymentTransaction.package_id,
-                        PaymentTransaction.payment_method
+                        payment.user_id,
+                        payment.package_id,
+                        payment.payment_method
                     );
                     console.log(`✅ User membership manually updated successfully:`, membershipResult);
                     
@@ -446,4 +445,80 @@ export const manualUpdateZaloPayStatus = async (req, res) => {
             data: null
         });
     }
+};
+
+/**
+ * Get payment by transaction ID
+ */
+export const getPaymentByTransactionId = async (transactionId) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT * FROM payment_transactions 
+      WHERE transaction_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `, [transactionId]);
+    
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    console.error('❌ Error getting payment by transaction ID:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update payment status
+ */
+export const updatePaymentStatus = async (paymentId, status) => {
+  try {
+    const [result] = await pool.execute(`
+      UPDATE payment_transactions 
+      SET status = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `, [status, paymentId]);
+    
+    if (result.affectedRows === 0) {
+      throw new Error(`No payment found with ID: ${paymentId}`);
+    }
+    
+    // Get updated payment
+    const [rows] = await pool.execute(`
+      SELECT * FROM payment_transactions WHERE id = ?
+    `, [paymentId]);
+    
+    return rows[0];
+  } catch (error) {
+    console.error('❌ Error updating payment status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user payments
+ */
+export const getUserPayments = async (userId = null) => {
+  try {
+    let query = `
+      SELECT * FROM payment_transactions 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `;
+    let params = [];
+    
+    if (userId) {
+      query = `
+        SELECT * FROM payment_transactions 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `;
+      params = [userId];
+    }
+    
+    const [rows] = await pool.execute(query, params);
+    return rows;
+  } catch (error) {
+    console.error('❌ Error getting user payments:', error);
+    throw error;
+  }
 };
