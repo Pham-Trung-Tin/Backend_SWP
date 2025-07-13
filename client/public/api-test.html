@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Progress API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Progress API Test</h1>
+    <button onclick="testCreateCheckin()">Test Create Checkin</button>
+    <button onclick="testGetProgress()">Test Get Progress</button>
+    <div id="results"></div>
+
+    <script>
+        async function testCreateCheckin() {
+            const testData = {
+                date: new Date().toISOString().split('T')[0],
+                targetCigarettes: 10,
+                actualCigarettes: 5,
+                notes: 'Test from browser'
+            };
+
+            try {
+                const response = await fetch('/api/progress/13', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                showResult('Create Checkin', response.ok, result);
+            } catch (error) {
+                showResult('Create Checkin', false, { error: error.message });
+            }
+        }
+
+        async function testGetProgress() {
+            try {
+                const response = await fetch('/api/progress/13');
+                const result = await response.json();
+                showResult('Get Progress', response.ok, result);
+            } catch (error) {
+                showResult('Get Progress', false, { error: error.message });
+            }
+        }
+
+        function showResult(testName, success, data) {
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <h3>${testName}</h3>
+                <p>Status: ${success ? 'SUCCESS' : 'FAILED'}</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+    </script>
+</body>
+</html>

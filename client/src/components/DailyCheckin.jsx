@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaCalendarCheck, FaSave } from 'react-icons/fa';
 import progressService from '../services/progressService';
+import { getCurrentUserId } from '../utils/userUtils';
 
 const DailyCheckin = ({ onProgressUpdate }) => {
     const [todayData, setTodayData] = useState({
@@ -200,56 +201,60 @@ const DailyCheckin = ({ onProgressUpdate }) => {
     useEffect(() => {
         const loadUserData = async () => {
             try {
-                // Lấy userId từ localStorage hoặc context
-                const userId = localStorage.getItem('user_id') || localStorage.getItem('userId') || 
-                              JSON.parse(localStorage.getItem('user') || '{}')?.id;
+                // Lấy userId từ getCurrentUserId utility function
+                const userId = getCurrentUserId();
                 
                 const today = new Date().toISOString().split('T')[0];
                 
-                // Thử load từ database bằng flow mới
+                // Thử load từ database bằng userId API (working endpoint)
                 try {
-                    const response = await fetch(`/api/progress/${userId}`);
-                    if (response.ok) {
-                        const result = await response.json();
+                    const fallbackUserId = 13; // fallback for testing
+                    const actualUserId = userId || fallbackUserId;
+                    
+                    // Cảnh báo khi sử dụng fallback
+                    if (!userId) {
+                        console.warn('⚠️ User ID not detected, using fallback ID 13 for development');
+                    }
+                    
+                    const response = await progressService.getProgressByUserId(actualUserId);
+                    
+                    if (response && response.success && response.data && response.data.length > 0) {
+                        // Tìm dữ liệu cho ngày hôm nay
+                        const todayProgress = response.data.find(item => 
+                            item.date.split('T')[0] === today
+                        );
                         
-                        if (result.success && result.data && result.data.length > 0) {
-                            // Tìm dữ liệu cho ngày hôm nay
-                            const todayProgress = result.data.find(item => 
-                                item.date.split('T')[0] === today
-                            );
+                        if (todayProgress) {
+                            const loadedData = {
+                                date: today,
+                                targetCigarettes: todayProgress.target_cigarettes || 0,
+                                actualCigarettes: todayProgress.actual_cigarettes || 0,
+                                notes: todayProgress.notes || '',
+                                healthScore: todayProgress.health_score || 0,
+                                moneySaved: todayProgress.money_saved || 0,
+                                cigarettesAvoided: todayProgress.cigarettes_avoided || 0
+                            };
                             
-                            if (todayProgress) {
-                                const loadedData = {
-                                    date: today,
-                                    targetCigarettes: todayProgress.target_cigarettes || 0,
-                                    actualCigarettes: todayProgress.actual_cigarettes || 0,
-                                    notes: todayProgress.notes || '',
-                                    healthScore: todayProgress.health_score || 0,
-                                    moneySaved: todayProgress.money_saved || 0,
-                                    cigarettesAvoided: todayProgress.cigarettes_avoided || 0
-                                };
-                                
-                                setTodayData(loadedData);
-                                setIsSubmitted(true);
-                                
-                                // Sync với localStorage
-                                localStorage.setItem(`checkin_${today}`, JSON.stringify(loadedData));
-                                
-                                setToast({
-                                    show: true,
-                                    message: '🔄 Dữ liệu được khôi phục từ database',
-                                    type: 'success'
-                                });
-                                
-                                setTimeout(() => {
-                                    setToast(prev => ({ ...prev, show: false }));
-                                }, 2000);
-                                return; // Dừng ở đây nếu đã load được từ database
-                            }
+                            setTodayData(loadedData);
+                            setIsSubmitted(true);
+                            
+                            // Sync với localStorage
+                            localStorage.setItem(`checkin_${today}`, JSON.stringify(loadedData));
+                            
+                            setToast({
+                                show: true,
+                                message: '🔄 Dữ liệu được khôi phục từ database',
+                                type: 'success'
+                            });
+                            
+                            setTimeout(() => {
+                                setToast(prev => ({ ...prev, show: false }));
+                            }, 2000);
+                            return; // Dừng ở đây nếu đã load được từ database
                         }
                     }
                 } catch (dbError) {
-                    // Database load failed, try localStorage
+                    console.log('Database load failed, trying localStorage fallback');
                 }
                 
                 // Fallback: Load từ localStorage (submitted data hoặc draft)
@@ -322,79 +327,43 @@ const DailyCheckin = ({ onProgressUpdate }) => {
 
         // Gửi dữ liệu lên server để lưu vào cơ sở dữ liệu
         try {
-            // Lấy userId từ localStorage hoặc context
-            const userId = localStorage.getItem('user_id') || localStorage.getItem('userId') || 
-                          JSON.parse(localStorage.getItem('user') || '{}')?.id;
+            // Lấy userId từ getCurrentUserId utility function
+            const userId = getCurrentUserId();
             
+            // Always use the new userId-based API which works without auth issues
+            const fallbackUserId = 13; // fallback for testing
+            const actualUserId = userId || fallbackUserId;
+            
+            // Cảnh báo khi sử dụng fallback
             if (!userId) {
-                // Fallback cho testing
-                
-                const result = await progressService.createCheckinByUserId(fallbackUserId, todayData);
-
-                setToast({ 
-                    show: true, 
-                    message: '✅ Đã lưu dữ liệu vào cơ sở dữ liệu!', 
-                    type: 'success' 
-                });
-                // Gọi callback cập nhật dashboard
-                if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
-            } else {
-                // Sử dụng userId từ user hiện tại
-                const result = await progressService.createCheckinByUserId(userId, todayData);
-
-                setToast({ 
-                    show: true, 
-                    message: '✅ Đã lưu dữ liệu vào cơ sở dữ liệu!', 
-                    type: 'success' 
-                });
-                // Gọi callback cập nhật dashboard
-                if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
+                console.warn('⚠️ User ID not detected, using fallback ID 13 for development');
             }
+            
+            console.log('Using userId for API call:', actualUserId);
+            const result = await progressService.createCheckinByUserId(actualUserId, todayData);
+
+            setToast({ 
+                show: true, 
+                message: '✅ Đã lưu dữ liệu vào cơ sở dữ liệu!', 
+                type: 'success' 
+            });
+            // Gọi callback cập nhật dashboard
+            if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
         } catch (error) {
-            // Fallback về flow cũ nếu flow mới thất bại
-            try {
-                // Kiểm tra xem đã có dữ liệu cho ngày hôm nay trên server chưa
-                try {
-                    const existingData = await progressService.getCheckinByDate(today);
-                    const result = await progressService.updateCheckin(today, todayData);
+            console.error('❌ Error saving to database:', error);
+            let errorMessage = '❌ Không thể lưu dữ liệu vào cơ sở dữ liệu. Đã lưu cục bộ.';
 
-                    setToast({ 
-                        show: true, 
-                        message: '✅ Đã cập nhật dữ liệu lên cơ sở dữ liệu!', 
-                        type: 'success' 
-                    });
-                    // Gọi callback cập nhật dashboard
-                    if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
-                } catch (checkError) {
-                    if (checkError.response && checkError.response.status === 404) {
-                        const result = await progressService.createCheckin(todayData);
-
-                        setToast({ 
-                            show: true, 
-                            message: '✅ Đã lưu dữ liệu mới vào cơ sở dữ liệu!', 
-                            type: 'success' 
-                        });
-                        // Gọi callback cập nhật dashboard
-                        if (onProgressUpdate) onProgressUpdate({ ...todayData, date: today });
-                    } else {
-                        throw checkError;
-                    }
-                }
-            } catch (fallbackError) {
-                let errorMessage = '❌ Không thể lưu dữ liệu vào cơ sở dữ liệu. Đã lưu cục bộ.';
-
-                if (fallbackError.response?.status === 401) {
-                    errorMessage = '❌ Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
-                } else if (fallbackError.response?.status === 500) {
-                    errorMessage = '❌ Lỗi máy chủ. Vui lòng thử lại sau.';
-                }
-
-                setToast({ 
-                    show: true, 
-                    message: errorMessage, 
-                    type: 'error' 
-                });
+            if (error.response?.status === 401) {
+                errorMessage = '❌ Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+            } else if (error.response?.status === 500) {
+                errorMessage = '❌ Lỗi máy chủ. Vui lòng thử lại sau.';
             }
+
+            setToast({ 
+                show: true, 
+                message: errorMessage, 
+                type: 'error' 
+            });
         }
 
         setIsSubmitted(true);
