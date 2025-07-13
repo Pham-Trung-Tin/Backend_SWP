@@ -202,7 +202,7 @@ const DailyCheckin = ({ onProgressUpdate }) => {
             try {
                 // Lấy userId từ localStorage hoặc context
                 const userId = localStorage.getItem('user_id') || localStorage.getItem('userId') || 
-                              JSON.parse(localStorage.getItem('user') || '{}')?.id || '13';
+                              JSON.parse(localStorage.getItem('user') || '{}')?.id;
                 
                 const today = new Date().toISOString().split('T')[0];
                 
@@ -328,7 +328,7 @@ const DailyCheckin = ({ onProgressUpdate }) => {
             
             if (!userId) {
                 // Fallback cho testing
-                const fallbackUserId = 13;
+                
                 const result = await progressService.createCheckinByUserId(fallbackUserId, todayData);
 
                 setToast({ 

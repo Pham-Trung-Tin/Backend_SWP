@@ -546,22 +546,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      loading, 
-      error, 
-      login, 
-      logout, 
-      setUser, 
-      updateUser, 
-      uploadAvatar,
-      refreshUserFromAPI,
-      isAuthenticated: !!user && !!token 
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-  
+  // return (
+  //   <AuthContext.Provider value={{ 
+  //     user, 
+  //     token, 
+  //     loading, 
+  //     error, 
+  //     login, 
+  //     logout, 
+  //     setUser, 
+  //     updateUser, 
+  //     uploadAvatar,
+  //     refreshUserFromAPI,
+  //     isAuthenticated: !!user && !!token 
+  //   }}>
+  //     {children}
+  //   </AuthContext.Provider>
+  // );
+
 export default AuthContext;

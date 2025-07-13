@@ -16,7 +16,7 @@ const getCurrentUserId = () => {
         }
     }
     
-    return userId || '13'; // Fallback for development
+    return userId; // Fallback for development
 };
 
 const cleanupCurrentUser = async () => {
