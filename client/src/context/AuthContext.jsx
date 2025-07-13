@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       // Kiểm tra xem có token trong localStorage không (tức là có ghi nhớ)
-      const hasRememberMe = localStorage.getItem('auth_token');
+      const hasRememberMe = localStorage.getItem('nosmoke_token');
       if (hasRememberMe) {
         localStorage.setItem('nosmoke_user', JSON.stringify(user));
       } else {
@@ -141,11 +141,11 @@ export const AuthProvider = ({ children }) => {
 
         // Lưu token và user data
         if (rememberMe) {
-          localStorage.setItem('auth_token', token);
+          localStorage.setItem('nosmoke_token', token);
           localStorage.setItem('refresh_token', refreshToken);
           localStorage.setItem('nosmoke_user', JSON.stringify(normalizedUser));
         } else {
-          sessionStorage.setItem('auth_token', token);
+          sessionStorage.setItem('nosmoke_token', token);
           sessionStorage.setItem('refresh_token', refreshToken);
           sessionStorage.setItem('nosmoke_user', JSON.stringify(normalizedUser));
         }
@@ -169,10 +169,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     // Xóa thông tin user và token khỏi cả localStorage và sessionStorage
     localStorage.removeItem('nosmoke_user');
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('nosmoke_token');
     localStorage.removeItem('refresh_token');
     sessionStorage.removeItem('nosmoke_user');
-    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('nosmoke_token');
     sessionStorage.removeItem('refresh_token');
     return { success: true };
   };
@@ -350,6 +350,7 @@ export const AuthProvider = ({ children }) => {
     register,
     updateUser,
     refreshMembership,
+    refreshUserFromAPI,
     setUser,
     verifyEmail,
     resendVerificationCode,
@@ -523,8 +524,9 @@ export const AuthProvider = ({ children }) => {
 
       setUser(processedUser);
 
-      // Update storage
-      if (rememberMe) {
+      // Update storage based on where token is stored
+      const hasRememberMe = localStorage.getItem('nosmoke_token');
+      if (hasRememberMe) {
         localStorage.setItem('nosmoke_user', JSON.stringify(processedUser));
       } else {
         sessionStorage.setItem('nosmoke_user', JSON.stringify(processedUser));

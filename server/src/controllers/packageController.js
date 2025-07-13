@@ -136,8 +136,108 @@ export const getPackageFeatures = async (req, res) => {
   }
 };
 
+/**
+ * Mua gói dịch vụ
+ * @route POST /api/packages/purchase
+ */
+export const purchasePackage = async (req, res) => {
+  try {
+    const { packageId } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, 'Unauthorized - User ID required', 401);
+    }
+
+    if (!packageId) {
+      return sendError(res, 'Package ID is required', 400);
+    }
+
+    console.log(`💰 User ${userId} purchasing package ${packageId}`);
+    
+    // Kiểm tra package tồn tại
+    const packageData = await Package.getPackageById(packageId);
+    if (!packageData) {
+      return sendError(res, 'Package not found', 404);
+    }
+
+    // TODO: Implement actual purchase logic
+    // For now, return success response
+    sendSuccess(res, 'Package purchased successfully', {
+      packageId,
+      packageName: packageData.name,
+      price: packageData.price,
+      purchaseDate: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Error purchasing package:', error);
+    sendError(res, 'Failed to purchase package: ' + error.message, 500);
+  }
+};
+
+/**
+ * Lấy gói hiện tại của user
+ * @route GET /api/packages/user/current
+ */
+export const getCurrentUserPackage = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, 'Unauthorized - User ID required', 401);
+    }
+
+    console.log(`📦 Getting current package for user ${userId}`);
+    
+    // TODO: Implement database lookup for user's current package
+    // For now, return default free package
+    const freePackage = await Package.getPackageById(1);
+    
+    sendSuccess(res, 'Current package retrieved successfully', {
+      userId,
+      currentPackage: freePackage,
+      startDate: new Date().toISOString(),
+      endDate: null,
+      isActive: true
+    });
+  } catch (error) {
+    console.error('❌ Error getting current user package:', error);
+    sendError(res, 'Failed to get current package: ' + error.message, 500);
+  }
+};
+
+/**
+ * Lấy lịch sử mua gói của user
+ * @route GET /api/packages/user/history
+ */
+export const getUserPackageHistory = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(res, 'Unauthorized - User ID required', 401);
+    }
+
+    console.log(`📦 Getting package history for user ${userId}`);
+    
+    // TODO: Implement database lookup for user's package history
+    // For now, return empty history
+    sendSuccess(res, 'Package history retrieved successfully', {
+      userId,
+      history: [],
+      totalPurchases: 0
+    });
+  } catch (error) {
+    console.error('❌ Error getting user package history:', error);
+    sendError(res, 'Failed to get package history: ' + error.message, 500);
+  }
+};
+
 export default {
   getAllPackages,
   getPackageById,
-  getPackageFeatures
+  getPackageFeatures,
+  purchasePackage,
+  getCurrentUserPackage,
+  getUserPackageHistory
 };

@@ -6,6 +6,9 @@ import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import quitPlanRoutes from './routes/quitPlanRoutes.js';
 import progressRoutes from './routes/progressRoutes.js';
+import packagesRoutes from './routes/packages.js';
+import paymentsRoutes from './routes/payments.js';
+import zaloPayRoutes from './routes/zaloPayRoutes.js';
 // Health routes removed - functionality now in ProgressDashboard component
 import ensureTablesExist from './ensureTables.js';
 
@@ -62,6 +65,9 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/quit-plans', quitPlanRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/packages', packagesRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/payments', zaloPayRoutes);
 // Health routes removed - functionality now in ProgressDashboard component
 
 // Test database connection

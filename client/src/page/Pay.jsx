@@ -599,7 +599,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Pay.css';
 import { FaCreditCard, FaWallet, FaMoneyBillWave, FaPaypal } from 'react-icons/fa';
-import axios from 'axios';
+import axios from '../utils/axiosConfig.js';
 
 const Pay = () => {
   const location = useLocation();

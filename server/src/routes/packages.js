@@ -1,9 +1,20 @@
 import express from 'express';
 import packageController from '../controllers/packageController.js';
-import membershipController from '../controllers/membershipController.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { authenticateToken as requireAuth } from '../middleware/auth.js';
+import Package from '../models/Package.js';
 
 const router = express.Router();
+
+// Initialize packages data on first load
+(async () => {
+  try {
+    console.log('🚀 Initializing packages routes...');
+    await Package.ensureDefaultPackages();
+    console.log('✅ Packages routes ready');
+  } catch (error) {
+    console.error('❌ Error initializing packages:', error);
+  }
+})();
 
 /**
  * @route GET /api/packages
@@ -38,20 +49,20 @@ router.get('/:id/features', packageController.getPackageFeatures);
  * @desc Mua hoặc nâng cấp gói thành viên
  * @access Private - Yêu cầu đăng nhập
  */
-router.post('/purchase', requireAuth, membershipController.purchasePackage);
+router.post('/purchase', requireAuth, packageController.purchasePackage);
 
 /**
  * @route GET /api/packages/user/current
  * @desc Lấy thông tin gói hiện tại của người dùng
  * @access Private - Yêu cầu đăng nhập
  */
-router.get('/user/current', requireAuth, membershipController.getCurrentMembership);
+router.get('/user/current', requireAuth, packageController.getCurrentUserPackage);
 
 /**
  * @route GET /api/packages/user/history
  * @desc Lấy lịch sử mua gói của người dùng
  * @access Private - Yêu cầu đăng nhập
  */
-router.get('/user/history', requireAuth, membershipController.getMembershipHistory);
+router.get('/user/history', requireAuth, packageController.getUserPackageHistory);
 
 export default router;

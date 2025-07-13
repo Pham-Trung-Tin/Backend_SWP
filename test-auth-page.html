@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #results {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .token-display {
+            word-break: break-all;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Authentication Fix</h1>
+    
+    <div class="test-section">
+        <h2>1. Login Test</h2>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="checkStoredToken()">Check Stored Token</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+    </div>
+
+    <div class="test-section">
+        <h2>2. API Test (with token)</h2>
+        <button onclick="testPackagesAPI()">Test Packages API</button>
+        <button onclick="testPaymentAPI()">Test Payment API</button>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Frontend Integration Test</h2>
+        <button onclick="testAxiosConfig()">Test Axios Config</button>
+        <button onclick="simulatePaymentFlow()">Simulate Payment Flow</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+            console.log(message);
+        }
+
+        async function testLogin() {
+            log('🔑 Testing login...', 'info');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'testuser@example.com',
+                        password: 'password123'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    log('✅ Login successful!', 'success');
+                    log(`Token: ${data.data.token.substring(0, 50)}...`, 'success');
+                    
+                    // Save token with correct key
+                    localStorage.setItem('nosmoke_token', data.data.token);
+                    localStorage.setItem('nosmoke_user', JSON.stringify(data.data.user));
+                    
+                    log('✅ Token saved to localStorage with key "nosmoke_token"', 'success');
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkStoredToken() {
+            log('🔍 Checking stored tokens...', 'info');
+            
+            const possibleKeys = ['nosmoke_token', 'auth_token', 'access_token'];
+            let found = false;
+            
+            possibleKeys.forEach(key => {
+                const localValue = localStorage.getItem(key);
+                const sessionValue = sessionStorage.getItem(key);
+                
+                if (localValue) {
+                    log(`✅ Found ${key} in localStorage: ${localValue.substring(0, 50)}...`, 'success');
+                    found = true;
+                }
+                
+                if (sessionValue) {
+                    log(`✅ Found ${key} in sessionStorage: ${sessionValue.substring(0, 50)}...`, 'success');
+                    found = true;
+                }
+            });
+            
+            if (!found) {
+                log('⚠️ No tokens found in storage', 'warning');
+            }
+            
+            // Check user data
+            const userData = localStorage.getItem('nosmoke_user') || sessionStorage.getItem('nosmoke_user');
+            if (userData) {
+                log('✅ User data found in storage', 'success');
+                try {
+                    const user = JSON.parse(userData);
+                    log(`User: ${user.username || user.email}`, 'info');
+                } catch (e) {
+                    log('❌ Invalid user data format', 'error');
+                }
+            } else {
+                log('⚠️ No user data found', 'warning');
+            }
+        }
+
+        async function testPackagesAPI() {
+            log('📦 Testing packages API...', 'info');
+            
+            const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+            
+            if (!token) {
+                log('❌ No token found. Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/packages', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Packages API successful! Found ${data.data.length} packages`, 'success');
+                    data.data.forEach(pkg => {
+                        log(`  - ${pkg.name}: ${pkg.price.toLocaleString()}đ`, 'info');
+                    });
+                } else {
+                    log(`❌ Packages API failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Packages API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPaymentAPI() {
+            log('💳 Testing payment API...', 'info');
+            
+            const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+            
+            if (!token) {
+                log('❌ No token found. Please login first.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/payments/zalopay/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        package_id: 1,
+                        amount: 999000
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log('✅ Payment API successful!', 'success');
+                    log(`Order URL: ${data.data.order_url ? 'Generated' : 'Not generated'}`, 'info');
+                } else {
+                    log(`❌ Payment API failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Payment API error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAxiosConfig() {
+            log('⚙️ Testing Axios configuration...', 'info');
+            
+            // Check if axios is available
+            if (typeof axios !== 'undefined') {
+                log('✅ Axios available globally', 'success');
+            } else {
+                log('⚠️ Axios not available globally (expected for module-based apps)', 'warning');
+            }
+            
+            // Test manual token injection
+            const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+            
+            if (token) {
+                log('✅ Token available for injection', 'success');
+                log(`Token: ${token.substring(0, 30)}...`, 'info');
+                
+                // Test with fetch (simulating axios behavior)
+                try {
+                    const response = await fetch('/api/packages', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        log('✅ Manual token injection works with fetch', 'success');
+                    } else {
+                        log('❌ Manual token injection failed', 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Manual token test error: ${error.message}`, 'error');
+                }
+            } else {
+                log('❌ No token available for testing', 'error');
+            }
+        }
+
+        async function simulatePaymentFlow() {
+            log('💰 Simulating payment flow...', 'info');
+            
+            const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
+            
+            if (!token) {
+                log('❌ Please login first', 'error');
+                return;
+            }
+            
+            try {
+                // Step 1: Get packages
+                log('Step 1: Getting packages...', 'info');
+                const packagesResponse = await fetch('/api/packages', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const packagesData = await packagesResponse.json();
+                
+                if (!packagesData.success) {
+                    log('❌ Failed to get packages', 'error');
+                    return;
+                }
+                
+                log(`✅ Got ${packagesData.data.length} packages`, 'success');
+                
+                // Step 2: Create payment
+                log('Step 2: Creating payment...', 'info');
+                const paymentResponse = await fetch('/api/payments/zalopay/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        package_id: packagesData.data[0].id,
+                        amount: packagesData.data[0].price
+                    })
+                });
+                
+                const paymentData = await paymentResponse.json();
+                
+                if (paymentData.success) {
+                    log('✅ Payment creation successful!', 'success');
+                    log('🎉 Authentication is working correctly!', 'success');
+                } else {
+                    log(`❌ Payment creation failed: ${paymentData.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Payment flow error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            log('🗑️ All storage cleared', 'warning');
+        }
+
+        // Initial check
+        window.onload = function() {
+            log('🚀 Auth Test Page Loaded', 'success');
+            log('Backend: http://localhost:5000', 'info');
+            log('Frontend: http://localhost:5176', 'info');
+            checkStoredToken();
+        };
+    </script>
+</body>
+</html>

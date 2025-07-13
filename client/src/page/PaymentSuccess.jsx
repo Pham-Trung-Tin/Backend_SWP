@@ -4,7 +4,7 @@ import './PaymentSuccess.css';
 import { FaCheckCircle, FaCheck, FaCrown, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import ReactConfetti from 'react-confetti';
-import axios from 'axios';
+import axios from '../utils/axiosConfig.js';
 
 // Component hiển thị thông báo trạng thái
 const StatusMessage = ({ status, message }) => {

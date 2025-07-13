@@ -1,6 +1,6 @@
 import express from 'express';
 import { createZaloPayment, zaloPayCallback, getZaloPayStatus, manualUpdateZaloPayStatus } from '../controllers/zaloPayController.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
+import { authenticateToken as requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 

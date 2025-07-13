@@ -17,14 +17,14 @@ const axiosInstance = axios.create({
 console.log('Axios instance created with:', {
   baseURL: '/', 
   proxyTarget: 'http://localhost:5000',
-  hasToken: Boolean(localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token'))
+  hasToken: Boolean(localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token'))
 });
 
 // Thêm interceptor để tự động gửi token authentication trong header
 axiosInstance.interceptors.request.use(
   (config) => {
     // Lấy token từ localStorage hoặc sessionStorage
-    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    const token = localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token');
     
     // Nếu có token, thêm vào header Authorization
     if (token) {
