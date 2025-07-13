@@ -72,58 +72,6 @@ export const ensureTablesExist = async () => {
                 console.log('profile_image column error:', error.message);
             }
         }
-        
-        // Thêm cột age nếu chưa có
-        try {
-            await pool.execute(`
-                ALTER TABLE users 
-                ADD COLUMN age INT NULL
-            `);
-            console.log('✅ Added age column to users table');
-        } catch (error) {
-            if (!error.message.includes('Duplicate column name')) {
-                console.log('age column error:', error.message);
-            }
-        }
-        
-        // Thêm cột quit_reason nếu chưa có
-        try {
-            await pool.execute(`
-                ALTER TABLE users 
-                ADD COLUMN quit_reason TEXT NULL
-            `);
-            console.log('✅ Added quit_reason column to users table');
-        } catch (error) {
-            if (!error.message.includes('Duplicate column name')) {
-                console.log('quit_reason column error:', error.message);
-            }
-        }
-        
-        // Thêm cột address nếu chưa có
-        try {
-            await pool.execute(`
-                ALTER TABLE users 
-                ADD COLUMN address VARCHAR(255) NULL
-            `);
-            console.log('✅ Added address column to users table');
-        } catch (error) {
-            if (!error.message.includes('Duplicate column name')) {
-                console.log('address column error:', error.message);
-            }
-        }
-        
-        // Thêm cột membership nếu chưa có
-        try {
-            await pool.execute(`
-                ALTER TABLE users 
-                ADD COLUMN membership ENUM('free', 'premium', 'pro') DEFAULT 'free'
-            `);
-            console.log('✅ Added membership column to users table');
-        } catch (error) {
-            if (!error.message.includes('Duplicate column name')) {
-                console.log('membership column error:', error.message);
-            }
-        }
 
         // Fix role column to ensure it has correct ENUM values
         try {
@@ -205,7 +153,6 @@ export const ensureTablesExist = async () => {
             }
         }, 10 * 60 * 1000); // Every 10 minutes
 
-        console.log('✅ Database tables verified and updated');
     } catch (error) {
         console.error('❌ Error ensuring tables exist:', error);
         throw error;
@@ -215,7 +162,7 @@ export const ensureTablesExist = async () => {
 // Generate JWT Token
 const generateToken = (userId) => {
     return jwt.sign(
-        { userId, id: userId },  // Include both userId and id for compatibility
+        { userId },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
@@ -224,7 +171,7 @@ const generateToken = (userId) => {
 // Generate Refresh Token
 const generateRefreshToken = (userId) => {
     return jwt.sign(
-        { userId, id: userId, type: 'refresh' },  // Include both userId and id for compatibility
+        { userId, type: 'refresh' },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' }
     );
@@ -232,52 +179,31 @@ const generateRefreshToken = (userId) => {
 
 // Format user data for response (remove sensitive info)
 const formatUserResponse = (user) => {
-    console.log('🔄 Formatting user data for response:', user);
-    
-    // Ghi log chi tiết cho các trường quan trọng để debug
-    console.log('Debug field details:');
-    console.log('- id:', user.id);
-    console.log('- full_name:', user.full_name);
-    console.log('- address:', user.address, typeof user.address);
-    console.log('- age:', user.age, typeof user.age);
-    console.log('- quit_reason:', user.quit_reason, typeof user.quit_reason);
-    console.log('- membership:', user.membership, typeof user.membership);
-    
-    // Ensure all fields are mapped for frontend and backend compatibility
-    const formattedUser = {
+    return {
         id: user.id,
         username: user.username,
         email: user.email,
         fullName: user.full_name,
-        full_name: user.full_name,
         phone: user.phone,
         dateOfBirth: user.date_of_birth,
-        date_of_birth: user.date_of_birth,
         gender: user.gender,
         role: user.role,
         emailVerified: user.email_verified,
         isActive: user.is_active,
-        profile_image: user.profile_image,
-        profileImage: user.profile_image,
-        // Xử lý đặc biệt cho các trường quan trọng
-        quit_reason: user.quit_reason,
-        quitReason: user.quit_reason,
-        age: user.age !== undefined ? user.age : null,
-        address: user.address,
-        membership: user.membership || 'free',  // Thêm membership với giá trị mặc định là 'free'
-        membershipType: user.membership || 'free',  // Thêm membershipType cho frontend
         createdAt: user.created_at,
         updatedAt: user.updated_at
     };
-    
-    console.log('✅ Formatted user data:', formattedUser);
-    return formattedUser;
 };
 
 // Register User - Step 1: Create pending registration
 export const register = async (req, res) => {
     try {
-        console.log('📝 Registration request received:', req.body);
+        console.log('\n� ═══════════════════════════════════════');
+        console.log('�📝  NEW REGISTRATION REQUEST');
+        console.log('👤 ═══════════════════════════════════════');
+        console.log('📧  Email:', req.body.email);
+        console.log('👤  Username:', req.body.username);
+        console.log('🏷️  Full Name:', req.body.fullName);
 
         const {
             username,
@@ -292,11 +218,11 @@ export const register = async (req, res) => {
 
         // Basic validation
         if (!username || !email || !password) {
-            console.log('❌ Missing required fields');
+            console.log('❌  Validation Failed: Missing required fields\n');
             return sendError(res, 'Username, email, and password are required', 400);
         }
 
-        console.log('🔍 Checking for existing users...');
+        console.log('🔍  Checking existing users...');
         // Check if user already exists
         const [existingUsers] = await pool.execute(
             'SELECT id FROM users WHERE email = ? OR username = ?',
@@ -304,9 +230,12 @@ export const register = async (req, res) => {
         );
 
         if (existingUsers.length > 0) {
-            console.log('❌ User already exists');
+            console.log('❌  User already exists');
+            console.log('👤 ═══════════════════════════════════════\n');
             return sendError(res, 'User with this email or username already exists', 409);
-        } console.log('🔍 Checking for pending registrations...');
+        }
+
+        console.log('🔍  Checking pending registrations...');
         // Check pending registrations
         const [pendingUsers] = await pool.execute(
             'SELECT id FROM pending_registrations WHERE email = ? OR username = ?',
@@ -314,18 +243,19 @@ export const register = async (req, res) => {
         );
 
         if (pendingUsers.length > 0) {
-            console.log('⚠️ Found existing pending registration, cleaning up...');
+            console.log('⚠️   Found existing pending registration');
+            console.log('🧹  Cleaning up previous registration...');
             // Delete existing pending registration and verification codes for this email/username
             await pool.execute('DELETE FROM pending_registrations WHERE email = ? OR username = ?', [email, username]);
             await pool.execute('DELETE FROM email_verifications WHERE email = ?', [email]);
-            console.log('✅ Cleaned up previous pending registration');
+            console.log('✅  Cleanup completed');
         }
 
-        console.log('🔐 Hashing password...');
+        console.log('🔐  Hashing password...');
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        console.log('💾 Creating pending registration...');
+        console.log('💾  Creating pending registration...');
         // Create pending registration
         await pool.execute(
             `INSERT INTO pending_registrations 
@@ -334,19 +264,22 @@ export const register = async (req, res) => {
             [username, email, hashedPassword, fullName, phone || null, dateOfBirth || null, gender || null, role || 'user']
         );
 
-        console.log('🔢 Generating verification code...');
+        console.log('🎲  Generating verification code...');
         // Generate verification code and send via email
         const verificationCode = emailService.generateVerificationCode();
 
-        console.log('📧 Attempting to send verification email...');
+        console.log('📧  Sending verification email...');
         try {
             await emailService.sendVerificationEmail(email, fullName, verificationCode);
-            console.log(`📧 Verification email sent to ${email}`);
+            console.log('✅  Verification email sent successfully');
         } catch (emailError) {
-            console.error('📧 Failed to send email:', emailError.message);
+            console.error('❌  Email failed:', emailError.message);
             // For development, continue without email but log the code
-            console.log(`⚠️ Development mode - Verification code: ${verificationCode}`);
+            console.log(`🔧  Development Code: ${verificationCode}`);
         }
+
+        console.log('✅  Registration process completed');
+        console.log('👤 ═══════════════════════════════════════\n');
 
         sendSuccess(res, 'Registration pending. Verification code sent to your email.', {
             email: email,
@@ -368,104 +301,72 @@ export const register = async (req, res) => {
 // Login User
 export const login = async (req, res) => {
     try {
-        // Hỗ trợ đăng nhập bằng email hoặc username
-        const { email, username, password } = req.body;
-        
-        // Xác định username hay email được sử dụng
-        const loginIdentifier = email || username;
-        console.log('🔑 Login attempt for:', loginIdentifier);
-        
-        if (!loginIdentifier) {
-            return sendError(res, 'Username or email is required', 400);
-        }
-        
-        // Đảm bảo truy vấn lấy tất cả các trường, bao gồm address, age, quit_reason, membership
+        console.log('\n🔐 ═══════════════════════════════════════');
+        console.log('🚪  LOGIN REQUEST');
+        console.log('🔐 ═══════════════════════════════════════');
+
+        const { email, password } = req.body;
+        console.log('📧  Email/Username:', email);
+
+        console.log('🔍  Finding user account...');
+        // Check if login input is email or username
         const [users] = await pool.execute(
-            `SELECT 
-                id, username, email, password_hash, full_name, phone, 
-                date_of_birth, gender, role, email_verified, is_active,
-                profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason, membership
-             FROM users 
-             WHERE email = ? OR username = ?`,
-            [loginIdentifier, loginIdentifier]
+            `SELECT * FROM users WHERE email = ? OR username = ?`,
+            [email, email]
         );
 
         if (users.length === 0) {
-            console.log('❌ User not found:', loginIdentifier);
-            return sendError(res, 'Invalid username, email or password', 401);
+            console.log('❌  User not found');
+            console.log('🔐 ═══════════════════════════════════════\n');
+            return sendError(res, 'Invalid email/username or password', 401);
         }
 
         const user = users[0];
-        console.log('👤 Found user:', { id: user.id, email: user.email });
+        console.log('✅  User found:', user.username);
+        console.log('🔍  Account Status:', user.is_active ? 'Active' : 'Inactive');
 
         if (!user.is_active) {
-            console.log('❌ Account deactivated:', user.id);
+            console.log('❌  Account is deactivated');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'Account is deactivated. Please contact support.', 401);
         }
 
+        console.log('🔑  Verifying password...');
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isPasswordValid) {
-            console.log('❌ Invalid password for user:', user.id);
-            return sendError(res, 'Invalid username, email or password', 401);
+            console.log('❌  Invalid password');
+            console.log('🔐 ═══════════════════════════════════════\n');
+            return sendError(res, 'Invalid email or password', 401);
         }
 
-        // Tạo tokens
+        console.log('✅  Password verified');
+        console.log('🎫  Generating authentication tokens...');
+
         const token = generateToken(user.id);
         const refreshToken = generateRefreshToken(user.id);
-        
-        // Log token structure for debugging
-        console.log('🔐 Generated token structure:', jwt.decode(token));
-        
-        // Cập nhật thời gian đăng nhập
+
+        console.log('📝  Updating user last login...');
         await pool.execute(
-            'UPDATE users SET updated_at = NOW(), refresh_token = ? WHERE id = ?',
-            [refreshToken, user.id]
-        );
-        
-        // Lấy dữ liệu mới nhất của người dùng với tất cả các trường
-        console.log('🔄 Fetching updated user data...');
-        const [updatedUsers] = await pool.execute(
-            `SELECT 
-                id, username, email, password_hash, full_name, phone, 
-                date_of_birth, gender, role, email_verified, is_active,
-                profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason, membership
-             FROM users 
-             WHERE id = ?`,
+            'UPDATE users SET updated_at = NOW() WHERE id = ?',
             [user.id]
         );
-        
-        const updatedUser = updatedUsers[0];
-        console.log('📊 User data for response:', {
-            id: updatedUser.id,
-            name: updatedUser.full_name,
-            quit_reason: updatedUser.quit_reason,
-            age: updatedUser.age,
-            profile_image: updatedUser.profile_image,
-            membership: updatedUser.membership // Thêm log membership để debug
-        });
-        
-        // Check if membership exists in the database
-        if (updatedUser.membership === undefined || updatedUser.membership === null) {
-            console.log('⚠️ Membership field is missing in user data. Adding default value "free"');
-            updatedUser.membership = 'free';
-        } else {
-            console.log('✅ Membership found in user data:', updatedUser.membership);
-        }
-        
-        // Format và trả về dữ liệu
-        const formattedUser = formatUserResponse(updatedUser);
-        console.log('✅ Login successful for user:', updatedUser.id);
-        
+
+        console.log('✅  Login successful');
+        console.log('🎉  Welcome back:', user.username);
+        console.log('🔐 ═══════════════════════════════════════\n');
+
         sendSuccess(res, 'Login successful', {
-            user: formattedUser,
+            user: formatUserResponse(user),
             token,
             refreshToken
         });
     } catch (error) {
-        console.error('❌ Login error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  LOGIN ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Login failed. Please try again.', 500);
     }
 };
@@ -473,17 +374,33 @@ export const login = async (req, res) => {
 // Verify Email (simple version)
 export const verifyEmail = async (req, res) => {
     try {
+        console.log('\n✉️  ═══════════════════════════════════════');
+        console.log('🔍  EMAIL VERIFICATION REQUEST');
+        console.log('✉️  ═══════════════════════════════════════');
+
         const { email, verificationCode } = req.body;
+        console.log('📧  Email:', email);
+        console.log('🔢  Code:', verificationCode);
 
         // Validation
         if (!email || !verificationCode) {
+            console.log('❌  Missing email or verification code');
+            console.log('✉️  ═══════════════════════════════════════\n');
             return sendError(res, 'Email and verification code are required', 400);
-        }        // Check if verification code is valid using emailService
+        }
+
+        console.log('🔍  Verifying code...');
+        // Check if verification code is valid using emailService
         const isCodeValid = await emailService.verifyCode(email, verificationCode);
 
         if (!isCodeValid) {
+            console.log('❌  Invalid or expired verification code');
+            console.log('✉️  ═══════════════════════════════════════\n');
             return sendError(res, 'Invalid or expired verification code', 400);
         }
+
+        console.log('✅  Code verified successfully');
+        console.log('🔍  Finding pending registration...');
 
         // Get pending registration data
         const [pendingRegistrations] = await pool.execute(
@@ -492,16 +409,21 @@ export const verifyEmail = async (req, res) => {
         );
 
         if (pendingRegistrations.length === 0) {
+            console.log('❌  No pending registration found');
+            console.log('✉️  ═══════════════════════════════════════\n');
             return sendError(res, 'No pending registration found or registration expired', 400);
         }
 
         const pendingUser = pendingRegistrations[0];
+        console.log('✅  Pending registration found');
+        console.log('👤  Username:', pendingUser.username);
 
+        console.log('📝  Creating user account...');
         // Move data from pending_registrations to users table
         const [result] = await pool.execute(
             `INSERT INTO users 
-             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at, age, address, quit_reason, membership) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW(), ?, ?, ?, ?)`,
+             (username, email, password_hash, full_name, phone, date_of_birth, gender, role, email_verified, is_active, created_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, TRUE, NOW())`,
             [
                 pendingUser.username,
                 pendingUser.email,
@@ -510,16 +432,14 @@ export const verifyEmail = async (req, res) => {
                 pendingUser.phone,
                 pendingUser.date_of_birth,
                 pendingUser.gender,
-                pendingUser.role || 'user',
-                null, // age
-                null, // address
-                null, // quit_reason
-                'free' // membership - mặc định là free cho người dùng mới
+                pendingUser.role || 'user'
             ]
         );
 
         const userId = result.insertId;
+        console.log('✅  User account created (ID:', userId + ')');
 
+        console.log('🧹  Cleaning up verification records...');
         // Mark verification as completed
         await pool.execute(
             'UPDATE email_verifications SET verified = TRUE WHERE email = ? AND verification_code = ?',
@@ -528,7 +448,10 @@ export const verifyEmail = async (req, res) => {
 
         // Clean up pending registration and verification records
         await pool.execute('DELETE FROM pending_registrations WHERE email = ?', [email]);
-        await pool.execute('DELETE FROM email_verifications WHERE email = ?', [email]);        // Generate JWT tokens
+        await pool.execute('DELETE FROM email_verifications WHERE email = ?', [email]);
+
+        console.log('🔑  Generating authentication tokens...');
+        // Generate JWT tokens
         const accessToken = generateToken(userId);
         const refreshToken = generateRefreshToken(userId);
 
@@ -538,7 +461,9 @@ export const verifyEmail = async (req, res) => {
             [refreshToken, userId]
         );
 
-        console.log('✅ Registration successful');
+        console.log('✅  Registration completed successfully');
+        console.log('🎉  Welcome user:', pendingUser.username);
+        console.log('✉️  ═══════════════════════════════════════\n');
         sendSuccess(res, 'Email verified and account created successfully', {
             user: {
                 id: userId,
@@ -560,12 +485,20 @@ export const verifyEmail = async (req, res) => {
 // Resend Verification Code
 export const resendVerificationCode = async (req, res) => {
     try {
+        console.log('\n📮 ═══════════════════════════════════════');
+        console.log('🔄  RESEND VERIFICATION CODE');
+        console.log('📮 ═══════════════════════════════════════');
+
         const { email } = req.body;
+        console.log('📧  Email:', email);
 
         if (!email) {
+            console.log('❌  Email is required');
+            console.log('📮 ═══════════════════════════════════════\n');
             return sendError(res, 'Email is required', 400);
         }
 
+        console.log('🔍  Checking pending registration...');
         // Check if there's a pending registration for this email
         const [pendingRegistrations] = await pool.execute(
             'SELECT * FROM pending_registrations WHERE email = ? AND expires_at > NOW()',
@@ -573,25 +506,35 @@ export const resendVerificationCode = async (req, res) => {
         );
 
         if (pendingRegistrations.length === 0) {
+            console.log('❌  No valid pending registration found');
+            console.log('📮 ═══════════════════════════════════════\n');
             return sendError(res, 'No pending registration found for this email or registration expired. Please register again.', 400);
         }
 
         const pendingUser = pendingRegistrations[0];
+        console.log('✅  Pending registration found');
+        console.log('👤  User:', pendingUser.username);
 
+        console.log('🧹  Clearing old verification codes...');
         // Delete old verification codes for this email
         await pool.execute('DELETE FROM email_verifications WHERE email = ?', [email]);
 
+        console.log('🎲  Generating new verification code...');
         // Generate new verification code
         const verificationCode = emailService.generateVerificationCode();
 
+        console.log('📧  Sending new verification email...');
         // Send verification email (this will also store the code)
         try {
             await emailService.sendVerificationEmail(email, pendingUser.full_name, verificationCode);
-            console.log(`📧 Verification email resent to ${email}`);
+            console.log('✅  Verification email resent successfully');
         } catch (emailError) {
-            console.error('📧 Failed to resend email:', emailError.message);
-            console.log(`⚠️ Development mode - New verification code: ${verificationCode}`);
+            console.error('❌  Email sending failed:', emailError.message);
+            console.log(`🔧  Development Code: ${verificationCode}`);
         }
+
+        console.log('✅  Resend process completed');
+        console.log('📮 ═══════════════════════════════════════\n');
 
         sendSuccess(res, 'New verification code sent to your email', {
             email: email,
@@ -600,7 +543,11 @@ export const resendVerificationCode = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Resend verification error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  RESEND VERIFICATION ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to resend verification code', 500);
     }
 };
@@ -608,39 +555,39 @@ export const resendVerificationCode = async (req, res) => {
 // Get User Profile
 export const getProfile = async (req, res) => {
     try {
+        console.log('\n👤 ═══════════════════════════════════════');
+        console.log('📋  GET USER PROFILE');
+        console.log('👤 ═══════════════════════════════════════');
+
         const userId = req.user.id;
-        console.log('🔍 Getting profile for user ID:', userId);
-        
-        // Lấy thông tin chi tiết của người dùng với tất cả các trường
+        console.log('🆔  User ID:', userId);
+
+        console.log('🔍  Fetching user profile...');
         const [users] = await pool.execute(
-            `SELECT 
-                id, username, email, password_hash, full_name, phone, 
-                date_of_birth, gender, role, email_verified, is_active,
-                profile_image, refresh_token, created_at, updated_at,
-                address, age, quit_reason, membership
-             FROM users 
-             WHERE id = ?`,
+            'SELECT * FROM users WHERE id = ?',
             [userId]
         );
 
         if (users.length === 0) {
-            console.log('❌ User not found:', userId);
+            console.log('❌  User not found');
+            console.log('👤 ═══════════════════════════════════════\n');
             return sendError(res, 'User not found', 404);
         }
-        
+
         const user = users[0];
-        console.log('✅ User profile found:', {
-            id: user.id,
-            name: user.full_name,
-            quit_reason: user.quit_reason,
-            age: user.age
-        });
-        
-        // Format dữ liệu trước khi trả về
-        const formattedUser = formatUserResponse(user);
-        sendSuccess(res, 'User profile fetched successfully', formattedUser);
+        console.log('✅  Profile found');
+        console.log('👤  Username:', user.username);
+        console.log('📧  Email:', user.email);
+        console.log('🏷️  Role:', user.role);
+        console.log('👤 ═══════════════════════════════════════\n');
+
+        sendSuccess(res, 'User profile fetched successfully', formatUserResponse(user));
     } catch (error) {
-        console.error('❌ Get profile error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  GET PROFILE ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to fetch profile', 500);
     }
 };
@@ -648,37 +595,22 @@ export const getProfile = async (req, res) => {
 // Update User Profile
 export const updateProfile = async (req, res) => {
     try {
-        console.log('📝 Update profile request:', req.body);
+        console.log('\n✏️  ═══════════════════════════════════════');
+        console.log('📝  UPDATE USER PROFILE');
+        console.log('✏️  ═══════════════════════════════════════');
+
         const userId = req.user.id;
-        const {
-            fullName,
-            phone,
-            dateOfBirth,
-            gender,
-            role,
-            // Thêm các trường mới
-            address,
-            age,
-            quitReason,
-            quit_reason,
-            membership
-        } = req.body;
-        
-        // Format age thành số nếu có
-        let formattedAge = null;
-        if (age !== undefined && age !== null && age !== '') {
-            formattedAge = parseInt(age);
-            if (isNaN(formattedAge)) formattedAge = null;
-        }
-        
-        // Xử lý quit_reason - ưu tiên quitReason nếu có cả hai
-        const finalQuitReason = quitReason !== undefined ? quitReason : quit_reason;
-        
-        console.log('🔄 Prepared update data:', {
-            fullName, phone, dateOfBirth, gender, role,
-            address, age: formattedAge, quitReason: finalQuitReason, membership
-        });
-        
+        const { fullName, phone, dateOfBirth, gender, role } = req.body;
+
+        console.log('🆔  User ID:', userId);
+        console.log('📝  Updates:');
+        console.log('    🏷️  Full Name:', fullName);
+        console.log('    📞  Phone:', phone);
+        console.log('    📅  DOB:', dateOfBirth);
+        console.log('    ⚧️   Gender:', gender);
+        console.log('    🏆  Role:', role);
+
+        console.log('💾  Updating profile...');
         await pool.execute(
             `UPDATE users SET 
                 full_name = ?, 
@@ -686,48 +618,21 @@ export const updateProfile = async (req, res) => {
                 date_of_birth = ?, 
                 gender = ?, 
                 role = ?,
-                address = ?,
-                age = ?,
-                quit_reason = ?,
-                membership = ?,
                 updated_at = NOW() 
              WHERE id = ?`,
-            [
-                fullName, 
-                phone || null, 
-                dateOfBirth || null, 
-                gender || null, 
-                role || 'user', 
-                address || null,
-                formattedAge,
-                finalQuitReason,
-                membership || 'free', // Giữ lại trường membership, mặc định 'free' nếu null
-                userId
-            ]
+            [fullName, phone || null, dateOfBirth || null, gender || null, role || 'user', userId]
         );
-        
-        // Fetch updated user data to return
-        const [updatedUsers] = await pool.execute(
-            `SELECT 
-                id, username, email, full_name, phone, 
-                date_of_birth, gender, role, email_verified, is_active,
-                profile_image, created_at, updated_at,
-                address, age, quit_reason, membership
-             FROM users 
-             WHERE id = ?`,
-            [userId]
-        );
-        
-        if (updatedUsers.length === 0) {
-            return sendError(res, 'User not found after update', 404);
-        }
-        
-        const formattedUser = formatUserResponse(updatedUsers[0]);
-        console.log('✅ Profile updated successfully:', formattedUser);
 
-        sendSuccess(res, 'Profile updated successfully', formattedUser);
+        console.log('✅  Profile updated successfully');
+        console.log('✏️  ═══════════════════════════════════════\n');
+
+        sendSuccess(res, 'Profile updated successfully');
     } catch (error) {
-        console.error('❌ Update profile error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  UPDATE PROFILE ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to update profile', 500);
     }
 };
@@ -735,33 +640,59 @@ export const updateProfile = async (req, res) => {
 // Change Password
 export const changePassword = async (req, res) => {
     try {
+        console.log('\n🔐 ═══════════════════════════════════════');
+        console.log('🔑  CHANGE PASSWORD');
+        console.log('🔐 ═══════════════════════════════════════');
+
         const userId = req.user.id;
-        const { currentPassword, newPassword } = req.body;        // Get current password hash
+        const { currentPassword, newPassword } = req.body;
+
+        console.log('🆔  User ID:', userId);
+        console.log('🔍  Validating current password...');
+
+        // Get current password hash
         const [users] = await pool.execute(
             'SELECT password_hash FROM users WHERE id = ?',
             [userId]
         );
 
         if (users.length === 0) {
+            console.log('❌  User not found');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'User not found', 404);
         }
 
+        console.log('🔑  Verifying current password...');
         // Verify current password
         const isPasswordValid = await bcrypt.compare(currentPassword, users[0].password_hash);
         if (!isPasswordValid) {
+            console.log('❌  Current password is incorrect');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'Current password is incorrect', 401);
         }
 
+        console.log('✅  Current password verified');
+        console.log('🔐  Hashing new password...');
         // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 12);        // Update password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        console.log('💾  Updating password...');
+        // Update password
         await pool.execute(
             'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
             [hashedPassword, userId]
         );
 
+        console.log('✅  Password changed successfully');
+        console.log('🔐 ═══════════════════════════════════════\n');
+
         sendSuccess(res, 'Password changed successfully');
     } catch (error) {
-        console.error('❌ Change password error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  CHANGE PASSWORD ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to change password', 500);
     }
 };
@@ -769,38 +700,70 @@ export const changePassword = async (req, res) => {
 // Refresh Token
 export const refreshToken = async (req, res) => {
     try {
+        console.log('\n🔄 ═══════════════════════════════════════');
+        console.log('🎫  REFRESH TOKEN');
+        console.log('🔄 ═══════════════════════════════════════');
+
         const { refreshToken } = req.body;
+        console.log('🔍  Verifying refresh token...');
 
         if (!refreshToken) {
+            console.log('❌  Refresh token is required');
+            console.log('🔄 ═══════════════════════════════════════\n');
             return sendError(res, 'Refresh token is required', 401);
         }
 
+        console.log('🔑  Decoding token...');
         const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
 
         if (decoded.type !== 'refresh') {
+            console.log('❌  Invalid refresh token type');
+            console.log('🔄 ═══════════════════════════════════════\n');
             return sendError(res, 'Invalid refresh token', 401);
-        }        // Check if user still exists and is active
+        }
+
+        console.log('✅  Token decoded successfully');
+        console.log('🆔  User ID:', decoded.userId);
+        console.log('🔍  Verifying user status...');
+
+        // Check if user still exists and is active
         const [users] = await pool.execute(
             'SELECT id FROM users WHERE id = ? AND is_active = true',
             [decoded.userId]
         );
 
         if (users.length === 0) {
+            console.log('❌  User not found or account deactivated');
+            console.log('🔄 ═══════════════════════════════════════\n');
             return sendError(res, 'User not found or account deactivated', 401);
         }
 
+        console.log('✅  User verified');
+        console.log('🎫  Generating new tokens...');
+
         const newToken = generateToken(decoded.userId);
         const newRefreshToken = generateRefreshToken(decoded.userId);
+
+        console.log('✅  New tokens generated successfully');
+        console.log('🔄 ═══════════════════════════════════════\n');
 
         sendSuccess(res, 'Token refreshed successfully', {
             token: newToken,
             refreshToken: newRefreshToken
         });
     } catch (error) {
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  REFRESH TOKEN ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            console.log('🚨  Invalid or expired token');
+            console.log('❌ ═══════════════════════════════════════\n');
             return sendError(res, 'Invalid or expired refresh token', 401);
         }
-        console.error('❌ Refresh token error:', error);
+
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to refresh token', 500);
     }
 };
@@ -808,50 +771,83 @@ export const refreshToken = async (req, res) => {
 // Forgot Password - Send reset code to email
 export const forgotPassword = async (req, res) => {
     try {
+        console.log('\n🔐 ═══════════════════════════════════════');
+        console.log('📧  FORGOT PASSWORD REQUEST');
+        console.log('🔐 ═══════════════════════════════════════');
+
         const { email } = req.body;
+        console.log('📧  Email:', email);
 
         if (!email) {
+            console.log('❌  Email is required');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'Email is required', 400);
         }
 
-        console.log('🔍 Processing forgot password for:', email);
-
+        console.log('🔍  Checking user account...');
         // Check if user exists
         const [users] = await pool.execute(
             'SELECT id, email, full_name FROM users WHERE email = ? AND is_active = TRUE',
             [email]
-        ); if (users.length === 0) {
+        );
+
+        if (users.length === 0) {
+            console.log('❌  Email not found or account inactive');
+            console.log('🔐 ═══════════════════════════════════════\n');
             // Return error if email doesn't exist
             return sendError(res, 'Email này chưa được đăng ký tài khoản', 404);
         }
 
         const user = users[0];
+        console.log('✅  User found:', user.full_name);
+        console.log('🎲  Generating reset code...');
 
         // Generate 6-digit reset code
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();        // Store reset code in database
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store reset code in database
         const expiredAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
+        console.log('🧹  Cleaning old reset codes...');
         // Delete any existing reset codes for this email first
         await pool.execute(
             'DELETE FROM password_resets WHERE email = ?',
             [email]
         );
 
+        console.log('💾  Storing new reset code...');
         // Insert new reset code
         await pool.execute(
             `INSERT INTO password_resets (email, reset_code, expires_at)
              VALUES (?, ?, ?)`,
             [email, resetCode, expiredAt]
-        );        // Send reset code via email
-        console.log('📧 Sending password reset email to:', email);
-        await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
+        );
 
-        console.log('✅ Password reset code sent to:', email);
-        sendSuccess(res, 'Reset code has been sent to your email', null);
+        console.log('📧  Sending password reset email...');
+        // Send reset code via email
+        try {
+            await emailService.sendPasswordResetEmail(email, user.full_name, resetCode);
+            console.log('✅  Password reset email sent successfully');
+        } catch (emailError) {
+            console.error('❌  Email sending failed:', emailError.message);
+            console.log(`🔧  Development Code: ${resetCode}`);
+        }
+
+        console.log('✅  Password reset request processed');
+        console.log('🔐 ═══════════════════════════════════════\n');
+
+        sendSuccess(res, 'Reset code has been sent to your email', {
+            message: 'Please check your email for the reset code',
+            resetCode: process.env.NODE_ENV === 'development' ? resetCode : undefined
+        });
 
     } catch (error) {
-        console.error('❌ Forgot password error:', error);
-        console.error('Error stack:', error.stack);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  FORGOT PASSWORD ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.error('📋  Stack:', error.stack);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to process forgot password request', 500);
     }
 };
@@ -859,18 +855,27 @@ export const forgotPassword = async (req, res) => {
 // Reset Password - Verify code and set new password
 export const resetPassword = async (req, res) => {
     try {
+        console.log('\n🔐 ═══════════════════════════════════════');
+        console.log('🔑  RESET PASSWORD');
+        console.log('🔐 ═══════════════════════════════════════');
+
         const { email, resetCode, newPassword } = req.body;
+        console.log('📧  Email:', email);
+        console.log('🔢  Reset Code:', resetCode);
 
         if (!email || !resetCode || !newPassword) {
+            console.log('❌  Missing required fields');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'Email, reset code, and new password are required', 400);
         }
 
         if (newPassword.length < 6) {
+            console.log('❌  Password too short');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'New password must be at least 6 characters long', 400);
         }
 
-        console.log('🔍 Processing password reset for:', email);
-
+        console.log('🔍  Verifying reset code...');
         // Verify reset code
         const [resetRecords] = await pool.execute(
             `SELECT id FROM password_resets 
@@ -882,8 +887,13 @@ export const resetPassword = async (req, res) => {
         );
 
         if (resetRecords.length === 0) {
+            console.log('❌  Invalid or expired reset code');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'Invalid or expired reset code', 400);
         }
+
+        console.log('✅  Reset code verified');
+        console.log('🔍  Checking user account...');
 
         // Check if user still exists and is active
         const [users] = await pool.execute(
@@ -892,33 +902,42 @@ export const resetPassword = async (req, res) => {
         );
 
         if (users.length === 0) {
+            console.log('❌  User not found or inactive');
+            console.log('🔐 ═══════════════════════════════════════\n');
             return sendError(res, 'User not found', 404);
         }
 
         const userId = users[0].id;
         const resetRecordId = resetRecords[0].id;
 
+        console.log('✅  User account verified');
+        console.log('🔐  Hashing new password...');
+
         // Hash new password
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
+        console.log('💾  Starting database transaction...');
         // Start transaction
         const connection = await pool.getConnection();
         await connection.beginTransaction();
 
         try {
+            console.log('📝  Updating user password...');
             // Update user password
             await connection.execute(
                 'UPDATE users SET password_hash = ? WHERE id = ?',
                 [passwordHash, userId]
             );
 
+            console.log('✅  Marking reset code as used...');
             // Mark reset code as used
             await connection.execute(
                 'UPDATE password_resets SET is_used = TRUE WHERE id = ?',
                 [resetRecordId]
             );
 
+            console.log('🔒  Clearing refresh tokens for security...');
             // Clear any existing refresh tokens for security
             await connection.execute(
                 'UPDATE users SET refresh_token = NULL WHERE id = ?',
@@ -926,19 +945,27 @@ export const resetPassword = async (req, res) => {
             );
 
             await connection.commit();
-            console.log('✅ Password reset successfully for user:', userId);
+            console.log('✅  Password reset completed successfully');
+            console.log('👤  User ID:', userId);
+            console.log('🔐 ═══════════════════════════════════════\n');
 
             sendSuccess(res, 'Password has been reset successfully. Please login with your new password.', null);
 
         } catch (error) {
             await connection.rollback();
+            console.log('🔄  Transaction rolled back');
             throw error;
         } finally {
             connection.release();
+            console.log('📤  Database connection released');
         }
 
     } catch (error) {
-        console.error('❌ Reset password error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  RESET PASSWORD ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to reset password', 500);
     }
 };
@@ -946,24 +973,39 @@ export const resetPassword = async (req, res) => {
 // Logout - Clear refresh token
 export const logout = async (req, res) => {
     try {
+        console.log('\n🚪 ═══════════════════════════════════════');
+        console.log('👋  LOGOUT REQUEST');
+        console.log('🚪 ═══════════════════════════════════════');
+
         const userId = req.user.id;
+        console.log('🆔  User ID:', userId);
 
         // Add validation to ensure userId exists
         if (!userId) {
+            console.log('❌  User ID not found in token');
+            console.log('🚪 ═══════════════════════════════════════\n');
             return sendError(res, 'User ID not found in token', 400);
         }
 
+        console.log('🔒  Clearing refresh token...');
         // Clear refresh token from database
         await pool.execute(
             'UPDATE users SET refresh_token = NULL WHERE id = ?',
             [userId]
         );
 
-        console.log('✅ User logged out successfully:', userId);
+        console.log('✅  User logged out successfully');
+        console.log('👋  Goodbye user:', userId);
+        console.log('🚪 ═══════════════════════════════════════\n');
+
         sendSuccess(res, 'Logged out successfully', null);
 
     } catch (error) {
-        console.error('❌ Logout error:', error);
+        console.log('\n❌ ═══════════════════════════════════════');
+        console.log('💥  LOGOUT ERROR');
+        console.log('❌ ═══════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.log('❌ ═══════════════════════════════════════\n');
         sendError(res, 'Failed to logout', 500);
     }
 };

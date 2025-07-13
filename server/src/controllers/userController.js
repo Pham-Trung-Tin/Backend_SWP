@@ -52,7 +52,6 @@ export const updateProfile = async (req, res) => {
         } = req.body;
         
         const userId = req.user.id;
-        console.log('👤 User ID:', userId);
         
         // Check if email already exists for another user
         if (email) {
@@ -66,17 +65,12 @@ export const updateProfile = async (req, res) => {
             }
         }
         
-        // Prepare update data - hỗ trợ nhiều định dạng đầu vào khác nhau
+        // Prepare update data
         const updateData = {};
-        
-        // Xử lý trường full_name (có thể truyền vào với nhiều tên khác nhau)
-        if (name) updateData.full_name = name;
-        else if (fullName) updateData.full_name = fullName;
-        else if (full_name) updateData.full_name = full_name;
-        
+        if (name) updateData.name = name;
         if (email) updateData.email = email;
         if (phone) updateData.phone = phone;
-        if (age !== undefined) updateData.age = parseInt(age);
+        if (age) updateData.age = parseInt(age);
         if (gender) updateData.gender = gender;
         if (address !== undefined) updateData.address = address;
         
@@ -108,32 +102,9 @@ export const updateProfile = async (req, res) => {
         }
         
         // Update user in database
-        const updated = await User.update(userId, updateData);
-        console.log('✅ Update result:', updated);
-        
-        // Kiểm tra kết quả cập nhật
-        if (!updated) {
-            return res.status(404).json({
-                success: false,
-                message: 'Failed to update user or user not found',
-                data: null
-            });
-        }
-        
-        // Đợi một chút để đảm bảo DB đã cập nhật xong
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Get updated user
+        await User.update(userId, updateData);
+          // Get updated user
         const updatedUser = await User.findById(userId);
-        if (!updatedUser) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found after update',
-                data: null
-            });
-        }
-        
-        // Loại bỏ thông tin nhạy cảm
         delete updatedUser.password_hash;
         delete updatedUser.refresh_token;
         

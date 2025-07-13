@@ -4,16 +4,12 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import healthRoutes from './routes/health.js';
-import packageRoutes from './routes/packages.js';
-import paymentRoutes from './routes/payments.js';
-import coachRoutes from './routes/coachRoutes.js';
-import appointmentRoutes from './routes/appointmentRoutes.js';
+import quitPlanRoutes from './routes/quitPlanRoutes.js';
+import progressRoutes from './routes/progressRoutes.js';
+// Health routes removed - functionality now in ProgressDashboard component
 import ensureTablesExist from './ensureTables.js';
-import path from 'path';
 
-// Load environment variables --
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -56,6 +52,18 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/quit-plans', quitPlanRoutes);
+app.use('/api/progress', progressRoutes);
+// Health routes removed - functionality now in ProgressDashboard component
+
 // Test database connection
 await testConnection();
 // Ensure all required tables exist on startup
@@ -70,70 +78,6 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV,
         version: '1.0.0'
     });
-});
-
-// Static files for uploads
-app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
-
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api', healthRoutes);
-app.use('/api/packages', packageRoutes);
-app.use('/api/coaches', coachRoutes);
-app.use('/api/appointments', appointmentRoutes);
-
-// Đăng ký route payments với debug chi tiết
-console.log('📌 Registering payment routes...');
-try {
-  // Express routers can be functions with properties
-  if (paymentRoutes) {
-    // Đăng ký routes
-    app.use('/api/payments', paymentRoutes);
-    console.log('✅ Payment routes registered successfully');
-    
-    // Log các routes đã đăng ký
-    if (paymentRoutes.stack && Array.isArray(paymentRoutes.stack)) {
-      console.log('Routes registered in paymentRoutes:');
-      paymentRoutes.stack.forEach(r => {
-        if (r.route) {
-          const methods = Object.keys(r.route.methods).map(m => m.toUpperCase()).join(',');
-          console.log(`  ${methods} ${r.route.path}`);
-        }
-      });
-    }
-  } else {
-    console.error('❌ paymentRoutes is not available');
-  }
-} catch (error) {
-  console.error('❌ Error registering payment routes:', error);
-}
-
-// Log tất cả các routes đã đăng ký (để debug)
-console.log('\n📋 Registered routes:');
-app._router.stack.forEach(middleware => {
-  if (middleware.route) {
-    // Routes đơn giản
-    console.log(`${middleware.route.stack[0].method.toUpperCase()} ${middleware.route.path}`);
-  } else if (middleware.name === 'router') {
-    // Router-level middleware
-    const path = middleware.regexp.toString()
-      .replace('\\/?(?=\\/|$)', '')
-      .replace(/[\\^$.*+?()[\]{}|]/g, '')
-      .replace('/^', '')
-      .replace('\\/', '/')
-      .replace('(?:/(?=$))?$/i', '');
-      
-    if (path.includes('/api/payments')) {
-      console.log(`🔍 Router at path: ${path}`);
-      middleware.handle.stack.forEach(handler => {
-        if (handler.route) {
-          const method = Object.keys(handler.route.methods)[0].toUpperCase();
-          console.log(`  ${method} ${path}${handler.route.path}`);
-        }
-      });
-    }
-  }
 });
 
 // 404 handler

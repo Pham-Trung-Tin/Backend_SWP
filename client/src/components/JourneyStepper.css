@@ -1,0 +1,197 @@
+/* JourneyStepper.css - Styling cho component JourneyStepper */
+
+/* Container chính */
+.journey-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Styling cho tiêu đề */
+.journey-title {
+  font-size: 24px;
+  color: #1890ff;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Styling cho các bước */
+.journey-steps {
+  margin-bottom: 30px;
+}
+
+/* Container cho các nút */
+.journey-button-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+/* Styling cho nút */
+.journey-button {
+  min-width: 100px;
+}
+
+/* Styling cho form */
+.journey-form {
+  margin-top: 20px;
+}
+
+.journey-form-item {
+  margin-bottom: 20px;
+}
+
+/* Styling cho card chọn kế hoạch */
+.plan-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.plan-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #1890ff;
+}
+
+.plan-card.selected {
+  border-color: #1890ff;
+  background-color: #e6f7ff;
+}
+
+.plan-card-title {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.plan-card-description {
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.plan-card-details {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.plan-card-detail {
+  font-size: 14px;
+  color: #888;
+  margin-right: 15px;
+  margin-bottom: 5px;
+}
+
+/* Styling cho thẻ tag */
+.plan-tag {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+/* Styling cho phần hoàn thành */
+.completion-section {
+  text-align: center;
+  padding: 30px;
+  background-color: #f6ffed;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.completion-icon {
+  font-size: 64px;
+  color: #52c41a;
+  margin-bottom: 20px;
+}
+
+.completion-title {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.completion-description {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+/* Styling cho thông báo chào mừng */
+.welcome-back-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.5s, fadeOut 0.5s 4.5s;
+  max-width: 350px;
+}
+
+.welcome-back-notification i {
+  color: #52c41a;
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.notification-text {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.notification-message {
+  color: #666;
+  font-size: 14px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+/* Responsive styling */
+@media (max-width: 768px) {
+  .journey-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .journey-button {
+    width: 100%;
+  }
+  
+  .plan-card-details {
+    flex-direction: column;
+  }
+}

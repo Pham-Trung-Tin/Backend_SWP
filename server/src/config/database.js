@@ -31,9 +31,6 @@ const createDbConfig = () => {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        acquireTimeout: 60000,
-        timeout: 60000,
-        reconnect: true,
         charset: 'utf8mb4',
         timezone: '+00:00',
         ssl: process.env.NODE_ENV === 'production' ? {
@@ -49,29 +46,34 @@ const pool = mysql.createPool(dbConfig);
 const testConnection = async () => {
     try {
         const connection = await pool.getConnection();
-        console.log('✅ Database connected successfully');
+        console.log('\n🔗 ════════════════════════════════════════════════');
+        console.log('✅  DATABASE CONNECTION SUCCESSFUL');
+        console.log('🔗 ════════════════════════════════════════════════');
 
         // Log connection info based on config type
         if (process.env.DATABASE_URL || process.env.DB_URL) {
-            console.log('📍 Connected to Railway MySQL via connection string');
-            console.log('🌐 Database host:', process.env.DB_HOST || 'from connection string');
+            console.log('�  Provider: Railway MySQL');
+            console.log('🌐  Host:', process.env.DB_HOST || 'from connection string');
         } else {
-            console.log('📍 Connected to MySQL:', {
-                host: process.env.DB_HOST,
-                database: process.env.DB_NAME,
-                user: process.env.DB_USER,
-                ssl: process.env.NODE_ENV === 'production'
-            });
+            console.log('�  Provider: Local MySQL');
+            console.log('🌐  Host:', process.env.DB_HOST);
+            console.log('🗄️  Database:', process.env.DB_NAME);
+            console.log('👤  User:', process.env.DB_USER);
         }
 
         // Test a simple query
         const [rows] = await connection.execute('SELECT 1 as test');
-        console.log('🔍 Database test query successful');
+        console.log('🔍  Test Query: PASSED');
+        console.log('🔗 ════════════════════════════════════════════════\n');
 
         connection.release();
     } catch (error) {
-        console.error('❌ Database connection failed:', error.message);
-        console.error('💡 Check your Railway database credentials and connection string');
+        console.log('\n❌ ════════════════════════════════════════════════');
+        console.log('💥  DATABASE CONNECTION FAILED');
+        console.log('❌ ════════════════════════════════════════════════');
+        console.error('🚨  Error:', error.message);
+        console.error('💡  Hint: Check your Railway database credentials');
+        console.log('❌ ════════════════════════════════════════════════\n');
         process.exit(1);
     }
 };

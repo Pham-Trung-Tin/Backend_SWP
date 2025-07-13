@@ -33,11 +33,33 @@ const QuitProgressChart = ({
         };
 
         // Dữ liệu thực tế mô phỏng (theo ngày)
-        const sampleActual = [
-            { date: '2024-01-01', actualCigarettes: 18, targetCigarettes: 20, mood: "good" },
-            { date: '2024-01-02', actualCigarettes: 19, targetCigarettes: 20, mood: "challenging" },
-            { date: '2024-01-03', actualCigarettes: 17, targetCigarettes: 20, mood: "good" },        ];
+        const today = new Date();
+        const sampleActual = [];
+        
+        // Tạo dữ liệu mẫu cho 30 ngày gần đây
+        for (let i = 30; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            // Tính toán giá trị thực tế dựa trên tuần
+            let weekIndex = Math.floor(i / 7);
+            weekIndex = Math.min(weekIndex, samplePlan.weeks.length - 1);
+            
+            const targetValue = samplePlan.weeks[weekIndex].amount;
+            // Thêm một chút biến động ngẫu nhiên
+            const randomVariation = Math.floor(Math.random() * 3) - 1; // -1, 0, hoặc 1
+            const actualValue = Math.max(0, targetValue + randomVariation);
+            
+            sampleActual.push({
+                date: dateStr,
+                actualCigarettes: actualValue,
+                targetCigarettes: targetValue,
+                mood: ["good", "challenging"][Math.floor(Math.random() * 2)]
+            });
+        }
 
+        console.log("Đã tạo dữ liệu mẫu:", sampleActual.length, "ngày");
         return { plan: samplePlan, actual: sampleActual };
     };
     
@@ -170,10 +192,34 @@ const QuitProgressChart = ({
             console.log("CHART DEBUG: ⚠️ Không có userPlan, sử dụng dữ liệu mẫu");
         }
 
-        // Kiểm tra dữ liệu thực tế
+        // Fix: Kiểm tra và chuyển đổi định dạng dữ liệu thực tế nếu cần
         if (Array.isArray(data.actual) && data.actual.length > 0) {
+            // Log dữ liệu mẫu để debug
+            console.log(`CHART DEBUG: ✅ Mẫu dữ liệu thực tế:`, data.actual[0]);
+            
+            // Đảm bảo dữ liệu có đúng định dạng (actualCigarettes và targetCigarettes)
+            if (data.actual.some(item => item.day && typeof item.cigarettes === 'number')) {
+                console.log("CHART DEBUG: 🔄 Định dạng dữ liệu dạng {day, cigarettes} -> {date, actualCigarettes}");
+                
+                // Chuyển đổi từ định dạng {day, cigarettes} sang {date, actualCigarettes}
+                data.actual = data.actual.map(item => {
+                    if (item.day !== undefined && item.cigarettes !== undefined) {
+                        const today = new Date();
+                        const date = new Date(today);
+                        date.setDate(today.getDate() - (data.actual.length - item.day));
+                        return {
+                            date: date.toISOString().split('T')[0],
+                            actualCigarettes: item.cigarettes,
+                            targetCigarettes: item.targetCigarettes || 
+                                              (data.plan.weeks && data.plan.weeks[0] ? data.plan.weeks[0].amount || 20 : 20)
+                        };
+                    }
+                    return item;
+                });
+            }
+            
             console.log(`CHART DEBUG: ✅ Có ${data.actual.length} bản ghi dữ liệu thực tế:`, 
-                data.actual.map(a => `${a.date}: ${a.actualCigarettes}/${a.targetCigarettes}`));
+                data.actual.map(a => `${a.date}: ${a.actualCigarettes}/${a.targetCigarettes || 'N/A'}`));
         } else {
             console.log("CHART DEBUG: ❌ Không có dữ liệu thực tế - đường xanh lá sẽ không hiển thị");
         }
@@ -187,10 +233,9 @@ const QuitProgressChart = ({
         console.log("CHART DEBUG: Filtered actual data:", filteredActualData);
         console.log("CHART DEBUG: Filtered data length:", filteredActualData?.length);
         
-        // Kiểm tra xem có dữ liệu thực tế không - nếu không có thì không hiển thị đường xanh lá
-        const hasRealActualData = Array.isArray(actualProgress) && actualProgress.length > 0;
-        if (!hasRealActualData) {
-            console.log("CHART DEBUG: ⚠️ Không có dữ liệu actualProgress thực tế từ props - sẽ ẩn đường xanh lá");
+        // Kiểm tra xem có dữ liệu thực tế không để hiển thị đường xanh lá
+        if (!Array.isArray(filteredActualData) || filteredActualData.length === 0) {
+            console.log("CHART DEBUG: ⚠️ Không có dữ liệu actualProgress thực tế từ props hoặc sau khi lọc - sẽ ẩn đường xanh lá");
         }
 
         // Tạo labels cho trục X (theo ngày)
@@ -200,42 +245,58 @@ const QuitProgressChart = ({
         
         // Tạo map cho việc lookup nhanh - chỉ nếu có dữ liệu thực tế
         const actualMap = new Map();
-        if (hasRealActualData && Array.isArray(filteredActualData)) {
+        if (Array.isArray(filteredActualData)) {
             filteredActualData.forEach(item => {
                 if (item && item.date) {
-                    actualMap.set(item.date, item.actualCigarettes);
-                    console.log(`CHART DEBUG: Adding to map - Date ${item.date}, Value ${item.actualCigarettes}`);
+                    // Chỉ thêm vào map nếu actualCigarettes là số hợp lệ
+                    if (item.actualCigarettes !== null && item.actualCigarettes !== undefined) {
+                        actualMap.set(item.date, item.actualCigarettes);
+                        console.log(`CHART DEBUG: Adding to map - Date ${item.date}, Value ${item.actualCigarettes}`);
+                    }
                 }
             });
         }
         
-        console.log("CHART DEBUG: actualMap size:", actualMap.size);        // Tạo dữ liệu cho chart
+        console.log("CHART DEBUG: actualMap size:", actualMap.size);
+        console.log("CHART DEBUG: filteredActualData size:", filteredActualData?.length || 0);        // Tạo dữ liệu cho chart
         if (Array.isArray(filteredPlanData)) {
             filteredPlanData.forEach((planItem, index) => {
                 // Format ngày cho label (chỉ hiển thị ngày/tháng)
                 const date = new Date(planItem.date);
                 const label = `${date.getDate()}/${date.getMonth() + 1}`;
                 labels.push(label);
-                
-                // Dữ liệu kế hoạch
-                planData.push(planItem.targetCigarettes);
-                
-                // Dữ liệu thực tế (chỉ nếu có dữ liệu thực tế từ props)
-                if (hasRealActualData) {
-                    const actualValue = actualMap.get(planItem.date);
-                    actualData.push(actualValue !== undefined ? actualValue : null);
-                    
-                    // Log dữ liệu dòng xanh lá (debug)
-                    if (actualValue !== undefined) {
-                        console.log(`DEBUG CHART: Ngày ${planItem.date} có dữ liệu thực tế: ${actualValue} điếu`);
+
+                // Đường xanh dương: lấy đúng số điếu/ngày từ planItem.amount (nếu có), nếu không thì lấy từ userPlan.weeks
+                let weekAmount = planItem.amount;
+                if (
+                    (weekAmount === undefined || weekAmount === null) &&
+                    userPlan &&
+                    Array.isArray(userPlan.weeks) &&
+                    planItem.week
+                ) {
+                    // Tìm tuần tương ứng trong userPlan.weeks
+                    const weekObj = userPlan.weeks.find(w => w.week === planItem.week);
+                    if (weekObj && typeof weekObj.amount === 'number') {
+                        weekAmount = weekObj.amount;
                     }
-                } else {
-                    // Không có dữ liệu thực tế, push null để không hiển thị điểm nào
-                    actualData.push(null);
+                }
+                // Fallback nếu vẫn không có amount
+                if (weekAmount === undefined || weekAmount === null) {
+                    weekAmount = planItem.targetCigarettes || 0;
+                }
+                planData.push(weekAmount);
+
+                // Dữ liệu thực tế (lấy từ actualMap)
+                const actualValue = actualMap.get(planItem.date);
+                actualData.push(actualValue !== undefined ? actualValue : null);
+
+                // Log dữ liệu dòng xanh lá (debug)
+                if (actualValue !== undefined) {
+                    console.log(`DEBUG CHART: Ngày ${planItem.date} có dữ liệu thực tế: ${actualValue} điếu`);
                 }
             });
               // Log tổng quan dữ liệu dòng xanh lá
-            if (hasRealActualData) {
+            if (actualMap.size > 0) {
                 console.log(`DEBUG CHART: ✅ Tổng số điểm dữ liệu thực tế: ${actualMap.size} điểm`);
                 console.log('DEBUG CHART: Dữ liệu dòng xanh lá:', actualData.filter(d => d !== null));
             } else {
