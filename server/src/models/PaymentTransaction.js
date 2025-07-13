@@ -70,7 +70,7 @@ export const createPaymentTransaction = async (transactionData) => {
     
     const [result] = await pool.execute(
       `INSERT INTO payment_transactions 
-        (payment_id, user_id, package_id, amount, payment_method, transaction_id, status, payment_details, callback_data)
+        (id, user_id, package_id, amount, payment_method, transaction_id, status, payment_details, callback_data)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [paymentId, userId, packageId, amount, paymentMethod, transactionId, status, details, callback]
     );

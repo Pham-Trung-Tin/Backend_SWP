@@ -113,7 +113,7 @@ export const purchasePackage = async (userId, packageId, paymentMethod) => {
     
     // Tạo giao dịch thanh toán
     const [paymentResult] = await connection.execute(`
-      INSERT INTO payment_transactions (user_id, package_id, amount, payment_method, status)
+      INSERT INTO payment_transactions (user_id, package_id, amount, method, status)
       VALUES (?, ?, ?, ?, 'completed')
     `, [userId, packageId, packageData.price, paymentMethod]);
     
