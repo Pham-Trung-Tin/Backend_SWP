@@ -73,6 +73,54 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
       return;
     }
 
+    // Tính toán từ actualProgress nếu có dữ liệu thực tế
+    if (actualProgress && actualProgress.length > 0) {
+      console.log("Tính toán từ actualProgress:", actualProgress);
+      
+      let totalCigarettesSaved = 0;
+      let totalMoneySaved = 0;
+      
+      // Lấy giá gói thuốc từ activePlan
+      let packPrice = 25000;
+      try {
+        const activePlanData = localStorage.getItem('activePlan');
+        if (activePlanData) {
+          const activePlan = JSON.parse(activePlanData);
+          if (activePlan && activePlan.packPrice) {
+            packPrice = activePlan.packPrice;
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi đọc packPrice:', error);
+      }
+      
+      const pricePerCigarette = packPrice / 20;
+      
+      // Tính tổng cigarettes saved từ dữ liệu thực tế
+      actualProgress.forEach(dayRecord => {
+        const targetForDay = dayRecord.targetCigarettes || dayRecord.target_cigarettes || 0;
+        const actualForDay = dayRecord.actualCigarettes || dayRecord.actual_cigarettes || 0;
+        const daySaved = Math.max(0, targetForDay - actualForDay);
+        
+        totalCigarettesSaved += daySaved;
+        totalMoneySaved += daySaved * pricePerCigarette;
+        
+        console.log(`Ngày ${dayRecord.date}: Target: ${targetForDay}, Actual: ${actualForDay}, Saved: ${daySaved}`);
+      });
+      
+      console.log(`Tổng cigarettes saved từ actualProgress: ${totalCigarettesSaved}`);
+      
+      setDashboardStats({
+        daysSincePlanCreation: actualProgress.length,
+        cigarettesSaved: totalCigarettesSaved,
+        moneySaved: totalMoneySaved,
+        planDuration: userPlan.weeks ? userPlan.weeks.length : 0,
+        planName: userPlan.name || 'Kế hoạch cá nhân',
+        healthProgress: 0
+      });
+      return;
+    }
+
     // Tính toán thông thường nếu không có thống kê từ bên ngoài
     const startDate = new Date(completionDate);
     const today = new Date();
@@ -114,7 +162,7 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
       planName: userPlan.name || 'Kế hoạch cá nhân',
       healthProgress: 0 // Giá trị mặc định
     });
-  }, [userPlan, completionDate, externalStats]);
+  }, [userPlan, completionDate, externalStats, actualProgress]);
   
   const loadMilestones = useCallback(() => {
     // Nếu không có dữ liệu đầy đủ, không thực hiện
@@ -146,7 +194,7 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
     if (userPlan && completionDate) {
       calculateDashboardStats();
     }
-  }, [userPlan, completionDate, calculateDashboardStats]);
+  }, [userPlan, completionDate, calculateDashboardStats, actualProgress]);
   
   // Tải milestone sau khi đã có thống kê
   useEffect(() => {

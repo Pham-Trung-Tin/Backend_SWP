@@ -643,18 +643,20 @@ export default function Progress() {
     
     // Tính toán số điếu đã tránh cho mỗi ngày và tích lũy tổng số
     actualProgress.forEach(dayRecord => {
-      // Số điếu đã tránh trong ngày = số điếu ban đầu - số điếu thực tế
-      const daySaved = Math.max(0, userInitialCigarettes - dayRecord.actualCigarettes);
+      // Số điếu đã tránh trong ngày = target theo plan - số điếu thực tế
+      // Sử dụng targetCigarettes từ progress data thay vì userInitialCigarettes
+      const targetForDay = dayRecord.targetCigarettes || dayRecord.target_cigarettes || userInitialCigarettes;
+      const daySaved = Math.max(0, targetForDay - dayRecord.actualCigarettes);
       totalSavedCigarettes += daySaved;
       
       // Ghi chi tiết để debug
-      detailedLog += `\n- Ngày ${dayRecord.date}: ${userInitialCigarettes} - ${dayRecord.actualCigarettes} = ${daySaved} điếu`;
+      detailedLog += `\n- Ngày ${dayRecord.date}: Target: ${targetForDay}, Actual: ${dayRecord.actualCigarettes} = Tránh được: ${daySaved} điếu`;
       
       // Lưu thông tin chi tiết
       dailySavings.push({
         date: dayRecord.date,
         actual: dayRecord.actualCigarettes,
-        targetFromPlan: initialCigarettesPerDay,
+        targetFromPlan: targetForDay,
         userInitialCigarettes: userInitialCigarettes,
         saved: daySaved
       });
