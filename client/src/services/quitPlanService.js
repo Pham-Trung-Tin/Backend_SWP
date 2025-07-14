@@ -1,12 +1,22 @@
+import { logDebug } from '../utils/debugHelpers';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Utility function to get auth headers
 const getAuthHeaders = () => {
-    // Tìm token từ cả localStorage và sessionStorage
-    const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    // Tìm token từ cả localStorage và sessionStorage với đúng key
+    const token = localStorage.getItem('nosmoke_token') || 
+                 sessionStorage.getItem('nosmoke_token') ||
+                 localStorage.getItem('auth_token') || 
+                 sessionStorage.getItem('auth_token');
+    
+    if (!token) {
+        throw new Error('Access token is required');
+    }
+    
     return {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
+        'Authorization': `Bearer ${token}`
     };
 };
 
@@ -41,8 +51,6 @@ export const createQuitPlan = async (planData) => {
 };
 
 // Get all quit plans for the current user
-import { logDebug } from '../utils/debugHelpers';
-
 export const getUserPlans = async () => {
     try {
         logDebug('QuitPlan', '🚀 Fetching user quit plans from database...');
