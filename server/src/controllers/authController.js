@@ -73,6 +73,29 @@ export const ensureTablesExist = async () => {
             }
         }
 
+        // Add membership columns
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN membership VARCHAR(50) DEFAULT 'free'
+            `);
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('membership column error:', error.message);
+            }
+        }
+        
+        try {
+            await pool.execute(`
+                ALTER TABLE users 
+                ADD COLUMN membership_type VARCHAR(50) DEFAULT 'free'
+            `);
+        } catch (error) {
+            if (!error.message.includes('Duplicate column name')) {
+                console.log('membership_type column error:', error.message);
+            }
+        }
+
         // Fix role column to ensure it has correct ENUM values
         try {
             await pool.execute(`
@@ -190,6 +213,9 @@ const formatUserResponse = (user) => {
         role: user.role,
         emailVerified: user.email_verified,
         isActive: user.is_active,
+        membership: user.membership || 'free', // Include membership field
+        membershipType: user.membership_type || user.membership || 'free', // Include membership_type field
+        avatar: user.profile_image, // Include avatar/profile image
         createdAt: user.created_at,
         updatedAt: user.updated_at
     };
