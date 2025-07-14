@@ -12,7 +12,7 @@ const CancelledAppointmentCard = ({ appointment, onRebook, onDelete }) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' });
   };
-  
+  //.comment o day choi 
   // Gọi hàm mở modal đặt lại lịch hẹn
   const handleRebookClick = () => {
     onRebook(appointment);
