@@ -228,66 +228,42 @@ const CoachMessagePanel = ({ appointment, onClose }) => {
           onLeave={() => setShowJitsi(false)}
         />
       )}
-      <section className="flex flex-col h-full w-full bg-transparent" style={{borderRadius: 0, boxShadow: 'none', margin: 0, padding: 0}}>
-        <header className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-white/90">
-          <div className="flex items-center gap-3">
-            {/* <img src={getUserAvatar()} alt={appointment.userName || 'Người dùng'} className="w-10 h-10 rounded-full object-cover bg-blue-100 border border-gray-200" /> */}
-            <div>
-              {/* Chỉ hiển thị appointment ID */}
-              <h3 className="text-base font-semibold text-gray-800 m-0">#{appointment.id}</h3>
-            </div>
+      <div className="coach-message-panel">
+        <header className="coach-message-header">
+          <div className="coach-message-header-left">
+            <h3 className="coach-message-title">#{appointment.id}</h3>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Video Call Button */}
+          <div className="coach-message-header-actions">
             <button
-              className="text-green-500 hover:bg-green-100 hover:text-green-700 rounded-full p-2 transition shadow-sm"
+              className="coach-message-video-btn"
               title="Bắt đầu gọi video"
               onClick={() => setShowJitsi(true)}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20 }}
             >
               <FaVideo />
             </button>
-            <button className="text-gray-400 text-lg ml-2 hover:bg-gray-100 rounded-full p-1 transition" onClick={onClose} style={{border: 'none', background: 'none', cursor: 'pointer'}}>
+            <button className="coach-message-close-btn" onClick={onClose}>
               <FaTimes />
             </button>
           </div>
         </header>
-        <div className="flex-1 px-3 py-2 overflow-y-auto bg-gradient-to-br from-white via-green-50 to-blue-50" style={{minHeight: 120}}>
+        <div className="coach-message-messages-box">
           {isLoading ? (
-            <div className="text-center text-gray-400 py-6 text-sm">
-              <p>Đang tải tin nhắn...</p>
-            </div>
+            <div className="coach-message-loading">Đang tải tin nhắn...</div>
           ) : (
             <>
               {messages.length === 0 ? (
-                <div className="text-center text-gray-400 py-6 text-sm">
-                  <p>Chưa có tin nhắn nào.</p>
-                </div>
+                <div className="coach-message-empty">Chưa có tin nhắn nào.</div>
               ) : (
                 messages.map(message => (
                   <div
                     key={message.id}
-                    className={`flex mb-2 ${message.sender === 'coach' ? 'justify-end' : 'justify-start'}`}
+                    className={`coach-message-row ${message.sender === 'coach' ? 'right' : 'left'}`}
                   >
-                    {/* Remove avatar images and user/coach names */}
                     <div
-                      className={`rounded-full px-3 py-1 min-w-[40px] shadow text-xs relative transition-all duration-200
-                        ${message.sender === 'coach' ? 'bg-gradient-to-r from-green-400 via-green-200 to-green-100 text-gray-900 ml-1' : 'bg-gradient-to-r from-blue-200 via-blue-50 to-white text-gray-800 mr-1 border border-blue-100'}
-                      `}
-                      style={{
-                        maxWidth: '80%',
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-line',
-                        overflowWrap: 'break-word',
-                        fontSize: '13px',
-                        padding: '6px 12px',
-                        borderRadius: '18px',
-                        boxShadow: '0 2px 8px rgba(67,233,123,0.08)'
-                      }}
+                      className={`coach-message-bubble ${message.sender === 'coach' ? 'coach' : 'user'}`}
                     >
-                      {/* Only show message text and time */}
                       <div>{message.text}</div>
-                      <div className={`text-[10px] mt-1 text-right ${message.sender === 'coach' ? 'text-green-600' : 'text-blue-500'}`}>{message.failed ? 'Gửi thất bại' : (message.pending ? 'Đang gửi...' : formatTime(message.timestamp || message.created_at))}</div>
+                      <div className={`coach-message-time ${message.sender === 'coach' ? 'coach' : 'user'}`}>{message.failed ? 'Gửi thất bại' : (message.pending ? 'Đang gửi...' : formatTime(message.timestamp || message.created_at))}</div>
                     </div>
                   </div>
                 ))
@@ -296,7 +272,7 @@ const CoachMessagePanel = ({ appointment, onClose }) => {
             </>
           )}
         </div>
-        <footer className="flex items-center px-4 py-2 bg-white/90 border-t border-gray-100">
+        <footer className="coach-message-input-box">
           <input
             type="text"
             value={input}
@@ -304,18 +280,17 @@ const CoachMessagePanel = ({ appointment, onClose }) => {
             onKeyPress={handleKeyPress}
             placeholder="Nhập tin nhắn..."
             disabled={isLoading}
-            className="flex-1 rounded-full border border-gray-200 outline-none text-sm bg-gray-50 px-4 py-2 mr-2 shadow-sm"
+            className="coach-message-input"
           />
           <button
-            className="rounded-full bg-green-500 hover:bg-green-600 text-white text-lg p-2 shadow transition disabled:opacity-50"
+            className="coach-message-send-btn"
             onClick={handleSendMessage}
             disabled={isLoading || input.trim() === ''}
-            style={{minWidth: 36, minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'center'}}
           >
             <FaPaperPlane />
           </button>
         </footer>
-      </section>
+      </div>
     </>
   );
 };

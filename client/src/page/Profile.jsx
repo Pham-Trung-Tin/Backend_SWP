@@ -840,7 +840,10 @@ export default function ProfilePage() {
               }}
             />
           </div>        )}
-          {/* Modal chỉnh sửa kế hoạch */}
+        {activeTab === "coach-messaging" && (
+          <CoachMessaging />
+        )}
+        {/* Modal chỉnh sửa kế hoạch */}
         <PlanEditModal
           isOpen={isPlanEditOpen}
           onClose={() => setIsPlanEditOpen(false)}
