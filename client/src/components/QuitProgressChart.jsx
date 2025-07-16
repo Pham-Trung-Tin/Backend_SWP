@@ -134,8 +134,9 @@ const QuitProgressChart = ({ userPlan, actualProgress, timeFilter = '30 ngày', 
                             const currentDate = new Date(startDate);
                             currentDate.setDate(startDate.getDate() + (weekIndex * 7) + day);
                             
-                            const weekLabel = `T${weekIndex + 1}-${day + 1}`;
-                            labels.push(weekLabel);
+                            // Tạo nhãn hiển thị ngày thực tế
+                            const dateLabel = `${currentDate.getDate()}/${currentDate.getMonth() + 1}`;
+                            labels.push(dateLabel);
                             planData.push(week.target);
                             
                             const dateStr = currentDate.toISOString().split('T')[0];
@@ -166,9 +167,9 @@ const QuitProgressChart = ({ userPlan, actualProgress, timeFilter = '30 ngày', 
                         
                         const dateStr = currentDate.toISOString().split('T')[0];
                         
-                        // Tạo nhãn hiển thị: Tuần X - Ngày Y
-                        const weekLabel = `T${weekIndex + 1}-${day + 1}`;
-                        labels.push(weekLabel);
+                        // Tạo nhãn hiển thị ngày thực tế
+                        const dateLabel = `${currentDate.getDate()}/${currentDate.getMonth() + 1}`;
+                        labels.push(dateLabel);
                         
                         // Lấy target từ week data
                         const planValue = week.target || week.amount || week.targetCigarettes || week.cigarettes || 0;
@@ -242,8 +243,9 @@ const QuitProgressChart = ({ userPlan, actualProgress, timeFilter = '30 ngày', 
                             const currentDate = new Date(startDate);
                             currentDate.setDate(startDate.getDate() + (weekIndex * 7) + day);
                             
-                            const weekLabel = `T${weekIndex + 1}-${day + 1}`;
-                            labels.push(weekLabel);
+                            // Tạo nhãn hiển thị ngày thực tế
+                            const dateLabel = `${currentDate.getDate()}/${currentDate.getMonth() + 1}`;
+                            labels.push(dateLabel);
                             planData.push(week.target);
                             
                             const dateStr = currentDate.toISOString().split('T')[0];
