@@ -23,19 +23,39 @@ const HealthProfile = ({ healthData = {}, activePlan = null }) => {
     respiratoryRate: 'Ổn định'
   });// Tạo milestone sức khỏe từ activePlan để hiển thị trong phần cải thiện sức khỏe
   const generateHealthImprovementsFromPlan = (activePlan) => {
-    if (!activePlan || !activePlan.weeks || !Array.isArray(activePlan.weeks)) {
+    if (!activePlan) {
+      return [];
+    }
+
+    // Parse plan_details nếu có
+    let weeksData = null;
+    if (activePlan.plan_details) {
+      try {
+        const parsedDetails = JSON.parse(activePlan.plan_details);
+        weeksData = parsedDetails.weeks;
+      } catch (error) {
+        console.error("❌ HEALTH_PROFILE: Lỗi parse plan_details:", error);
+      }
+    }
+
+    // Fallback sang activePlan.weeks nếu có
+    if (!weeksData && activePlan.weeks) {
+      weeksData = activePlan.weeks;
+    }
+
+    if (!weeksData || !Array.isArray(weeksData)) {
       return [];
     }
 
     const currentDate = new Date();
-    const startDate = activePlan.startDate ? new Date(activePlan.startDate) : currentDate;
+    const startDate = activePlan.start_date ? new Date(activePlan.start_date) : currentDate;
     
     // Tạo cải thiện sức khỏe dựa trên tiến trình của kế hoạch
     const healthImprovements = [];
     const improvementGroups = new Map(); // Để gộp các tuần có nội dung giống nhau
     
     // Milestone sức khỏe theo tuần từ kế hoạch
-    activePlan.weeks.forEach((week, index) => {
+    weeksData.forEach((week, index) => {
       const weekStartDate = new Date(startDate);
       weekStartDate.setDate(startDate.getDate() + (index * 7));
       const weekEndDate = new Date(weekStartDate);
@@ -217,52 +237,7 @@ const HealthProfile = ({ healthData = {}, activePlan = null }) => {
               />
             )}
           </div>
-        </div>
-        
-        <div className="health-stat-row two-col">
-          <div className="health-stat-item">
-            <label>Mức tiêu thụ hàng ngày</label>
-            {!isEditingStats ? (
-              <p>{data.dailyConsumption}</p>
-            ) : (
-              <input
-                type="text"
-                value={editableStats.dailyConsumption || ''}
-                onChange={(e) => handleStatsChange('dailyConsumption', e.target.value)}
-                placeholder="Ví dụ: 20 điếu/ngày"
-              />
-            )}
-          </div>
-          <div className="health-stat-item">
-            <label>Số lần cố gắng cai thuốc</label>
-            {!isEditingStats ? (
-              <p>{data.quitAttempts}</p>
-            ) : (
-              <input
-                type="text"
-                value={editableStats.quitAttempts || ''}
-                onChange={(e) => handleStatsChange('quitAttempts', e.target.value)}
-                placeholder="Ví dụ: 2 lần"
-              />
-            )}
-          </div>
-        </div>
-        
-        <div className="health-stat-row">
-          <div className="health-stat">
-            <h4>Vấn đề sức khỏe liên quan</h4>
-            {!isEditingStats ? (
-              <p>{data.healthIssues}</p>
-            ) : (
-              <textarea
-                value={editableStats.healthIssues || ''}
-                onChange={(e) => handleStatsChange('healthIssues', e.target.value)}
-                placeholder="Mô tả các vấn đề sức khỏe..."
-                rows="3"
-              />
-            )}
-          </div>
-        </div>        <div className="health-stat-row two-col">
+        </div>            <div className="health-stat-row two-col">
           <div className="health-stat-item">
             <label>Huyết áp</label>
             {!isEditingStats ? (

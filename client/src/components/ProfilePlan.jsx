@@ -16,13 +16,13 @@ const ProfilePlan = ({ planData = {}, activePlan = null }) => {
     navigate('/journey');
   };
 
-  // Kiểm tra xem có kế hoạch thực tế không
-  const hasValidPlan = activePlan && (activePlan.strategy || activePlan.weeks);
+  // Kiểm tra xem có kế hoạch thực tế không - sử dụng dữ liệu database
+  const hasValidPlan = activePlan && (activePlan.plan_name || activePlan.start_date || activePlan.plan_details);
   
-  // Xử lý ngày bắt đầu: ưu tiên activePlan.startDate, nếu không có thì dùng ngày hiện tại khi có activePlan
+  // Xử lý ngày bắt đầu: ưu tiên activePlan.start_date từ database
   const getStartDate = () => {
-    if (activePlan?.startDate) {
-      return new Date(activePlan.startDate).toLocaleDateString('vi-VN');
+    if (activePlan?.start_date) {
+      return new Date(activePlan.start_date).toLocaleDateString('vi-VN');
     }
     if (planData.startDate) {
       return planData.startDate;
@@ -33,27 +33,42 @@ const ProfilePlan = ({ planData = {}, activePlan = null }) => {
     }
     return 'Chưa tạo kế hoạch';
   };
-  // Ưu tiên sử dụng dữ liệu thực tế từ activePlan
+
+  // Parse plan_details từ database
+  const parsePlanDetails = (planDetails) => {
+    if (!planDetails) return null;
+    try {
+      return JSON.parse(planDetails);
+    } catch (error) {
+      console.error("❌ PROFILE_PLAN: Lỗi parse plan_details:", error);
+      return null;
+    }
+  };
+
+  const planDetails = parsePlanDetails(activePlan?.plan_details);
+  // Ưu tiên sử dụng dữ liệu thực tế từ activePlan database
   const plan = {
-    name: activePlan?.name || 'Kế hoạch cai thuốc cá nhân',
-    strategy: activePlan?.strategy || planData.strategy || 'Cai thuốc hoàn toàn và duy trì lâu dài',
+    name: activePlan?.plan_name || 'Kế hoạch cai thuốc cá nhân',
+    strategy: planDetails?.strategy || activePlan?.strategy || planData.strategy || 'Cai thuốc hoàn toàn và duy trì lâu dài',
     startDate: getStartDate(),
-    goal: activePlan?.goal || planData.goal || 'Cải thiện sức khỏe và tiết kiệm chi phí',
-    initialCigarettes: activePlan?.initialCigarettes || planData.initialCigarettes || 20,
-    weeks: activePlan?.weeks || planData.weeks || [],
+    goal: planDetails?.goal || activePlan?.goal || planData.goal || 'Cải thiện sức khỏe và tiết kiệm chi phí',
+    initialCigarettes: planDetails?.initialCigarettes || activePlan?.initial_cigarettes || planData.initialCigarettes || 20,
+    weeks: planDetails?.weeks || activePlan?.weeks || planData.weeks || [],
     milestones: planData.milestones || []
   };
 
   // Tạo milestones từ kế hoạch thực tế nếu có
-  const generateMilestonesFromPlan = (activePlan) => {
-    if (!activePlan || !activePlan.weeks || !Array.isArray(activePlan.weeks)) {
+  const generateMilestonesFromPlan = (activePlan, planDetails) => {
+    const weeksData = planDetails?.weeks || activePlan?.weeks;
+    const startDate = activePlan?.start_date ? new Date(activePlan.start_date) : new Date();
+    
+    if (!weeksData || !Array.isArray(weeksData)) {
       return plan.milestones || [];
     }
 
     const currentDate = new Date();
-    const startDate = activePlan.startDate ? new Date(activePlan.startDate) : currentDate;
     
-    return activePlan.weeks.map((week, index) => {
+    return weeksData.map((week, index) => {
       const weekStartDate = new Date(startDate);
       weekStartDate.setDate(startDate.getDate() + (index * 7));
       const weekEndDate = new Date(weekStartDate);
@@ -75,7 +90,7 @@ const ProfilePlan = ({ planData = {}, activePlan = null }) => {
     });
   };
 
-  const milestones = activePlan ? generateMilestonesFromPlan(activePlan) : (plan.milestones || []);
+  const milestones = activePlan ? generateMilestonesFromPlan(activePlan, planDetails) : (plan.milestones || []);
   return (
     <div className="simple-plan">      <div className="current-plan">
         <div className="plan-strategy">
@@ -91,17 +106,18 @@ const ProfilePlan = ({ planData = {}, activePlan = null }) => {
           <strong>{plan.startDate}</strong>
         </div>
         
-        {activePlan && activePlan.initialCigarettes && (
+        {(activePlan?.initial_cigarettes || planDetails?.initialCigarettes) && (
           <div className="plan-initial">
             <h3>Thông tin ban đầu</h3>
-            <p>Số điếu/ngày trước khi cai: <strong>{activePlan.initialCigarettes} điếu</strong></p>
-            {activePlan.packPrice && (
-              <p>Giá gói thuốc: <strong>{activePlan.packPrice.toLocaleString()} VNĐ</strong></p>
+            <p>Số điếu/ngày trước khi cai: <strong>{plan.initialCigarettes} điếu</strong></p>
+            {(planDetails?.packPrice || activePlan?.packPrice) && (
+              <p>Giá gói thuốc: <strong>{(planDetails?.packPrice || activePlan?.packPrice).toLocaleString()} VNĐ</strong></p>
             )}
-            {activePlan.weeks && activePlan.weeks.length > 0 && (
-              <p>Thời gian kế hoạch: <strong>{activePlan.weeks.length} tuần</strong></p>
+            {plan.weeks && plan.weeks.length > 0 && (
+              <p>Thời gian kế hoạch: <strong>{plan.weeks.length} tuần</strong></p>
             )}
-          </div>        )}
+          </div>
+        )}
         
         <div className="milestones">
           <h3>Cột mốc theo tuần</h3>
