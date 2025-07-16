@@ -10,7 +10,8 @@ import {
     getChartData,
     createCheckinByUserId,
     updateCheckinByUserId,
-    getProgressByUserId
+    getProgressByUserId,
+    clearUserProgress
 } from '../controllers/progressController.js';
 
 const router = express.Router();
@@ -40,6 +41,9 @@ router.put('/checkin/:date', authenticateToken, updateCheckin);
 
 // DELETE /api/progress/checkin/:date - Delete checkin for specific date
 router.delete('/checkin/:date', authenticateToken, deleteCheckin);
+
+// DELETE /api/progress/user/:userId/clear - Clear all progress for specific user
+router.delete('/user/:userId/clear', authenticateToken, clearUserProgress);
 
 // GET /api/progress/stats - Get progress statistics
 router.get('/stats', authenticateToken, getProgressStats);

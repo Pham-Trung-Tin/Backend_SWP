@@ -821,3 +821,38 @@ export const getProgressByUserId = async (req, res) => {
         return sendError(res, 'Failed to retrieve progress data', 500);
     }
 };
+
+// DELETE /api/progress/user/:userId/clear - Clear all progress for specific user
+export const clearUserProgress = async (req, res) => {
+    if (!req.user || !req.user.id) {
+        return sendError(res, 'Authentication required', 401);
+    }
+
+    try {
+        const userId = req.params.userId;
+        
+        // Security check: user can only clear their own progress
+        if (parseInt(userId) !== req.user.id) {
+            return sendError(res, 'You can only clear your own progress data', 403);
+        }
+
+        console.log(`🔍 Clearing all progress for user ${userId}`);
+
+        // Delete all progress entries for this user
+        const [result] = await pool.execute(
+            'DELETE FROM daily_progress WHERE smoker_id = ?',
+            [userId]
+        );
+
+        console.log(`✅ Deleted ${result.affectedRows} progress entries for user ${userId}`);
+        
+        return sendSuccess(res, 'All progress data cleared successfully', {
+            deletedCount: result.affectedRows,
+            userId: parseInt(userId)
+        });
+
+    } catch (error) {
+        console.error('❌ Error clearing user progress:', error);
+        return sendError(res, 'Failed to clear progress data', 500);
+    }
+};

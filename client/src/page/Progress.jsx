@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import QuitProgressChart from '../components/QuitProgressChart';
 import DailyCheckin from '../components/DailyCheckin';
 import ProgressDashboard from '../components/ProgressDashboard';
 import ResetCheckinData from '../components/ResetCheckinData';
@@ -937,7 +936,7 @@ export default function Progress() {
           userPlan={userPlan} 
           completionDate={completionData?.completionDate || new Date().toISOString()}
           dashboardStats={dashboardStats}
-          actualProgress={actualProgress} // Truyền dữ liệu thực tế vào ProgressDashboard
+          actualProgress={actualProgress} // Debug: {actualProgress?.length || 0} mục
           onDataReset={() => {
             // Reset data & recalculate
             localStorage.removeItem('dashboardStats');
@@ -945,6 +944,25 @@ export default function Progress() {
             recalculateStatistics();
           }}
         />
+        
+        {/* Debug info */}
+        {actualProgress && actualProgress.length > 0 && (
+          <div style={{
+            marginTop: '20px',
+            padding: '10px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '5px',
+            fontSize: '12px'
+          }}>
+            <strong>Debug - Dữ liệu actualProgress:</strong>
+            <br />
+            Tổng số mục: {actualProgress.length}
+            <br />
+            Mục đầu tiên: {actualProgress[0] ? `${actualProgress[0].date}: ${actualProgress[0].actualCigarettes}/${actualProgress[0].targetCigarettes}` : 'N/A'}
+            <br />
+            Mục cuối cùng: {actualProgress[actualProgress.length - 1] ? `${actualProgress[actualProgress.length - 1].date}: ${actualProgress[actualProgress.length - 1].actualCigarettes}/${actualProgress[actualProgress.length - 1].targetCigarettes}` : 'N/A'}
+          </div>
+        )}
     </div>
   );
 }

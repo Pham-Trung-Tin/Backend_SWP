@@ -21,9 +21,17 @@ const progressService = {
       // Calculate statistics based on checkin data
       const targetCigs = parseInt(checkinData.targetCigarettes || 0);
       const actualCigs = parseInt(checkinData.actualCigarettes || 0);
+      const initialCigs = parseInt(checkinData.initialCigarettes || checkinData.dailyCigarettes || 50); // Số điếu ban đầu hút 1 ngày
       
-      // Calculate cigarettes avoided
-      const cigarettesAvoided = Math.max(0, targetCigs - actualCigs);
+      // Calculate cigarettes avoided - FIXED: Dùng số điếu ban đầu - số điếu thực tế hút
+      const cigarettesAvoided = Math.max(0, initialCigs - actualCigs);
+      
+      console.log('🔍 Cigarettes calculation:', {
+        initialCigs,
+        actualCigs,
+        targetCigs,
+        cigarettesAvoided
+      });
       
       // Calculate money saved (assuming average cost per cigarette)
       const costPerCigarette = checkinData.packPrice ? (checkinData.packPrice / 20) : 1250; // 25,000 VND per pack of 20
@@ -31,7 +39,7 @@ const progressService = {
       
       // Calculate health score (simple formula based on cigarettes avoided)
       // 0-100 scale where 0 = smoked all cigarettes, 100 = avoided all cigarettes
-      const healthScore = targetCigs > 0 ? Math.round((cigarettesAvoided / targetCigs) * 100) : 0;
+      const healthScore = initialCigs > 0 ? Math.round((cigarettesAvoided / initialCigs) * 100) : 0;
       
       const newFormatData = {
         date: checkinData.date,
@@ -96,9 +104,17 @@ const progressService = {
       // Calculate statistics based on checkin data
       const targetCigs = parseInt(checkinData.targetCigarettes || 0);
       const actualCigs = parseInt(checkinData.actualCigarettes || 0);
+      const initialCigs = parseInt(checkinData.initialCigarettes || checkinData.dailyCigarettes || 50); // Số điếu ban đầu hút 1 ngày
       
-      // Calculate cigarettes avoided
-      const cigarettesAvoided = Math.max(0, targetCigs - actualCigs);
+      // Calculate cigarettes avoided - FIXED: Dùng số điếu ban đầu - số điếu thực tế hút
+      const cigarettesAvoided = Math.max(0, initialCigs - actualCigs);
+      
+      console.log('🔍 Update cigarettes calculation:', {
+        initialCigs,
+        actualCigs,
+        targetCigs,
+        cigarettesAvoided
+      });
       
       // Calculate money saved (assuming average cost per cigarette)
       const costPerCigarette = checkinData.packPrice ? (checkinData.packPrice / 20) : 1250; // 25,000 VND per pack of 20
@@ -106,7 +122,7 @@ const progressService = {
       
       // Calculate health score (simple formula based on cigarettes avoided)
       // 0-100 scale where 0 = smoked all cigarettes, 100 = avoided all cigarettes
-      const healthScore = targetCigs > 0 ? Math.round((cigarettesAvoided / targetCigs) * 100) : 0;
+      const healthScore = initialCigs > 0 ? Math.round((cigarettesAvoided / initialCigs) * 100) : 0;
       
       const updatedData = {
         targetCigarettes: targetCigs,
@@ -589,10 +605,21 @@ const progressService = {
       // Calculate statistics
       const targetCigs = parseInt(checkinData.targetCigarettes || 0);
       const actualCigs = parseInt(checkinData.actualCigarettes || 0);
-      const cigarettesAvoided = Math.max(0, targetCigs - actualCigs);
+      const initialCigs = parseInt(checkinData.initialCigarettes || checkinData.dailyCigarettes || 50); // Số điếu ban đầu hút 1 ngày
+      
+      // Calculate cigarettes avoided - FIXED: Dùng số điếu ban đầu - số điếu thực tế hút
+      const cigarettesAvoided = Math.max(0, initialCigs - actualCigs);
+      
+      console.log('🔍 CreateCheckinByUserId cigarettes calculation:', {
+        initialCigs,
+        actualCigs,
+        targetCigs,
+        cigarettesAvoided
+      });
+      
       const costPerCigarette = checkinData.packPrice ? (checkinData.packPrice / 20) : 1250;
       const moneySaved = cigarettesAvoided * costPerCigarette;
-      const healthScore = targetCigs > 0 ? Math.round((cigarettesAvoided / targetCigs) * 100) : 0;
+      const healthScore = initialCigs > 0 ? Math.round((cigarettesAvoided / initialCigs) * 100) : 0;
       
       const dataToSend = {
         date: checkinData.date,
@@ -656,6 +683,107 @@ const progressService = {
     } catch (error) {
       console.error('❌ Error in getProgressByUserId:', error);
       throw error;
+    }
+  },
+
+  // Clear all progress data for current user
+  clearUserProgress: async () => {
+    try {
+      // Lấy userId từ getCurrentUserId
+      const userId = getCurrentUserId();
+      const token = getAuthToken();
+      
+      if (!userId || !token) {
+        console.warn('⚠️ User not logged in, cannot clear progress');
+        throw new Error('User not logged in');
+      }
+      
+      console.log('🔍 Clearing all progress for userId:', userId);
+      
+      // Gọi API để xóa tất cả progress của user
+      const response = await axios.delete(`${API_URL}/user/${userId}/clear`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ All progress cleared successfully:', response.data);
+      
+      // Clear localStorage progress data
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('checkin_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      return response.data;
+      
+    } catch (error) {
+      console.error('❌ Error clearing user progress:', error);
+      
+      // Fallback: Clear localStorage anyway
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('checkin_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      throw error;
+    }
+  },
+
+  // Force clear all progress data (both database and localStorage)
+  forceCleanAllProgress: async () => {
+    try {
+      console.log('🔍 Force cleaning all progress data...');
+      
+      // 1. Try to clear database via API
+      try {
+        await progressService.clearUserProgress();
+        console.log('✅ Database progress cleared');
+      } catch (apiError) {
+        console.warn('⚠️ Could not clear database progress:', apiError);
+      }
+      
+      // 2. Clear localStorage
+      try {
+        const keys = Object.keys(localStorage);
+        let cleared = 0;
+        keys.forEach(key => {
+          if (key.startsWith('checkin_')) {
+            localStorage.removeItem(key);
+            cleared++;
+          }
+        });
+        console.log(`✅ Cleared ${cleared} localStorage progress entries`);
+      } catch (localStorageError) {
+        console.warn('⚠️ Could not clear localStorage:', localStorageError);
+      }
+      
+      // 3. Clear sessionStorage
+      try {
+        const sessionKeys = Object.keys(sessionStorage);
+        let sessionCleared = 0;
+        sessionKeys.forEach(key => {
+          if (key.startsWith('checkin_')) {
+            sessionStorage.removeItem(key);
+            sessionCleared++;
+          }
+        });
+        console.log(`✅ Cleared ${sessionCleared} sessionStorage progress entries`);
+      } catch (sessionStorageError) {
+        console.warn('⚠️ Could not clear sessionStorage:', sessionStorageError);
+      }
+      
+      console.log('✅ Force clean completed');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error in force clean:', error);
+      return false;
     }
   },
 };

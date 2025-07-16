@@ -8,6 +8,7 @@ const DailyCheckin = ({ onProgressUpdate }) => {
         date: new Date().toISOString().split('T')[0],
         targetCigarettes: 0, // Sẽ được tính từ kế hoạch thực tế của user
         actualCigarettes: 0,
+        initialCigarettes: 0, // Sẽ được lấy từ plan của user, mặc định là 0
         notes: ''
     });
 
@@ -51,6 +52,41 @@ const DailyCheckin = ({ onProgressUpdate }) => {
                     }
                     
                     setCurrentPlan(plan);
+                    
+                    // Lấy số điếu ban đầu từ plan
+                    let initialCigs = 0; // Default fallback - sẽ được lấy từ plan thực tế
+                    console.log('🔍 DailyCheckin - Plan structure:', plan);
+                    
+                    // Ưu tiên lấy từ initialCigarettes trực tiếp
+                    if (plan.initialCigarettes) {
+                        initialCigs = plan.initialCigarettes;
+                        console.log('🔍 DailyCheckin - Got from plan.initialCigarettes:', initialCigs);
+                    } else if (plan.initial_cigarettes) {
+                        initialCigs = plan.initial_cigarettes;
+                        console.log('🔍 DailyCheckin - Got from plan.initial_cigarettes:', initialCigs);
+                    } else if (plan.dailyCigarettes) {
+                        initialCigs = plan.dailyCigarettes;
+                        console.log('🔍 DailyCheckin - Got from plan.dailyCigarettes:', initialCigs);
+                    } else if (plan.daily_cigarettes) {
+                        initialCigs = plan.daily_cigarettes;
+                        console.log('🔍 DailyCheckin - Got from plan.daily_cigarettes:', initialCigs);
+                    } else if (plan.weeks && plan.weeks.length > 0) {
+                        // Lấy từ tuần đầu tiên
+                        const firstWeek = plan.weeks[0];
+                        initialCigs = firstWeek.amount || firstWeek.cigarettes || 
+                                    firstWeek.dailyCigarettes || firstWeek.daily_cigarettes || 
+                                    firstWeek.target || 0;
+                        console.log('🔍 DailyCheckin - Got from first week:', initialCigs);
+                    }
+                    
+                    // Update todayData với initialCigarettes
+                    setTodayData(prev => ({
+                        ...prev,
+                        initialCigarettes: initialCigs
+                    }));
+                    
+                    console.log('🔍 DailyCheckin - Set initialCigarettes:', initialCigs);
+                    
                     return plan;
                 }
             }
@@ -61,6 +97,41 @@ const DailyCheckin = ({ onProgressUpdate }) => {
             if (localPlan) {
                 const parsedPlan = JSON.parse(localPlan);
                 setCurrentPlan(parsedPlan);
+                
+                // Lấy số điếu ban đầu từ plan
+                let initialCigs = 0; // Default fallback - sẽ được lấy từ plan thực tế
+                console.log('🔍 DailyCheckin - LocalStorage plan structure:', parsedPlan);
+                
+                // Ưu tiên lấy từ initialCigarettes trực tiếp
+                if (parsedPlan.initialCigarettes) {
+                    initialCigs = parsedPlan.initialCigarettes;
+                    console.log('🔍 DailyCheckin - Got from parsedPlan.initialCigarettes:', initialCigs);
+                } else if (parsedPlan.initial_cigarettes) {
+                    initialCigs = parsedPlan.initial_cigarettes;
+                    console.log('🔍 DailyCheckin - Got from parsedPlan.initial_cigarettes:', initialCigs);
+                } else if (parsedPlan.dailyCigarettes) {
+                    initialCigs = parsedPlan.dailyCigarettes;
+                    console.log('🔍 DailyCheckin - Got from parsedPlan.dailyCigarettes:', initialCigs);
+                } else if (parsedPlan.daily_cigarettes) {
+                    initialCigs = parsedPlan.daily_cigarettes;
+                    console.log('🔍 DailyCheckin - Got from parsedPlan.daily_cigarettes:', initialCigs);
+                } else if (parsedPlan.weeks && parsedPlan.weeks.length > 0) {
+                    // Lấy từ tuần đầu tiên
+                    const firstWeek = parsedPlan.weeks[0];
+                    initialCigs = firstWeek.amount || firstWeek.cigarettes || 
+                                firstWeek.dailyCigarettes || firstWeek.daily_cigarettes || 
+                                firstWeek.target || 0;
+                    console.log('🔍 DailyCheckin - Got from first week:', initialCigs);
+                }
+                
+                // Update todayData với initialCigarettes
+                setTodayData(prev => ({
+                    ...prev,
+                    initialCigarettes: initialCigs
+                }));
+                
+                console.log('🔍 DailyCheckin - Set initialCigarettes from localStorage:', initialCigs);
+                
                 return parsedPlan;
             }
             
@@ -399,8 +470,46 @@ const DailyCheckin = ({ onProgressUpdate }) => {
             
             console.log('🔍 DailyCheckin handleSubmit - Using userId:', userId);
             
+            // Lấy số điếu ban đầu từ plan
+            let initialCigarettes = todayData.initialCigarettes || 0; // Lấy từ state trước
+            console.log('🔍 DailyCheckin handleSubmit - todayData.initialCigarettes:', todayData.initialCigarettes);
+            console.log('🔍 DailyCheckin handleSubmit - currentPlan:', currentPlan);
+            
+            // Nếu state không có hoặc = 0, lấy từ currentPlan
+            if (!initialCigarettes && currentPlan) {
+                if (currentPlan.initialCigarettes) {
+                    initialCigarettes = currentPlan.initialCigarettes;
+                    console.log('🔍 DailyCheckin handleSubmit - Got from currentPlan.initialCigarettes:', initialCigarettes);
+                } else if (currentPlan.initial_cigarettes) {
+                    initialCigarettes = currentPlan.initial_cigarettes;
+                    console.log('🔍 DailyCheckin handleSubmit - Got from currentPlan.initial_cigarettes:', initialCigarettes);
+                } else if (currentPlan.dailyCigarettes) {
+                    initialCigarettes = currentPlan.dailyCigarettes;
+                    console.log('🔍 DailyCheckin handleSubmit - Got from currentPlan.dailyCigarettes:', initialCigarettes);
+                } else if (currentPlan.daily_cigarettes) {
+                    initialCigarettes = currentPlan.daily_cigarettes;
+                    console.log('🔍 DailyCheckin handleSubmit - Got from currentPlan.daily_cigarettes:', initialCigarettes);
+                } else if (currentPlan.weeks && currentPlan.weeks.length > 0) {
+                    // Lấy từ tuần đầu tiên
+                    const firstWeek = currentPlan.weeks[0];
+                    initialCigarettes = firstWeek.amount || firstWeek.cigarettes || 
+                                      firstWeek.dailyCigarettes || firstWeek.daily_cigarettes || 
+                                      firstWeek.target || 0;
+                    console.log('🔍 DailyCheckin handleSubmit - Got from first week:', initialCigarettes);
+                }
+            }
+            
+            console.log('🔍 DailyCheckin handleSubmit - Final initial cigarettes:', initialCigarettes);
+            
+            // Thêm initialCigarettes vào todayData
+            const dataWithInitial = {
+                ...todayData,
+                initialCigarettes: initialCigarettes,
+                dailyCigarettes: initialCigarettes
+            };
+            
             console.log('Using userId for API call:', userId);
-            const result = await progressService.createCheckinByUserId(userId, todayData);
+            const result = await progressService.createCheckinByUserId(userId, dataWithInitial);
 
             setToast({ 
                 show: true, 
@@ -452,7 +561,14 @@ const DailyCheckin = ({ onProgressUpdate }) => {
     // Thêm hàm mới để cập nhật dữ liệu lên server
     const updateServerData = async (date) => {
         try {
-            const result = await progressService.updateCheckin(date, todayData);
+            // Thêm initialCigarettes vào dữ liệu
+            const dataWithInitial = {
+                ...todayData,
+                initialCigarettes: todayData.initialCigarettes || 0,
+                dailyCigarettes: todayData.initialCigarettes || 0
+            };
+            
+            const result = await progressService.updateCheckin(date, dataWithInitial);
             return true;
         } catch (error) {
             console.error('❌ Lỗi khi cập nhật dữ liệu checkin vào cơ sở dữ liệu:', error);
