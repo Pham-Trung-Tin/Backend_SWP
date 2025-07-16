@@ -573,7 +573,7 @@ function AppointmentList() {
               
               <div className="appointment-body">
                 <div className="coach-info">
-                  <img src={appointment.coachAvatar} alt={appointment.coachName} className="coach-avatar" />
+                  {/* <img src={appointment.coachAvatar} alt={appointment.coachName} className="coach-avatar" /> */}
                   <div className="coach-details">
                     <h3>{appointment.coachName}</h3>
                     <p>{appointment.coachRole}</p>
@@ -584,21 +584,23 @@ function AppointmentList() {
                   <div className="detail-item">
                     <FaCalendarAlt />
                     <span>{formatDate(appointment.date)}</span>
-                  </div>
-                  <div className="detail-item">
                     <FaClock />
                     <span>{appointment.time}</span>
-                  </div>
-                  <div className="detail-item">
                     <FaMapMarkerAlt />
                     <span>Tư vấn trực tuyến</span>
                   </div>
+                  {/* <div className="detail-item">
+                    
+                  </div>
+                  <div className="detail-item">
+                    
+                  </div> */}
                   {appointment.rating && (
                     <div className="detail-item rating-display">
                       <div className="stars-display">
                         {[...Array(5)].map((_, i) => (
                           <span key={i}>
-                            {i < appointment.rating.stars ? 
+                            {i < (typeof appointment.rating === 'object' ? appointment.rating.stars : appointment.rating) ? 
                               <FaStarSolid className="star-small filled" /> : 
                               <FaStarRegular className="star-small" />}
                           </span>
@@ -810,7 +812,7 @@ function AppointmentList() {
               <img 
                 src={appointmentToRate.coachAvatar} 
                 alt={appointmentToRate.coachName} 
-                className="coach-avatar-rating" 
+                // className="coach-avatar-rating" 
               />
               <div>
                 <h4>{appointmentToRate.coachName}</h4>
