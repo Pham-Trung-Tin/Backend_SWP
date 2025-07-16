@@ -615,6 +615,8 @@ export const createCheckinByUserId = async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error creating checkin by userId:', error);
+        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Error message:', error.message);
         return sendError(res, 'Failed to create daily checkin', 500);
     }
 };

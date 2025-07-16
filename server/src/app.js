@@ -130,15 +130,15 @@ app.use('/api/test', testRoutes);
 console.log('📌 Registering payment routes...');
 try {
   // Express routers can be functions with properties
-  if (paymentRoutes) {
+  if (paymentsRoutes) {
     // Đăng ký routes
-    app.use('/api/payments', paymentRoutes);
+    app.use('/api/payments', paymentsRoutes);
     console.log('✅ Payment routes registered successfully');
     
     // Log các routes đã đăng ký
-    if (paymentRoutes.stack && Array.isArray(paymentRoutes.stack)) {
-      console.log('Routes registered in paymentRoutes:');
-      paymentRoutes.stack.forEach(r => {
+    if (paymentsRoutes.stack && Array.isArray(paymentsRoutes.stack)) {
+      console.log('Routes registered in paymentsRoutes:');
+      paymentsRoutes.stack.forEach(r => {
         if (r.route) {
           const methods = Object.keys(r.route.methods).map(m => m.toUpperCase()).join(',');
           console.log(`  ${methods} ${r.route.path}`);
@@ -146,7 +146,7 @@ try {
       });
     }
   } else {
-    console.error('❌ paymentRoutes is not available');
+    console.error('❌ paymentsRoutes is not available');
   }
 } catch (error) {
   console.error('❌ Error registering payment routes:', error);

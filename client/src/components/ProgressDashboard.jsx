@@ -7,6 +7,17 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
   const [dashboardStats, setDashboardStats] = useState(null);
   const [milestones, setMilestones] = useState([]);  // Tính toán thống kê
   
+  // Debug logging để kiểm tra dữ liệu userPlan nhận được
+  console.log("🔍 ProgressDashboard nhận được userPlan:", {
+    userPlan: userPlan,
+    planName: userPlan?.plan_name || userPlan?.planName,
+    planId: userPlan?.id,
+    initialCigarettes: userPlan?.initial_cigarettes || userPlan?.initialCigarettes,
+    startDate: userPlan?.start_date || userPlan?.startDate,
+    totalWeeks: userPlan?.total_weeks || userPlan?.totalWeeks,
+    weeks: userPlan?.weeks ? userPlan.weeks.length : 0
+  });
+  
   // Tạo dữ liệu mẫu cho biểu đồ thực tế
   const generateSampleActualData = (plan) => {
     if (!plan || !plan.weeks || plan.weeks.length === 0) {

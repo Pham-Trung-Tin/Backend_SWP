@@ -69,7 +69,7 @@ const progressService = {
             timeout: 10000,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
+              'Authorization': `Bearer ${localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
             },
           }).post('/api/progress/checkin', newFormatData);
           console.log('Direct API call successful:', directResponse.data);
@@ -142,7 +142,7 @@ const progressService = {
             timeout: 10000,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
+              'Authorization': `Bearer ${localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
             },
           }).put(`/api/progress/checkin/${date}`, updatedData);
           console.log('Direct API call successful:', directResponse.data);
@@ -187,7 +187,7 @@ const progressService = {
             timeout: 10000,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
+              'Authorization': `Bearer ${localStorage.getItem('nosmoke_token') || sessionStorage.getItem('nosmoke_token') || localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')}`
             },
           }).get(`/api/progress/user/${date}`);
           console.log('Direct API call successful:', directResponse.data);
