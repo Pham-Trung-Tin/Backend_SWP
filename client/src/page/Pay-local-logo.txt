@@ -1,0 +1,15 @@
+// Alternative implementation using local logo
+// Save this if you want to use local logo instead
+
+// 1. Place zalopay-logo.png in client/src/assets/images/
+// 2. Import the logo:
+// import zaloPayLogo from '../assets/images/zalopay-logo.png';
+
+// 3. Replace the img tag with:
+// <img 
+//   src={zaloPayLogo} 
+//   alt="ZaloPay Logo" 
+//   className="zalopay-logo"
+// />
+
+// This ensures the logo is bundled with your app and doesn't depend on external URLs

@@ -43,12 +43,115 @@
   .payment-content {
     flex-direction: column;
   }
+  
+  .payment-methods-section {
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .zalopay-option {
+    padding: 1.5rem;
+  }
+  
+  .zalopay-info {
+    gap: 0.8rem;
+  }
+  
+  .zalopay-logo {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .zalopay-icon {
+    font-size: 1.8rem;
+  }
+  
+  .zalopay-details h3 {
+    font-size: 1.2rem;
+  }
+  
+  .payment-actions {
+    gap: 0.8rem;
+  }
+  
+  .payment-actions button {
+    padding: 0.8rem 1.5rem !important;
+    font-size: 1rem !important;
+  }
 }
 
 .payment-methods-section {
   flex: 2;
   padding: 2rem;
   border-right: 1px solid #f0f0f0;
+}
+
+/* ZaloPay specific styling */
+.zalopay-option {
+  background: linear-gradient(135deg, #0068FF 0%, #0052CC 100%);
+  border-radius: 12px;
+  padding: 2rem;
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 104, 255, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.zalopay-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 104, 255, 0.4);
+}
+
+.zalopay-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.zalopay-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background-color: white;
+  padding: 4px;
+  transition: transform 0.2s ease;
+}
+
+.zalopay-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Fallback styling if image fails to load */
+.zalopay-logo:after {
+  content: "";
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0068FF 0%, #0052CC 100%);
+  border-radius: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.zalopay-icon {
+  font-size: 2rem;
+  color: #ffffff;
+}
+
+.zalopay-details h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #ffffff;
+}
+
+.zalopay-details p {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin: 0;
+  color: #ffffff;
 }
 
 .payment-summary-section {
@@ -149,7 +252,7 @@ h2 {
   border-bottom: none;
   font-weight: 700;
   font-size: 1.2rem;
-  color: #3498db;
+  color: #0068FF;
 }
 
 .payment-agreement {
@@ -177,36 +280,47 @@ h2 {
   gap: 1rem;
 }
 
-.payment-button {
-  padding: 1rem;
-  background-color: #3498db;
+.payment-actions button:first-child {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #0068FF 0%, #0052CC 100%);
   color: white;
   border: none;
-  border-radius: 5px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  text-transform: none;
 }
 
-.payment-button:hover {
-  background-color: #2980b9;
+.payment-actions button:first-child:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0052CC 0%, #003d99 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 104, 255, 0.3);
 }
 
-.payment-button:disabled {
-  background-color: #95a5a6;
+.payment-actions button:first-child:disabled {
+  background: #95a5a6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.back-button {
-  padding: 1rem;
+.payment-actions button:last-child {
+  padding: 1rem 2rem;
   background-color: transparent;
-  color: #555;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+  color: #666;
+  border: 2px solid #ddd;
+  border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.payment-actions button:last-child:hover {
+  border-color: #bbb;
+  color: #444;
+  background-color: #f9f9f9;
 }
 
 .back-button:hover {
