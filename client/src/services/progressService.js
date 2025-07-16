@@ -1,4 +1,5 @@
 import axios from '../utils/axiosConfig';
+import { getCurrentUserId, getAuthToken } from '../utils/userUtils';
 
 // Endpoint cơ sở cho API progress
 const API_URL = '/api/progress';
@@ -205,6 +206,15 @@ const progressService = {
   // Lấy tất cả check-in của người dùng hiện tại
   getUserProgress: async (params = {}) => {
     try {
+      // Lấy userId từ getCurrentUserId
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ User not logged in, cannot fetch progress');
+        throw new Error('User not logged in');
+      }
+      
+      console.log('🔍 Getting user progress for userId:', userId);
+      
       // Lấy kế hoạch hiện tại để bổ sung mục tiêu
       let currentPlan = null;
       try {
@@ -238,11 +248,12 @@ const progressService = {
         console.log("Đã tạo bảng tra cứu mục tiêu từ kế hoạch:", planTargets);
       }
       
-      const response = await axios.get(`${API_URL}/user`, { params });
+      // Sử dụng API endpoint theo userId thay vì token-based
+      const response = await progressService.getProgressByUserId(userId, params);
       
       // Chuyển đổi dữ liệu từ cấu trúc mới sang định dạng mà frontend cần
-      if (response.data && response.data.data) {
-        response.data.data = response.data.data.map(item => {
+      if (response && response.data) {
+        response.data = response.data.map(item => {
           // Parse progress_data từ JSON
           const progressData = item.progress_data ? JSON.parse(item.progress_data) : {};
           const dateStr = item.date;
@@ -270,7 +281,7 @@ const progressService = {
         
         // Thêm các ngày chỉ có mục tiêu nhưng không có check-in nếu có kế hoạch
         if (Object.keys(planTargets).length > 0) {
-          const existingDates = new Set(response.data.data.map(item => item.date));
+          const existingDates = new Set(response.data.map(item => item.date));
           
           // Thêm mục tiêu cho các ngày không có check-in
           Object.entries(planTargets).forEach(([date, target]) => {
@@ -281,7 +292,7 @@ const progressService = {
               
               // Chỉ thêm các ngày từ ngày bắt đầu kế hoạch đến hôm nay
               if (targetDate <= today) {
-                response.data.data.push({
+                response.data.push({
                   id: null,
                   date: date,
                   targetCigarettes: target,
@@ -301,11 +312,11 @@ const progressService = {
           });
           
           // Sắp xếp lại dữ liệu theo ngày
-          response.data.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+          response.data.sort((a, b) => new Date(a.date) - new Date(b.date));
         }
       }
       
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error fetching user progress:', error);
       throw error;
@@ -315,15 +326,35 @@ const progressService = {
   // Lấy check-in cho một ngày cụ thể
   getCheckinByDate: async (date) => {
     try {
-      const response = await axios.get(`${API_URL}/user/${date}`);
+      // Lấy userId từ getCurrentUserId
+      const userId = getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ User not logged in, cannot fetch checkin');
+        return { data: null };
+      }
+      
+      console.log(`🔍 Getting checkin for userId ${userId} on date: ${date}`);
+      
+      // Sử dụng API endpoint theo userId
+      const response = await fetch(`/api/progress/${userId}/${date}`);
+      
+      if (response.status === 404) {
+        return { data: null };
+      }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} - ${data.message || 'Unknown error'}`);
+      }
       
       // Chuyển đổi dữ liệu từ cấu trúc mới sang định dạng mà frontend cần
-      if (response.data && response.data.data) {
-        const item = response.data.data;
+      if (data && data.data) {
+        const item = data.data;
         // Parse progress_data từ JSON
         const progressData = item.progress_data ? JSON.parse(item.progress_data) : {};
         
-        response.data.data = {
+        data.data = {
           id: item.id,
           date: item.date,
           // Lấy dữ liệu từ progress_data
@@ -341,12 +372,8 @@ const progressService = {
         };
       }
       
-      return response.data;
+      return data;
     } catch (error) {
-      // Nếu không tìm thấy check-in cho ngày này (404), trả về null thay vì lỗi
-      if (error.response && error.response.status === 404) {
-        return { data: null };
-      }
       console.error(`Error fetching checkin for ${date}:`, error);
       throw error;
     }
@@ -366,11 +393,25 @@ const progressService = {
   // Lấy số liệu thống kê tiến trình
   getProgressStats: async (days = 30) => {
     try {
+      // Lấy userId từ getCurrentUserId
+      const userId = getCurrentUserId();
+      const token = getAuthToken();
+      
+      if (!userId || !token) {
+        console.warn('⚠️ User not logged in, cannot fetch progress stats');
+        throw new Error('User not logged in');
+      }
+      
+      console.log('🔍 Getting progress stats for userId:', userId);
+      
+      // Sử dụng token-based API (vì chưa có userId-based endpoint)
       const response = await axios.get(`${API_URL}/stats`, {
-        params: { days }
+        params: { days },
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      // Bổ sung thêm các thống kê sức khỏe (nếu chưa có)
       const data = response.data;
       if (data && data.data) {
         // Tính toán thêm số ngày không hút thuốc (nếu chưa có)
@@ -396,6 +437,17 @@ const progressService = {
   // Lấy dữ liệu cho biểu đồ
   getChartData: async (params = {}) => {
     try {
+      // Lấy userId từ getCurrentUserId
+      const userId = getCurrentUserId();
+      const token = getAuthToken();
+      
+      if (!userId || !token) {
+        console.warn('⚠️ User not logged in, cannot fetch chart data');
+        throw new Error('User not logged in');
+      }
+      
+      console.log('🔍 Getting chart data for userId:', userId);
+      
       // Đảm bảo có type và days trong params
       const enhancedParams = {
         type: 'comprehensive', // Mặc định là lấy tất cả dữ liệu
@@ -416,12 +468,20 @@ const progressService = {
         console.warn("Không thể lấy được kế hoạch hiện tại:", planError);
       }
       
-      const response = await axios.get(`${API_URL}/chart-data`, { params: enhancedParams });
+      // Sử dụng token-based API
+      const response = await axios.get(`${API_URL}/chart-data`, {
+        params: enhancedParams,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = response.data;
       
       // Xử lý và định dạng dữ liệu cho biểu đồ
-      if (response.data && response.data.data) {
+      if (data && data.data) {
         // Đảm bảo dữ liệu được sắp xếp theo ngày
-        response.data.data = response.data.data
+        data.data = data.data
           .map(item => {
             return {
               date: item.date,
@@ -462,7 +522,7 @@ const progressService = {
           // Tạo mảng dữ liệu mới với đầy đủ mục tiêu
           const newData = [];
           allDates.forEach(date => {
-            const existingItem = response.data.data.find(item => item.date === date);
+            const existingItem = data.data.find(item => item.date === date);
             
             if (existingItem) {
               // Cập nhật mục tiêu nếu chưa có
@@ -485,15 +545,15 @@ const progressService = {
           });
           
           // Sắp xếp lại dữ liệu theo ngày
-          response.data.data = newData.sort((a, b) => new Date(a.date) - new Date(b.date));
+          data.data = newData.sort((a, b) => new Date(a.date) - new Date(b.date));
           console.log(`Đã cập nhật ${newData.length} mục dữ liệu biểu đồ với mục tiêu từ kế hoạch`);
         }
         
         // Tính toán thêm dữ liệu xu hướng nếu có nhiều hơn 2 điểm dữ liệu
-        if (response.data.data.length > 2) {
+        if (data.data.length > 2) {
           // Tính xu hướng hút thuốc (tăng/giảm)
-          const firstActual = response.data.data[0].actual;
-          const lastActual = response.data.data[response.data.data.length - 1].actual;
+          const firstActual = data.data[0].actual;
+          const lastActual = data.data[data.data.length - 1].actual;
           const trend = firstActual > lastActual ? 'decrease' : 
                       (firstActual < lastActual ? 'increase' : 'stable');
           
@@ -501,7 +561,7 @@ const progressService = {
           const changePercent = firstActual > 0 ? 
             Math.round(((lastActual - firstActual) / firstActual) * 100) : 0;
             
-          response.data.trend = {
+          data.trend = {
             direction: trend,
             percentage: Math.abs(changePercent),
             startValue: firstActual,
@@ -510,7 +570,7 @@ const progressService = {
         }
       }
       
-      return response.data;
+      return data;
     } catch (error) {
       console.error('Error fetching chart data:', error);
       throw error;

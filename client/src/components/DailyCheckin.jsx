@@ -381,6 +381,10 @@ const DailyCheckin = ({ onProgressUpdate }) => {
             // Lấy userId từ getCurrentUserId utility function
             const userId = getCurrentUserId();
             console.log('🔍 DailyCheckin handleSubmit - getCurrentUserId():', userId);
+            console.log('🔍 DailyCheckin handleSubmit - localStorage keys:', Object.keys(localStorage));
+            console.log('🔍 DailyCheckin handleSubmit - sessionStorage keys:', Object.keys(sessionStorage));
+            console.log('🔍 DailyCheckin handleSubmit - nosmoke_user:', localStorage.getItem('nosmoke_user'));
+            console.log('🔍 DailyCheckin handleSubmit - nosmoke_token:', localStorage.getItem('nosmoke_token') ? 'Present' : 'Missing');
             
             if (!userId) {
                 console.warn('⚠️ User not logged in, cannot save to database');
