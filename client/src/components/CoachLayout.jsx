@@ -63,6 +63,12 @@ function CoachLayout() {
               </button>
             </li>
             <li>
+              <button 
+                onClick={() => navigate('/coach/messages')}
+                className="nav-btn"
+              >
+                <FaComments /> Tin nhắn
+              </button>
             </li>
           </ul>
         </nav>

@@ -8,6 +8,7 @@ import Home from "./page/Home.jsx";
 import ProfilePage from "./page/Profile.jsx"; // Đổi tên từ Tools sang ProfilePage
 import ProgressPage from "./page/Progress.jsx"; // Import component Progress
 import MembershipDebugger from "./components/MembershipDebugger.jsx"; // Import component để debug membership
+
 import TestPage from "./page/TestPage.jsx"; // Thêm trang test đơn giản
 import Blog from "./page/Blog.jsx"; // Import component Blog
 import Login from "./page/Login.jsx"; // Import component Login
@@ -24,6 +25,7 @@ import UserProfile from "./page/User.jsx"; // Import UserProfile component
 import CoachLayout from "./components/CoachLayout.jsx"; // Import CoachLayout
 import CoachDashboard from "./page/coach/CoachDashboard.jsx"; // Import CoachDashboard
 import CoachBookings from "./page/coach/CoachBookings.jsx"; // Import CoachBookings
+import CoachMessaging from "./page/coach/CoachMessaging.jsx"; // Import CoachMessaging
 import { AuthProvider } from "./context/AuthContext.jsx"; // Import AuthProvider
 import { MembershipProvider } from "./context/MembershipContext.jsx"; // Import MembershipProvider
 import "./style.css";
@@ -339,6 +341,10 @@ const router = createBrowserRouter([
       {
         path: "bookings",
         element: <CoachBookings />
+      },
+      {
+        path: "messages",
+        element: <CoachMessaging />
       }
     ]
   },
@@ -385,6 +391,19 @@ const SimpleBackToTop = () => {
     </button>
   );
 };
+
+// Import debug utilities for development
+import debugAuth from "./utils/authDebug.js";
+import debugAuthNew from "./utils/authDebugNew.js";
+
+// Make debug utilities available globally in development
+if (import.meta.env.DEV) {
+  window.debugAuth = debugAuth;
+  window.debugAuthNew = debugAuthNew;
+  console.log('🔧 Debug utilities loaded:');
+  console.log('- window.debugAuth.fullReport() - Original debug functions');
+  console.log('- window.debugAuthNew.fullAuthReport() - Enhanced debug functions');
+}
 
 export default function App() {
   return (

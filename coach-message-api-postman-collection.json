@@ -1,0 +1,464 @@
+{
+    "info": {
+        "_postman_id": "d78e1a5a-9f2e-4b2a-8d15-6f3a3e0fb233",
+        "name": "Coach Messaging API Tests",
+        "description": "Collection để test API tin nhắn giữa coach và user",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login as User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = JSON.parse(responseBody);",
+                                    "if (jsonData.token) {",
+                                    "    pm.environment.set(\"userToken\", jsonData.token);",
+                                    "    console.log(\"User token saved\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"{{userEmail}}\",\n    \"password\": \"{{userPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Đăng nhập với tài khoản user thông thường"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Login as Coach",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = JSON.parse(responseBody);",
+                                    "if (jsonData.token) {",
+                                    "    pm.environment.set(\"coachToken\", jsonData.token);",
+                                    "    console.log(\"Coach token saved\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"{{coachEmail}}\",\n    \"password\": \"{{coachPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Đăng nhập với tài khoản coach"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Các API liên quan đến xác thực"
+        },
+        {
+            "name": "Messages API",
+            "item": [
+                {
+                    "name": "Get Messages (User)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{userToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Lấy tin nhắn của một cuộc hẹn cụ thể (vai trò User)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Messages (Coach)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{coachToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Lấy tin nhắn của một cuộc hẹn cụ thể (vai trò Coach)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message (User)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{userToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"text\": \"Xin chào coach, tôi có một câu hỏi về buổi hẹn sắp tới.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Gửi tin nhắn đến coach (vai trò User)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Send Message (Coach)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{coachToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"text\": \"Chào bạn, tôi có thể giúp gì cho bạn?\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Gửi tin nhắn đến user (vai trò Coach)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Mark Messages as Read (User)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{userToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages",
+                                "read"
+                            ]
+                        },
+                        "description": "Đánh dấu tin nhắn đã đọc (vai trò User)"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Mark Messages as Read (Coach)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{coachToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}/messages/read",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}",
+                                "messages",
+                                "read"
+                            ]
+                        },
+                        "description": "Đánh dấu tin nhắn đã đọc (vai trò Coach)"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Các API liên quan đến tin nhắn"
+        },
+        {
+            "name": "Appointments API",
+            "item": [
+                {
+                    "name": "Get User Appointments",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{userToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/user",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "user"
+                            ]
+                        },
+                        "description": "Lấy danh sách cuộc hẹn của user"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Coach Appointments",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{coachToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/coach",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "coach"
+                            ]
+                        },
+                        "description": "Lấy danh sách cuộc hẹn của coach"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Appointment Detail",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{userToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "appointments",
+                                "{{appointmentId}}"
+                            ]
+                        },
+                        "description": "Lấy chi tiết một cuộc hẹn cụ thể"
+                    },
+                    "response": []
+                }
+            ],
+            "description": "Các API liên quan đến cuộc hẹn, cần thiết để lấy appointmentId cho việc test tin nhắn"
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3001",
+            "type": "string"
+        },
+        {
+            "key": "userEmail",
+            "value": "user@example.com",
+            "type": "string"
+        },
+        {
+            "key": "userPassword",
+            "value": "password123",
+            "type": "string"
+        },
+        {
+            "key": "coachEmail",
+            "value": "coach@example.com",
+            "type": "string"
+        },
+        {
+            "key": "coachPassword",
+            "value": "password123",
+            "type": "string"
+        },
+        {
+            "key": "appointmentId",
+            "value": "1",
+            "type": "string"
+        }
+    ]
+}

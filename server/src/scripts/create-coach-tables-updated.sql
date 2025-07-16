@@ -1,0 +1,97 @@
+-- -- Script SQL để tạo các bảng liên quan đến Coach
+-- -- Lưu ý: Sử dụng bảng users với role='coach' thay vì tạo bảng coaches riêng
+
+-- -- Bảng lịch sẵn có của coach (khung giờ và ngày làm việc)
+-- CREATE TABLE IF NOT EXISTS coach_availability (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     coach_id INT NOT NULL,
+--     day_of_week TINYINT NOT NULL COMMENT 'Ngày trong tuần (1=Monday, 7=Sunday)',
+--     start_time TIME NOT NULL COMMENT 'Giờ bắt đầu làm việc',
+--     end_time TIME NOT NULL COMMENT 'Giờ kết thúc làm việc',
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--     FOREIGN KEY (coach_id) REFERENCES users(id) ON DELETE CASCADE,
+--     UNIQUE KEY unique_coach_time (coach_id, day_of_week, start_time, end_time)
+-- );
+
+-- -- Bảng cuộc hẹn với coach
+-- CREATE TABLE IF NOT EXISTS appointment (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     coach_id INT NOT NULL COMMENT 'ID của user với role coach',
+--     user_id INT NOT NULL COMMENT 'ID của người dùng đặt lịch',
+--     appointment_time DATETIME NOT NULL COMMENT 'Thời gian cuộc hẹn',
+--     duration_minutes INT NOT NULL DEFAULT 30 COMMENT 'Thời lượng cuộc hẹn tính bằng phút',
+--     status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending',
+--     notes TEXT,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--     FOREIGN KEY (coach_id) REFERENCES users(id) ON DELETE CASCADE,
+--     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+-- );
+
+-- -- Bảng đánh giá coach (feedback)
+-- CREATE TABLE IF NOT EXISTS feedback (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     coach_id INT NOT NULL,
+--     smoker_id INT NOT NULL COMMENT 'ID của người dùng đánh giá (smoker)',
+--     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+--     content TEXT,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     FOREIGN KEY (coach_id) REFERENCES users(id) ON DELETE CASCADE,
+--     FOREIGN KEY (smoker_id) REFERENCES users(id) ON DELETE CASCADE,
+--     UNIQUE KEY unique_feedback (coach_id, smoker_id) COMMENT 'Một smoker chỉ đánh giá một coach một lần'
+-- );
+
+-- -- Cập nhật bảng users để thêm các trường thông tin cho coach nếu cần
+-- -- Lưu ý: Chỉ chạy nếu bạn cần thêm các trường này vào bảng users
+-- ALTER TABLE users
+-- ADD COLUMN IF NOT EXISTS bio TEXT,
+-- ADD COLUMN IF NOT EXISTS specialization VARCHAR(255),
+-- ADD COLUMN IF NOT EXISTS experience INT COMMENT 'Years of experience';
+
+-- -- Dữ liệu mẫu cho coach_availability
+-- INSERT INTO coach_availability (coach_id, day_of_week, start_time, end_time) VALUES
+-- (1, 1, '08:00:00', '10:00:00'),
+-- (1, 1, '14:00:00', '16:00:00'),
+-- (1, 2, '08:00:00', '12:00:00'),
+-- (1, 3, '13:00:00', '17:00:00'),
+-- (1, 4, '08:00:00', '12:00:00'),
+-- (1, 5, '14:00:00', '18:00:00'),
+-- (2, 1, '09:00:00', '11:00:00'),
+-- (2, 2, '14:00:00', '16:00:00'),
+-- (2, 3, '09:00:00', '12:00:00'),
+-- (2, 4, '14:00:00', '17:00:00'),
+-- (2, 5, '10:00:00', '14:00:00'),
+-- (2, 6, '09:00:00', '12:00:00'),
+-- (3, 2, '08:00:00', '10:00:00'),
+-- (3, 3, '14:00:00', '16:00:00'),
+-- (3, 4, '08:00:00', '12:00:00'),
+-- (3, 5, '13:00:00', '17:00:00'),
+-- (3, 6, '09:00:00', '13:00:00'),
+-- -- Thêm lịch làm việc cho coach có ID 4 với khung giờ buổi tối
+-- (4, 1, '09:00:00', '22:00:00'), -- Thứ Hai - đến tận 10 giờ tối
+-- (4, 2, '09:00:00', '22:00:00'), -- Thứ Ba - đến tận 10 giờ tối
+-- (4, 3, '09:00:00', '22:00:00'), -- Thứ Tư - đến tận 10 giờ tối
+-- (4, 4, '10:00:00', '22:00:00'), -- Thứ Năm - đến tận 10 giờ tối
+-- (4, 5, '10:00:00', '22:00:00'), -- Thứ Sáu - đến tận 10 giờ tối
+-- (4, 6, '08:00:00', '22:00:00'), -- Thứ Bảy - đến tận 10 giờ tối
+-- (4, 7, '13:00:00', '22:00:00'), -- Chủ Nhật - buổi chiều đến tối
+-- -- Thêm lịch làm việc cho coach có ID 13
+-- (13, 1, '08:00:00', '17:00:00'),
+-- (13, 2, '08:00:00', '17:00:00'),
+-- (13, 3, '08:00:00', '17:00:00'),
+-- (13, 4, '08:00:00', '17:00:00'),
+-- (13, 5, '08:00:00', '17:00:00');
+
+-- -- Dữ liệu mẫu cho các cuộc hẹn
+-- INSERT INTO appointment (coach_id, user_id, appointment_time, duration_minutes, status, notes) VALUES
+-- (1, 4, '2025-07-10 09:00:00', 30, 'confirmed', 'Cuộc hẹn tư vấn đầu tiên'),
+-- (2, 5, '2025-07-11 10:00:00', 45, 'pending', 'Cần thảo luận về kế hoạch cai thuốc'),
+-- (3, 6, '2025-07-12 14:00:00', 60, 'confirmed', 'Đánh giá tiến độ sau 2 tuần');
+
+-- -- Dữ liệu mẫu cho các đánh giá
+-- INSERT INTO feedback (coach_id, smoker_id, rating, content) VALUES
+-- (1, 7, 5, 'Coach A đã giúp tôi bỏ thuốc thành công sau 15 năm hút. Phương pháp của anh rất hiệu quả và dễ thực hiện.'),
+-- (1, 8, 4, 'Tôi đã giảm được 90% lượng thuốc hút sau 2 tháng làm việc với coach. Rất hài lòng với kết quả.'),
+-- (2, 7, 5, 'Coach B có phương pháp tâm lý rất hiệu quả, giúp tôi vượt qua cơn thèm thuốc một cách dễ dàng.'),
+-- (3, 9, 5, 'Sau 3 tháng tập luyện với coach C, chức năng phổi của tôi đã cải thiện đáng kể. Cảm ơn coach rất nhiều!');

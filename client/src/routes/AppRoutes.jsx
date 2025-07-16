@@ -8,6 +8,8 @@ import Pay from '../page/Pay';
 import PaymentSuccess from '../page/PaymentSuccess';
 import CoachBookings from '../page/coach/CoachBookings';
 import CoachDashboard from '../page/coach/CoachDashboard';
+import CoachDashboardDemo from '../page/coach/CoachDashboardDemo';
+import CoachDashboardNew from '../page/coach/CoachDashboardNew';
 import Chat from '../page/Chat';
 
 /**
@@ -57,6 +59,14 @@ const router = createBrowserRouter([
   {
     path: "/coach-dashboard",
     element: <Layout><CoachDashboard /></Layout>,
+  },
+  {
+    path: "/coach-dashboard-demo",
+    element: <Layout><CoachDashboardDemo /></Layout>,
+  },
+  {
+    path: "/coach-dashboard-new",
+    element: <Layout><CoachDashboardNew /></Layout>,
   },
   {
     path: "/chat",

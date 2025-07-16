@@ -5,6 +5,17 @@ import { useAuth } from '../context/AuthContext';
 import './AppointmentList.css';
 import ProtectedCoachChat from './ProtectedCoachChat';
 import RequireMembership from './RequireMembership';
+import { 
+  getUserAppointments, 
+  cancelAppointment, 
+  deleteAppointment, 
+  rateAppointment,
+  getAppointmentMessages,
+  sendAppointmentMessage,
+  markMessagesAsRead,
+  getUnreadMessageCounts,
+  updateAppointmentStatus
+} from '../utils/userAppointmentApi';
 
 // Component hiển thị cho thẻ lịch hẹn đã hủy
 const CancelledAppointmentCard = ({ appointment, onRebook, onDelete }) => {
@@ -67,7 +78,9 @@ function AppointmentList() {
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [showRebookModal, setShowRebookModal] = useState(false);
   const [appointmentToRebook, setAppointmentToRebook] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);  const [appointmentToDelete, setAppointmentToDelete] = useState(null);  const [showToast, setShowToast] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState(null);
+  const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -76,62 +89,69 @@ function AppointmentList() {
   const [ratingHover, setRatingHover] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const { user } = useAuth(); // Lấy thông tin user từ AuthContext
-  const navigate = useNavigate();useEffect(() => {
-    // Fetch appointments from localStorage
-    const fetchAppointments = () => {
-      setLoading(true);
-      const storedAppointments = JSON.parse(localStorage.getItem('appointments')) || [];
-      
-      // Log ngày hiện tại để debug
-      console.log('Ngày hiện tại:', new Date().toLocaleDateString('vi-VN'));
-      
-      // Sort appointments by date (newest first)
-      const sortedAppointments = storedAppointments.sort((a, b) => {
-        const dateA = new Date(`${a.date.split('T')[0]}T${a.time}`);
-        const dateB = new Date(`${b.date.split('T')[0]}T${b.time}`);
-        return dateB - dateA;
-      });
-      
-      // Check if there's a new appointment (most recently added)
-      if (sortedAppointments.length > 0) {
-        setNewAppointmentId(sortedAppointments[0].id);
-        
-        // Set filter to "upcoming" to show the new appointment
-        setFilter('upcoming');
-        
-        // After 5 seconds, remove the highlight
-        setTimeout(() => {
-          setNewAppointmentId(null);
-        }, 5000);
+  const navigate = useNavigate();  useEffect(() => {
+    // Fetch appointments from API
+    const fetchAppointments = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
       }
-      
-      setAppointments(sortedAppointments);
-      setLoading(false);
+
+      setLoading(true);
+      try {
+        const response = await getUserAppointments();
+        const appointmentsData = response.data || [];
+        
+        // Log ngày hiện tại để debug
+        console.log('Ngày hiện tại:', new Date().toLocaleDateString('vi-VN'));
+        
+        // Sort appointments by date (newest first)
+        const sortedAppointments = appointmentsData.sort((a, b) => {
+          const dateA = new Date(a.appointment_time);
+          const dateB = new Date(b.appointment_time);
+          return dateB - dateA;
+        });
+        
+        // Check if there's a new appointment (most recently added)
+        if (sortedAppointments.length > 0) {
+          setNewAppointmentId(sortedAppointments[0].id);
+          
+          // Set filter to "upcoming" to show the new appointment
+          setFilter('upcoming');
+          
+          // After 5 seconds, remove the highlight
+          setTimeout(() => {
+            setNewAppointmentId(null);
+          }, 5000);
+        }
+        
+        setAppointments(sortedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        // Fallback to empty array
+        setAppointments([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAppointments();
-  }, []);  // Filter appointments based on the selected filter
+  }, [user]);  // Filter appointments based on the selected filter
   const filteredAppointments = appointments.filter(appointment => {
     // Lấy ngày giờ hiện tại
     const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset giờ về 00:00:00 cho việc so sánh ngày
     
-    // Lấy ngày giờ lịch hẹn
-    const [hours, minutes] = appointment.time.split(':').map(Number);
-    const appointmentDate = new Date(appointment.date);
-    appointmentDate.setHours(hours, minutes, 0, 0);
-    
-    // Cũng tạo một bản sao ngày lịch hẹn với giờ reset để so sánh ngày
-    const appointmentDay = new Date(appointmentDate);
-    appointmentDay.setHours(0, 0, 0, 0);
+    // Lấy ngày giờ lịch hẹn từ appointment_time (ISO format từ backend)
+    const appointmentDate = new Date(appointment.appointment_time);
     
     // Kiểm tra xem lịch hẹn đã hoàn thành chưa
-    const isCompleted = appointment.status === 'completed' || appointment.completed === true;
+    const isCompleted = appointment.status === 'completed';
+    const isCancelled = appointment.status === 'cancelled';
     
     // Đã hủy hoặc đã hoàn thành chỉ hiển thị trong "Tất cả" và "Đã qua", không hiển thị trong "Sắp tới"
-    if (appointment.status === 'cancelled' || isCompleted) {
+    if (isCancelled || isCompleted) {
       if (filter === 'upcoming') {
         return false; // Lịch đã hủy hoặc đã hoàn thành không hiển thị trong "Sắp tới"
       } else if (filter === 'past') {
@@ -147,7 +167,7 @@ function AppointmentList() {
       return appointmentDate >= now;
     } else if (filter === 'past') {
       // Filter "Đã qua": Hiển thị lịch hẹn có thời gian < thời gian hiện tại hoặc đã hủy hoặc đã hoàn thành
-      return appointmentDate < now || appointment.status === 'cancelled' || isCompleted;
+      return appointmentDate < now || isCancelled || isCompleted;
     }
     
     return true; // 'all' filter: hiển thị tất cả
@@ -232,31 +252,39 @@ function AppointmentList() {
   };
 
   // Handle cancel appointment
-  const handleCancelAppointment = () => {
+  const handleCancelAppointment = async () => {
     if (appointmentToCancel) {
-      const updatedAppointments = appointments.map(appointment => {
-        if (appointment.id === appointmentToCancel) {
-          return { ...appointment, status: 'cancelled' };
-        }
-        return appointment;
-      });
-      
-      setAppointments(updatedAppointments);
-      localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-      closeCancelModal();
+      try {
+        await cancelAppointment(appointmentToCancel, 'User cancelled appointment');
+        
+        // Update local state
+        const updatedAppointments = appointments.map(appointment => {
+          if (appointment.id === appointmentToCancel) {
+            return { ...appointment, status: 'cancelled' };
+          }
+          return appointment;
+        });
+        
+        setAppointments(updatedAppointments);
+        closeCancelModal();
+        showToastMessage('Lịch hẹn đã được hủy thành công');
+      } catch (error) {
+        console.error('Error cancelling appointment:', error);
+        showToastMessage('Có lỗi xảy ra khi hủy lịch hẹn');
+        closeCancelModal();
+      }
     }
-  };  // Handle reschedule or rebook appointment
+  };
+
+  // Handle reschedule or rebook appointment
   const handleRescheduleAppointment = (appointment) => {
-    // Lưu thông tin lịch hẹn cần thay đổi vào localStorage
+    // Lưu thông tin lịch hẹn cần thay đổi vào localStorage (tạm thời để navigation hoạt động)
     localStorage.setItem('appointmentToReschedule', JSON.stringify(appointment));
     
     // Chuyển hướng đến trang đặt lịch với tham số reschedule=true
     navigate('/appointment?reschedule=true');
     
-    // Khi đặt lịch mới thành công, xóa lịch hẹn cũ
-    const existingAppointments = JSON.parse(localStorage.getItem('appointments')) || [];
-    const updatedAppointments = existingAppointments.filter(app => app.id !== appointment.id);
-    localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
+    // Note: Việc xóa lịch hẹn cũ sẽ được thực hiện trong BookAppointment component thông qua API
   };
   // Open rebook confirmation modal
   const openRebookModal = (appointment) => {
@@ -299,39 +327,48 @@ function AppointmentList() {
     setShowDeleteModal(false);
     setAppointmentToDelete(null);
   };  // Handle delete cancelled appointment
-  const handleDeleteAppointment = () => {
+  const handleDeleteAppointment = async () => {
     if (appointmentToDelete) {
       // Set deleting state to true
       setIsDeleting(true);
       
-      // Simulate a short delay for better UX
-      setTimeout(() => {
+      try {
+        await deleteAppointment(appointmentToDelete.id);
+        
         // Filter out the appointment to delete
         const updatedAppointments = appointments.filter(
           appointment => appointment.id !== appointmentToDelete.id
         );
         
         setAppointments(updatedAppointments);
-        localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
         closeDeleteModal();
         
+        // Show success toast
+        showToastMessage('Lịch hẹn đã được xóa thành công!');
+      } catch (error) {
+        console.error('Error deleting appointment:', error);
+        showToastMessage('Có lỗi xảy ra khi xóa lịch hẹn');
+        closeDeleteModal();
+      } finally {
         // Reset deleting state
         setIsDeleting(false);
-        
-        // Show success toast
-        setToastMessage('Lịch hẹn đã được xóa thành công!');
-        setShowToast(true);
-        
-        // Hide toast after 3 seconds
-        setTimeout(() => {
-          setShowToast(false);
-        }, 3000);
-      }, 500); // Small delay for better user experience
+      }
     }
   };
 
+  // Helper function to show toast messages
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    
+    // Hide toast after 3 seconds
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
   // Handle opening chat with coach
-  const handleOpenChat = (appointment) => {
+  const handleOpenChat = async (appointment) => {
     const coach = {
       name: appointment.coachName,
       avatar: appointment.coachAvatar,
@@ -342,9 +379,16 @@ function AppointmentList() {
     setSelectedAppointment(appointment);
     setShowChat(true);
     
-    // Clear any unread messages when opening the chat
-    const unreadKey = `unread_messages_${appointment.id}`;
-    localStorage.setItem(unreadKey, '0');
+    // Mark messages as read when opening the chat
+    try {
+      await markMessagesAsRead(appointment.id);
+      
+      // Update unread counts
+      const response = await getUnreadMessageCounts();
+      setUnreadCounts(response.data || {});
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
   };
   // Handle closing chat
   const handleCloseChat = () => {
@@ -353,9 +397,7 @@ function AppointmentList() {
   
   // Check if there are unread messages for an appointment
   const hasUnreadMessages = (appointmentId) => {
-    const unreadKey = `unread_messages_${appointmentId}`;
-    const unreadCount = localStorage.getItem(unreadKey);
-    return unreadCount && parseInt(unreadCount) > 0;
+    return unreadCounts[appointmentId] && unreadCounts[appointmentId] > 0;
   };
 
   // Open rating modal
@@ -385,72 +427,75 @@ function AppointmentList() {
   };
 
   // Handle rating submission
-  const handleRatingSubmit = () => {
+  const handleRatingSubmit = async () => {
     if (appointmentToRate && rating > 0) {
       setIsSubmittingRating(true);
       
-      // Create rating object
-      const ratingObj = {
-        stars: rating,
-        comment: ratingComment,
-        date: new Date().toISOString()
-      };
+      try {
+        // Create rating object with the correct field name (content instead of feedback)
+        const ratingData = {
+          rating: rating,
+          content: ratingComment || ' ' // Provide a space if empty to avoid NULL
+        };
+        
+        await rateAppointment(appointmentToRate.id, ratingData);
+        
+        // Update the appointment with the rating in local state
+        const updatedAppointments = appointments.map(appointment => {
+          if (appointment.id === appointmentToRate.id) {
+            return { 
+              ...appointment, 
+              rating: rating,
+              content: ratingComment || ' ', // Use content instead of feedback
+              rated_at: new Date().toISOString()
+            };
+          }
+          return appointment;
+        });
+        
+        setAppointments(updatedAppointments);
+        
+        // Show success toast
+        showToastMessage('Đánh giá của bạn đã được gửi thành công!');
+        
+        closeRatingModal();
+      } catch (error) {
+        console.error('Error submitting rating:', error);
+        showToastMessage('Có lỗi xảy ra khi gửi đánh giá');
+      } finally {
+        setIsSubmittingRating(false);
+      }
+    }
+  };
+
+  // Handle complete appointment (cho coach sử dụng nếu cần)
+  const handleCompleteAppointment = async (appointmentId) => {
+    try {
+      await updateAppointmentStatus(appointmentId, 'completed');
       
-      // Update the appointment with the rating
+      // Update local state
       const updatedAppointments = appointments.map(appointment => {
-        if (appointment.id === appointmentToRate.id) {
-          return { ...appointment, rating: ratingObj };
+        if (appointment.id === appointmentId) {
+          return { 
+            ...appointment, 
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          };
         }
         return appointment;
       });
       
-      // Update localStorage and state
       setAppointments(updatedAppointments);
-      localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-      
-      // Show success toast
-      setToastMessage('Đánh giá của bạn đã được gửi thành công!');
-      setShowToast(true);
-      
-      // Reset states
-      setTimeout(() => {
-        setIsSubmittingRating(false);
-        setShowToast(false);
-        closeRatingModal();
-      }, 1000);
+      showToastMessage('Buổi tư vấn đã được xác nhận hoàn thành!');
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      showToastMessage('Có lỗi xảy ra khi hoàn thành lịch hẹn');
     }
-  };
-
-  // Handle complete appointment
-  const handleCompleteAppointment = (appointmentId) => {
-    const updatedAppointments = appointments.map(appointment => {
-      if (appointment.id === appointmentId) {
-        return { 
-          ...appointment, 
-          status: 'completed',
-          completed: true,
-          completedAt: new Date().toISOString()
-        };
-      }
-      return appointment;
-    });
-    
-    setAppointments(updatedAppointments);
-    localStorage.setItem('appointments', JSON.stringify(updatedAppointments));
-    
-    // Show toast notification
-    setToastMessage('Buổi tư vấn đã được xác nhận hoàn thành!');
-    setShowToast(true);
-    
-    // Hide toast after 3 seconds
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
   };
 
   // Handle navigate to chat in navigation
   const handleNavigateToChat = (appointment) => {
-    // Store chat info for navigation
+    // Store chat info for navigation (tạm thời vẫn dùng localStorage cho navigation)
     const chatInfo = {
       appointmentId: appointment.id,
       coachName: appointment.coachName,
@@ -460,7 +505,7 @@ function AppointmentList() {
     
     localStorage.setItem('navChatInfo', JSON.stringify(chatInfo));
     
-    // Navigate to chat section (assuming there's a chat page/section)
+    // Navigate to chat section
     navigate('/chat');
   };
 

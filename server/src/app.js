@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -9,7 +10,13 @@ import progressRoutes from './routes/progressRoutes.js';
 import packagesRoutes from './routes/packages.js';
 import paymentsRoutes from './routes/payments.js';
 import zaloPayRoutes from './routes/zaloPayRoutes.js';
-// Health routes removed - functionality now in ProgressDashboard component
+import userRoutes from './routes/users.js';
+import healthRoutes from './routes/health.js';
+import coachRoutes from './routes/coachRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import testRoutes from './routes/testRoutes.js';
+import createAppointmentsStatusRoutes from './routes/appointmentsStatusRoutes.js';
 import ensureTablesExist from './ensureTables.js';
 
 // Load environment variables
@@ -44,12 +51,21 @@ const corsOptions = {
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['X-Total-Count']
 };
 
 app.use(cors(corsOptions));
+
+// Add specific CORS headers for preflight requests
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).end();
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -84,6 +100,83 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV,
         version: '1.0.0'
     });
+});
+
+// Static files for uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+
+// Special CORS handling for appointments status endpoint
+app.options('/api/appointments/:id/status', (req, res) => {
+    console.log('🔄 Handling OPTIONS preflight for PATCH status endpoint');
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).end();
+});
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/appointments-update', createAppointmentsStatusRoutes());
+app.use('/api', healthRoutes);
+// app.use('/api/packages', packageRoutes);
+app.use('/api/coaches', coachRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/test', testRoutes);
+
+// Đăng ký route payments với debug chi tiết
+console.log('📌 Registering payment routes...');
+try {
+  // Express routers can be functions with properties
+  if (paymentRoutes) {
+    // Đăng ký routes
+    app.use('/api/payments', paymentRoutes);
+    console.log('✅ Payment routes registered successfully');
+    
+    // Log các routes đã đăng ký
+    if (paymentRoutes.stack && Array.isArray(paymentRoutes.stack)) {
+      console.log('Routes registered in paymentRoutes:');
+      paymentRoutes.stack.forEach(r => {
+        if (r.route) {
+          const methods = Object.keys(r.route.methods).map(m => m.toUpperCase()).join(',');
+          console.log(`  ${methods} ${r.route.path}`);
+        }
+      });
+    }
+  } else {
+    console.error('❌ paymentRoutes is not available');
+  }
+} catch (error) {
+  console.error('❌ Error registering payment routes:', error);
+}
+
+// Log tất cả các routes đã đăng ký (để debug)
+console.log('\n📋 Registered routes:');
+app._router.stack.forEach(middleware => {
+  if (middleware.route) {
+    // Routes đơn giản
+    console.log(`${middleware.route.stack[0].method.toUpperCase()} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    // Router-level middleware
+    const path = middleware.regexp.toString()
+      .replace('\\/?(?=\\/|$)', '')
+      .replace(/[\\^$.*+?()[\]{}|]/g, '')
+      .replace('/^', '')
+      .replace('\\/', '/')
+      .replace('(?:/(?=$))?$/i', '');
+      
+    if (path.includes('/api/payments')) {
+      console.log(`🔍 Router at path: ${path}`);
+      middleware.handle.stack.forEach(handler => {
+        if (handler.route) {
+          const method = Object.keys(handler.route.methods)[0].toUpperCase();
+          console.log(`  ${method} ${path}${handler.route.path}`);
+        }
+      });
+    }
+  }
 });
 
 // 404 handler

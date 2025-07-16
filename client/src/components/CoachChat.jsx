@@ -1,39 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaPaperPlane, FaUser } from 'react-icons/fa';
 import '../styles/CoachChat.css';
+import { getAppointmentMessages, sendAppointmentMessage, markMessagesAsRead } from '../utils/userAppointmentApi';
+import { 
+  initSocket, 
+  joinAppointmentRoom, 
+  sendMessageNotification,
+  subscribeToMessages, 
+  subscribeToMessagesRead,
+  markMessagesAsRead as socketMarkMessagesAsRead
+} from '../utils/socket';
+import JitsiMeeting from './JitsiMeeting';
 
 const CoachChat = ({ coach, appointment, isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showJitsi, setShowJitsi] = useState(false);
   const messagesEndRef = useRef(null);
-  const pollingIntervalRef = useRef(null);
-  const lastMessageCountRef = useRef(0);
-  // Load previous messages from localStorage
+  const socketUnsubscribersRef = useRef([]);
+  
+  // Load messages from the database
+  const loadMessages = async (isRealTimeUpdate = false) => {
+    if (!appointment) return;
+    
+    // Only show loading on first load
+    if (!isRealTimeUpdate) {
+      setIsLoading(true);
+    }
+    
+    try {
+      // Fetch messages from the API
+      const response = await getAppointmentMessages(appointment.id);
+      
+      if (response?.success && response?.data) {
+        setMessages(response.data);
+        
+        // Mark messages as read
+        await markMessagesAsRead(appointment.id);
+        socketMarkMessagesAsRead(appointment.id);
+      } else if (response?.success && (!response?.data || response?.data.length === 0) && isFirstLoad) {
+        // If no messages and it's first load, create a welcome message
+        const welcomeMessage = {
+          text: `Xin chào ${appointment.userName || 'bạn'}! Tôi là Coach ${coach.name}, chuyên gia hỗ trợ cai thuốc. Rất vui được đồng hành cùng bạn trong hành trình cai thuốc lá này. Hãy chia sẻ với tôi về tình trạng hiện tại và mục tiêu của bạn nhé! 🌟`,
+          sender: 'coach'
+        };
+        
+        // Send welcome message through API
+        try {
+          const welcomeResponse = await sendAppointmentMessage(appointment.id, welcomeMessage);
+          if (welcomeResponse?.success && welcomeResponse?.data) {
+            setMessages([welcomeResponse.data]);
+          }
+        } catch (error) {
+          console.error('Error sending welcome message:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      if (!isRealTimeUpdate) {
+        setIsLoading(false);
+        setIsFirstLoad(false);
+      }
+    }
+  };
+  
+  // Load messages when component mounts or appointment changes
   useEffect(() => {
     if (isOpen && appointment && isFirstLoad) {
-      const chatKey = `coach_chat_${appointment.id}`;
-      const savedMessages = JSON.parse(localStorage.getItem(chatKey)) || [];
-      
-      // If no previous messages, add a welcome message from the coach
-      if (savedMessages.length === 0) {
-        const welcomeMessage = {
-          id: 1,
-          text: `Xin chào ${appointment.userName || 'bạn'}! Tôi là Coach ${coach.name}, chuyên gia hỗ trợ cai thuốc. Rất vui được đồng hành cùng bạn trong hành trình cai thuốc lá này. Hãy chia sẻ với tôi về tình trạng hiện tại và mục tiêu của bạn nhé! 🌟`,
-          sender: 'coach',
-          timestamp: new Date().toISOString(),
-          readByUser: false
-        };
-        const initialMessages = [welcomeMessage];
-        setMessages(initialMessages);
-        localStorage.setItem(chatKey, JSON.stringify(initialMessages));
-        
-        // Mark welcome message as unread
-        const unreadKey = `unread_messages_${appointment.id}`;
-        localStorage.setItem(unreadKey, '1');
-      }
-      setIsFirstLoad(false);
+      loadMessages();
     }
   }, [isOpen, appointment, coach, isFirstLoad]);
 
@@ -42,95 +80,128 @@ const CoachChat = ({ coach, appointment, isOpen, onClose }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Function to load messages from localStorage
-  const loadMessages = () => {
-    if (!appointment) return;
-    
-    const chatKey = `coach_chat_${appointment.id}`;
-    const savedMessages = JSON.parse(localStorage.getItem(chatKey)) || [];
-    
-    // Check if there are new messages
-    if (savedMessages.length > lastMessageCountRef.current) {
-      setHasNewMessage(true);
-      // Auto-hide the indicator after 3 seconds
-      setTimeout(() => setHasNewMessage(false), 3000);
-    }
-    
-    lastMessageCountRef.current = savedMessages.length;
-    
-    // Only update if messages have changed
-    if (JSON.stringify(savedMessages) !== JSON.stringify(messages)) {
-      // Mark all coach messages as read by user when loading
-      const updatedMessages = savedMessages.map(msg => ({
-        ...msg,
-        readByUser: msg.sender === 'coach' ? true : msg.readByUser
-      }));
-      
-      setMessages(updatedMessages);
-      
-      // Update localStorage with read status
-      localStorage.setItem(chatKey, JSON.stringify(updatedMessages));
-      
-      // Clear unread count for user
-      const unreadKey = `unread_messages_${appointment.id}`;
-      localStorage.setItem(unreadKey, '0');
-    }
-  };
-
-  // Real-time polling effect
+  // Set up Socket.IO connection
   useEffect(() => {
     if (isOpen && appointment) {
-      // Load messages immediately
-      loadMessages();
+      // Initialize socket connection
+      initSocket();
       
-      // Set up polling every 2 seconds
-      pollingIntervalRef.current = setInterval(() => {
-        loadMessages();
-      }, 2000);
+      // Join appointment room
+      joinAppointmentRoom(appointment.id);
+      
+      // Set up polling to refresh messages every 10 seconds
+      const pollingInterval = setInterval(() => {
+        loadMessages(true);
+      }, 10000);
+      
+      // Subscribe to new messages
+      const unsubscribeMessages = subscribeToMessages(appointment.id, (newMessage) => {
+        if (newMessage) {
+          // Tải lại tất cả tin nhắn để đảm bảo có tin nhắn mới nhất
+          loadMessages(true);
+          
+          // Show new message indicator if not from the current user
+          if (newMessage.sender !== 'user') {
+            setHasNewMessage(true);
+            // Auto-hide the indicator after 3 seconds
+            setTimeout(() => setHasNewMessage(false), 3000);
+          }
+          
+          // Mark messages as read if chat is open
+          markMessagesAsRead(appointment.id)
+            .then(() => socketMarkMessagesAsRead(appointment.id))
+            .catch(error => console.error('Error marking messages as read:', error));
+        }
+      });
+      
+      // Subscribe to messages read events
+      const unsubscribeMessagesRead = subscribeToMessagesRead(appointment.id, (data) => {
+        // Update read status for messages
+        setMessages(prevMessages => 
+          prevMessages.map(msg => {
+            if (data.reader === 'user' && msg.sender === 'coach') {
+              return { ...msg, read_by_user: true };
+            } else if (data.reader === 'coach' && msg.sender === 'user') {
+              return { ...msg, read_by_coach: true };
+            }
+            return msg;
+          })
+        );
+      });
+      
+      // Store unsubscribe functions
+      socketUnsubscribersRef.current = [unsubscribeMessages, unsubscribeMessagesRead];
+      
+      // Mark messages as read when opening the chat
+      markMessagesAsRead(appointment.id)
+        .then(() => socketMarkMessagesAsRead(appointment.id))
+        .catch(error => console.error('Error marking messages as read:', error));
       
       return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
+        // Cleanup socket subscriptions
+        socketUnsubscribersRef.current.forEach(unsub => unsub && unsub());
+        socketUnsubscribersRef.current = [];
+        // Clear polling interval
+        clearInterval(pollingInterval);
       };
-    } else {
-      // Clear polling when chat is closed
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
     }
   }, [isOpen, appointment]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, []);
-
   const handleSendMessage = () => {
-    if (input.trim() === '') return;
+    if (input.trim() === '' || !appointment) return;
     
-    const userMessage = {
-      id: messages.length + 1,
+    const messageData = {
+      text: input
+    };
+    
+    // Add message to UI immediately for better UX
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
       text: input,
       sender: 'user',
       timestamp: new Date().toISOString(),
-      readByCoach: false
+      read_by_coach: false,
+      read_by_user: true,
+      pending: true
     };
     
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    setMessages(prevMessages => [...prevMessages, tempMessage]);
     setInput('');
     
-    // Save to localStorage
-    if (appointment) {
-      const chatKey = `coach_chat_${appointment.id}`;
-      localStorage.setItem(chatKey, JSON.stringify(newMessages));
-    }
+    // Send message via API
+    sendAppointmentMessage(appointment.id, messageData)
+      .then(response => {
+        if (response?.success && response?.data) {
+          // Replace temp message with actual message from server
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.id === tempMessage.id ? response.data : msg
+            )
+          );
+          
+          // Just emit a socket event to notify others of the new message
+          // Since the message is already saved in the database, we send a notification-only event
+          sendMessageNotification(appointment.id);
+        } else {
+          // Handle error
+          console.error('Failed to send message');
+          // Mark message as failed
+          setMessages(prevMessages => 
+            prevMessages.map(msg => 
+              msg.id === tempMessage.id ? { ...msg, failed: true } : msg
+            )
+          );
+        }
+      })
+      .catch(error => {
+        console.error('Error sending message:', error);
+        // Mark message as failed
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id === tempMessage.id ? { ...msg, failed: true } : msg
+          )
+        );
+      });
   };
 
   const handleKeyPress = (e) => {
@@ -152,16 +223,6 @@ const CoachChat = ({ coach, appointment, isOpen, onClose }) => {
     return avatars[appointment.id % avatars.length];
   };
 
-  // Function to mark a new message from coach as unread if chat is not open
-  const markMessageAsUnread = () => {
-    if (!isOpen && appointment) {
-      const unreadKey = `unread_messages_${appointment.id}`;
-      const currentUnreadCount = localStorage.getItem(unreadKey) || '0';
-      const newUnreadCount = parseInt(currentUnreadCount) + 1;
-      localStorage.setItem(unreadKey, newUnreadCount.toString());
-    }
-  };
-
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
@@ -174,87 +235,136 @@ const CoachChat = ({ coach, appointment, isOpen, onClose }) => {
 
   if (!isOpen || !appointment || !coach) return null;
 
+  // Tạo roomName cho Jitsi từ appointment
+  const jitsiRoomName = appointment ? `appointment-${appointment.id}` : '';
+
   return (
-    <div className="coach-chat-overlay">
-      <div className="coach-chat-container">
-        <div className="coach-chat-header">
-          <div className="coach-chat-title">
-            <div className="coach-avatar-small">
-              <img src={coach.avatar} alt={coach.name} />
-              {/* Status indicator ẩn vì đã có text status */}
-            </div>
-            <div>
-              <h3>Coach {coach.name}</h3>
-              <p>● Đang online - Sẵn sàng hỗ trợ</p>
-            </div>
-            {hasNewMessage && (
-              <div className="new-message-indicator">
-                Tin nhắn mới!
+    <>
+      {showJitsi && (
+        <JitsiMeeting
+          roomName={jitsiRoomName}
+          onLeave={() => setShowJitsi(false)}
+        />
+      )}
+      <div className="coach-chat-overlay">
+        <div className="coach-chat-container">
+          <div className="coach-chat-header">
+            <div className="coach-chat-title">
+              <div className="coach-avatar-small">
+                <img src={coach.avatar} alt={coach.name} />
+                {/* Status indicator ẩn vì đã có text status */}
               </div>
-            )}
+              <div>
+                <h3>Coach {coach.name}</h3>
+                <p>● Đang online - Sẵn sàng hỗ trợ</p>
+              </div>
+              {hasNewMessage && (
+                <div className="new-message-indicator">
+                  Tin nhắn mới!
+                </div>
+              )}
+            </div>
+            <button className="coach-chat-close" onClick={onClose}>
+              <FaTimes />
+            </button>
           </div>
-          <button className="coach-chat-close" onClick={onClose}>
-            <FaTimes />
-          </button>
-        </div>
-        
-        <div className="coach-chat-messages">
-          {messages.map(message => (
-            <div 
-              key={message.id} 
-              className={`message ${message.sender === 'coach' ? 'coach-message' : 'user-message'}`}
+          {/* Thêm nút gọi video */}
+          <div style={{ textAlign: 'center', margin: '10px 0' }}>
+            <button
+              style={{
+                padding: '8px 16px',
+                background: '#0077ff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                fontSize: 16,
+                cursor: 'pointer',
+              }}
+              onClick={() => setShowJitsi(true)}
             >
-              {message.sender === 'coach' && (
-                <div 
-                  className="coach-avatar-mini"
-                  data-username={coach.name}
-                >
-                  <img src={coach.avatar} alt={coach.name} />
-                </div>
-              )}
-              
-              <div className="message-content">
-                <p>{message.text}</p>
-                <span className="message-time">
-                  {formatTime(message.timestamp)}
-                </span>
+              Gọi video với Coach
+            </button>
+          </div>
+          <div className="coach-chat-messages">
+            {isLoading ? (
+              <div className="loading-messages">
+                <p>Đang tải tin nhắn...</p>
               </div>
-              
-              {message.sender === 'user' && (
-                <div 
-                  className="user-avatar-mini"
-                  data-username={appointment.userName || 'Người dùng'}
-                >
-                  <img 
-                    src={getUserAvatar()} 
-                    alt={appointment.userName || 'User'} 
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+            ) : (
+              <>
+                {messages.length === 0 ? (
+                  <div className="no-messages">
+                    <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
+                  </div>
+                ) : (
+                  messages.map(message => (
+                    <div 
+                      key={message.id} 
+                      className={`message ${message.sender === 'coach' ? 'coach-message' : 'user-message'} ${message.pending ? 'pending' : ''} ${message.failed ? 'failed' : ''}`}
+                    >
+                      {message.sender === 'coach' && (
+                        <div className="avatar-container">
+                          <img 
+                            src={coach.avatar || '/image/default-coach-avatar.svg'} 
+                            alt={message.coach_name || coach.name || "Coach"} 
+                            className="message-avatar" 
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="message-bubble">
+                        <div className="message-sender-name">
+                          {message.sender === 'user' 
+                            ? (message.user_name || appointment.userName || 'Người dùng') 
+                            : (message.coach_name || coach.name || 'Coach')}
+                        </div>
+                        <p>{message.text}</p>
+                        <span className="message-time">
+                          {message.failed ? 'Gửi thất bại' : (message.pending ? 'Đang gửi...' : formatTime(message.timestamp || message.created_at))}
+                        </span>
+                      </div>
+                      
+                      {message.sender === 'user' && (
+                        <div className="avatar-container">
+                          <img 
+                            src={getUserAvatar()} 
+                            alt={message.user_name || appointment.userName || 'Người dùng'} 
+                            className="message-avatar"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
           
-          <div ref={messagesEndRef} />
-        </div>
-        
-        <div className="coach-chat-input">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Nhập tin nhắn gửi coach..."
-          />
-          <button className="send-button" onClick={handleSendMessage}>
-            <FaPaperPlane />
-          </button>
-        </div>
-        
-        <div className="coach-chat-footer">
-          <p>Coach sẽ phản hồi trong vòng: <strong>15-30 phút</strong></p>
+          <div className="coach-chat-input">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Nhập tin nhắn gửi coach..."
+              disabled={isLoading}
+            />
+            <button 
+              className="send-button" 
+              onClick={handleSendMessage}
+              disabled={isLoading || input.trim() === ''}
+            >
+              <FaPaperPlane />
+            </button>
+          </div>
+          
+          <div className="coach-chat-footer">
+            <p>Coach sẽ phản hồi trong vòng: <strong>15-30 phút</strong></p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

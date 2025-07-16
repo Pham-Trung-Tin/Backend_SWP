@@ -44,6 +44,7 @@ import "../styles/ProfilePlan.css";
 import "../styles/ModalStyles.css";
 import "../styles/JournalEntry.css";
 import "../styles/ProgressTracker.css";
+import CoachMessaging from "./coach/CoachMessaging.jsx";
 
 // Component Modal chỉnh sửa kế hoạch
 function PlanEditModal({ isOpen, onClose, currentPlan, activePlan, onSave }) {
@@ -381,7 +382,7 @@ export default function ProfilePage() {
       },
       {
         id: 3,
-        name: "Tuần đầu tiên không hút thuốc",
+        name: "Tuần đầu tiên không hút",
         date: new Date(
           new Date(activePlan.startDate).getTime() + 7 * 86400000
         ).toLocaleDateString("vi-VN"),
@@ -586,7 +587,6 @@ export default function ProfilePage() {
             className={`nav-item ${activeTab === "appointments" ? "active" : ""}`}
             onClick={() => {
               setActiveTab("appointments");
-              // Scroll to the top of the content area
               const profileContent = document.querySelector('.profile-content');
               if (profileContent) {
                 setTimeout(() => {
@@ -597,14 +597,31 @@ export default function ProfilePage() {
           >
             <FaCalendarAlt /> Lịch hẹn Coach
           </Link>
-            <Link
+
+          {/* Mục Nhắn tin tích hợp chat coach */}
+          <button
+            className={`nav-item${activeTab === "coach-messaging" ? " active" : ""}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              background: activeTab === 'coach-messaging' ? '#1976d2' : 'none', // Blue when active
+              color: activeTab === 'coach-messaging' ? '#fff' : 'inherit',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'coach-messaging' ? 'bold' : 'normal',
+              boxShadow: activeTab === 'coach-messaging' ? '0 2px 8px rgba(25, 118, 210, 0.08)' : 'none',
+            }}
+            onClick={() => setActiveTab('coach-messaging')}
+          >
+            <FaComment /> Nhắn tin
+          </button>
+
+          <Link
             to="#"
-            className={`nav-item ${
-              activeTab === "achievements" ? "active" : ""
-            }`}
+            className={`nav-item ${activeTab === "achievements" ? "active" : ""}`}
             onClick={() => {
               setActiveTab("achievements");
-              // Scroll to the top of the content area
               const profileContent = document.querySelector('.profile-content');
               if (profileContent) {
                 setTimeout(() => {

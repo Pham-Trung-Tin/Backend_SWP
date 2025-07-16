@@ -1,0 +1,59 @@
+{
+    "name": "nosmoke-backend",
+    "version": "1.0.0",
+    "description": "NoSmoke Application Backend API",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "setup-db": "node scripts/setup-database.js",
+        "test-packages": "node src/scripts/test-packages-api.js",
+        "test-package-detail": "node src/scripts/test-package-detail-api.js",
+        "test-purchase": "node src/scripts/test-purchase-package.js",
+        "check-tables": "node check-tables.js",
+        "check-connection": "node src/scripts/check-connection.js",
+        "generate-token": "node src/scripts/generate-test-token.js",
+        "decode-token": "node src/scripts/decode-token.js",
+        "test-simple": "node src/scripts/test-purchase-simple.js",
+        "test-token-fix": "node src/scripts/test-token-fix.js",
+        "check-membership": "node src/scripts/check-membership-status.js",
+        "create-messages-table": "node src/scripts/create-messages-table.js",
+        "create-messages-table-fixed": "node src/scripts/create-messages-table-fixed.js",
+        "check-users-membership": "node src/scripts/check-users-membership.js",
+        "test-direct-purchase": "node src/scripts/test-direct-purchase.js",
+        "fix-membership-column": "node src/scripts/fix-membership-column.js",
+        "check-packages": "node src/scripts/check-packages.js",
+        "extend-membership": "node src/scripts/extend-membership-enum.js",
+        "test-payment-endpoints": "node src/scripts/test-payment-endpoints.js",
+        "test-payment-history": "node src/scripts/test-payment-history-api.js", 
+        "test-payment-verify": "node src/scripts/test-payment-verify-endpoints.js",
+        "create-test-user": "node src/scripts/create-test-user.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "express-rate-limit": "^7.1.5",
+        "express-validator": "^7.0.1",
+        "helmet": "^7.1.0",
+        "jsonwebtoken": "^9.0.2",
+        "multer": "^2.0.1",
+        "mysql2": "^3.6.5",
+        "node-fetch": "^3.3.2",
+        "nodemailer": "^6.10.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    },
+    "keywords": [
+        "smoking",
+        "quit",
+        "health",
+        "api"
+    ],
+    "author": "NoSmoke Team",
+    "license": "ISC"
+}
