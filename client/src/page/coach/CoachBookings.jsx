@@ -193,13 +193,13 @@ function CoachBookings() {
   };
 
   const handleSendMessage = (booking) => {
-    // Chuyển hướng đến trang chat với thông tin người dùng
-    navigate('/coach/chat', { 
-      state: { 
+    // Chuyển hướng đến trang tin nhắn coach
+    navigate('/coach/messages', {
+      state: {
         userId: booking.userId,
         userName: booking.userName,
-        userEmail: booking.userEmail 
-      } 
+        userEmail: booking.userEmail
+      }
     });
   };
 
