@@ -630,8 +630,8 @@ const progressService = {
         healthScore: healthScore,
         notes: checkinData.notes || '',
         toolType: 'quit_smoking_plan',
-        daysClean: checkinData.daysClean || 0,
-        vapesAvoided: checkinData.vapesAvoided || 0,
+        daysClean: checkinData.daysClean,
+        vapesAvoided: checkinData.vapesAvoided,
         progressPercentage: healthScore,
         progressData: checkinData.progressData || {}
       };
