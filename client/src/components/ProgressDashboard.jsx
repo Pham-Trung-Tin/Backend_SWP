@@ -7,6 +7,21 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
   const [dashboardStats, setDashboardStats] = useState(null);
   const [milestones, setMilestones] = useState([]);  // Tính toán thống kê
   
+  // Debug logging để kiểm tra dữ liệu userPlan nhận được
+  console.log("🔍 ProgressDashboard nhận được userPlan:", {
+    userPlan: userPlan,
+    planName: userPlan?.plan_name || userPlan?.planName,
+    planId: userPlan?.id,
+    initialCigarettes: userPlan?.initial_cigarettes || userPlan?.initialCigarettes,
+    startDate: userPlan?.start_date || userPlan?.startDate,
+    totalWeeks: userPlan?.total_weeks || userPlan?.totalWeeks,
+    weeks: userPlan?.weeks ? userPlan.weeks.length : 0
+  });
+  
+  console.log("🔍 ProgressDashboard nhận được completionDate:", completionDate);
+  console.log("🔍 ProgressDashboard nhận được externalStats:", externalStats);
+  console.log("🔍 ProgressDashboard nhận được actualProgress:", actualProgress);
+  
   // Tạo dữ liệu mẫu cho biểu đồ thực tế
   const generateSampleActualData = (plan) => {
     if (!plan || !plan.weeks || plan.weeks.length === 0) {
@@ -49,19 +64,37 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
   
   // Early return if required props are missing
   if (!userPlan || !completionDate) {
+    console.log("🔍 ProgressDashboard - Missing required props:", {
+      hasUserPlan: !!userPlan,
+      hasCompletionDate: !!completionDate,
+      userPlan: userPlan,
+      completionDate: completionDate
+    });
     return (
       <div className="dashboard-error">
         <p>Không thể hiển thị dashboard - thiếu dữ liệu cần thiết</p>
+        <p>UserPlan: {userPlan ? 'Có' : 'Không'}</p>
+        <p>CompletionDate: {completionDate ? 'Có' : 'Không'}</p>
       </div>
     );
   }
   
   const calculateDashboardStats = useCallback(() => {
-    if (!userPlan || !completionDate) return;
+    console.log("🔍 calculateDashboardStats được gọi với:", {
+      userPlan: userPlan,
+      completionDate: completionDate,
+      externalStats: externalStats,
+      actualProgress: actualProgress
+    });
+    
+    if (!userPlan || !completionDate) {
+      console.log("🔍 calculateDashboardStats - Missing required data, returning");
+      return;
+    }
 
     // Nếu có thống kê từ bên ngoài, sử dụng nó thay vì tính toán lại
     if (externalStats && Object.keys(externalStats).length > 0) {
-      console.log("Sử dụng thống kê từ Progress.jsx:", externalStats);
+      console.log("🔍 Sử dụng thống kê từ Progress.jsx:", externalStats);
       setDashboardStats({
         daysSincePlanCreation: externalStats.noSmokingDays || 0, 
         cigarettesSaved: externalStats.savedCigarettes || 0,
@@ -122,31 +155,40 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
     }
 
     // Tính toán thông thường nếu không có thống kê từ bên ngoài
+    console.log("🔍 Tính toán thông thường - không có external stats");
     const startDate = new Date(completionDate);
     const today = new Date();
     const daysSinceStart = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
     
+    console.log("🔍 Date calculation:", {
+      startDate: startDate,
+      today: today,
+      daysSinceStart: daysSinceStart
+    });
+    
     // Tính toán số điếu đã tiết kiệm được - đảm bảo userPlan.weeks tồn tại
     const initialCigarettesPerDay = userPlan.weeks && userPlan.weeks.length > 0 ? 
       userPlan.weeks[0]?.amount || 20 : 20;
-    const estimatedSaved = initialCigarettesPerDay * daysSinceStart;      // Tính tiền tiết kiệm dựa trên giá gói thuốc từ kế hoạch của người dùng
-    // Nếu có thống kê từ bên ngoài, sử dụng số tiền đã tính toán
+    const estimatedSaved = initialCigarettesPerDay * daysSinceStart;
+    
+    console.log("🔍 Cigarettes calculation:", {
+      initialCigarettesPerDay: initialCigarettesPerDay,
+      estimatedSaved: estimatedSaved
+    });      // Tính tiền tiết kiệm dựa trên giá gói thuốc từ kế hoạch của người dùng
     let packPrice = 25000; // Giá mặc định nếu không tìm thấy
     
-    // Lấy giá gói thuốc từ activePlan nếu không có thống kê từ bên ngoài
-    if (!externalStats || !externalStats.savedMoney) {
-      try {
-        const activePlanData = localStorage.getItem('activePlan');
-        if (activePlanData) {
-          const activePlan = JSON.parse(activePlanData);
-          if (activePlan && activePlan.packPrice) {
-            packPrice = activePlan.packPrice;
-            console.log(`[Dashboard] Lấy giá gói thuốc từ activePlan: ${packPrice.toLocaleString()}đ`);
-          }
+    // Lấy giá gói thuốc từ activePlan
+    try {
+      const activePlanData = localStorage.getItem('activePlan');
+      if (activePlanData) {
+        const activePlan = JSON.parse(activePlanData);
+        if (activePlan && activePlan.packPrice) {
+          packPrice = activePlan.packPrice;
+          console.log(`[Dashboard] Lấy giá gói thuốc từ activePlan: ${packPrice.toLocaleString()}đ`);
         }
-      } catch (error) {
-        console.error('[Dashboard] Lỗi khi đọc packPrice từ activePlan:', error);
       }
+    } catch (error) {
+      console.error('[Dashboard] Lỗi khi đọc packPrice từ activePlan:', error);
     }
     
     const pricePerCigarette = packPrice / 20; // Giả sử 1 gói = 20 điếu
@@ -154,14 +196,23 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
                      externalStats.savedMoney : 
                      estimatedSaved * pricePerCigarette;
     
-    setDashboardStats({
+    console.log("🔍 Final calculation:", {
+      packPrice: packPrice,
+      pricePerCigarette: pricePerCigarette,
+      moneySaved: moneySaved
+    });
+    
+    const finalStats = {
       daysSincePlanCreation: daysSinceStart, 
       cigarettesSaved: estimatedSaved,
       moneySaved: moneySaved,
       planDuration: userPlan.weeks ? userPlan.weeks.length : 0,
       planName: userPlan.name || 'Kế hoạch cá nhân',
       healthProgress: 0 // Giá trị mặc định
-    });
+    };
+    
+    console.log("🔍 Setting dashboard stats:", finalStats);
+    setDashboardStats(finalStats);
   }, [userPlan, completionDate, externalStats, actualProgress]);
   
   const loadMilestones = useCallback(() => {
@@ -184,7 +235,7 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
 
     const updatedMilestones = healthMilestones.map(milestone => ({
       ...milestone,
-      achieved: dashboardStats.daysSincePlanCreation >= milestone.days
+      achieved: (externalStats?.noSmokingDays || dashboardStats?.daysSincePlanCreation || 0) >= milestone.days
     }));
     setMilestones(updatedMilestones);
   }, [userPlan, completionDate, dashboardStats]);
@@ -221,12 +272,15 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
   
   // Show loading state while dashboardStats is not set
   if (!dashboardStats) {
-    console.log("Dashboard stats not set yet, showing loading screen");
+    console.log("🔍 Dashboard stats not set yet, showing loading screen");
+    console.log("🔍 Current dashboardStats:", dashboardStats);
     return (
       <div className="dashboard-loading">
         <p>Đang tải dashboard...</p>
+        <p>Debug: userPlan={userPlan ? 'Có' : 'Không'}, completionDate={completionDate ? 'Có' : 'Không'}</p>
       </div>
-    );  }
+    );
+  }
 
   const achievementProgress = getAchievementProgress();
 
@@ -249,14 +303,14 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
           <div className="stat-icon">
             <FaCalendarCheck />
           </div>          <div className="stat-content">
-            <h3>{dashboardStats.daysSincePlanCreation}</h3>
+            <h3>{externalStats?.noSmokingDays || dashboardStats?.daysSincePlanCreation || 0}</h3>
             <p>Ngày theo dõi</p>
           </div>
         </div>        <div className="stat-card success">
           <div className="stat-icon">
             <FaLeaf />
           </div>          <div className="stat-content">
-            <h3>{externalStats && externalStats.savedCigarettes ? externalStats.savedCigarettes.toLocaleString() : (dashboardStats.cigarettesSaved ? dashboardStats.cigarettesSaved.toLocaleString() : '0')}</h3>
+            <h3>{(externalStats?.savedCigarettes || dashboardStats?.cigarettesSaved || 0).toLocaleString()}</h3>
             <p>Điếu thuốc đã tránh</p>       
           </div>
         </div>
@@ -266,7 +320,7 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
             <FaCoins />
           </div>
           <div className="stat-content">
-            <h3>{(dashboardStats.moneySaved / 1000).toFixed(0)}K</h3>
+            <h3>{((externalStats?.savedMoney || dashboardStats?.moneySaved || 0) / 1000).toFixed(0)}K</h3>
             <p>VNĐ đã tiết kiệm</p>
           </div>
         </div>
@@ -286,26 +340,12 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
           <FaChartLine className="section-icon" />
           Kế hoạch của bạn
         </h2>        <div className="maintenance-chart">
-          {console.log("DASHBOARD DEBUG: Trước khi render QuitProgressChart")}
-          {console.log("DASHBOARD DEBUG: userPlan:", userPlan)}
-          {console.log("DASHBOARD DEBUG: actualProgress:", actualProgress)}
-          {console.log("DASHBOARD DEBUG: actualProgress length:", Array.isArray(actualProgress) ? actualProgress.length : 'not an array')}
-          {console.log("DASHBOARD DEBUG: actualProgress sample:", Array.isArray(actualProgress) && actualProgress.length > 0 ? actualProgress[0] : 'no data')}
-          
-          {/* Thêm giao diện debug thủ công */}
-          {Array.isArray(actualProgress) && actualProgress.length === 0 && (
-            <div style={{marginBottom: '10px', padding: '8px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '4px'}}>
-              Chú ý: Dữ liệu tiến trình trống (actualProgress.length = 0)
-            </div>
-          )}
-          
           <QuitProgressChart
-            userPlan={userPlan || { weeks: [], name: 'Kế hoạch cá nhân' }}
-            actualProgress={actualProgress && actualProgress.length > 0 ? actualProgress : generateSampleActualData(userPlan)} // Sử dụng dữ liệu thực tế hoặc mẫu nếu không có
+            userPlan={userPlan}
+            actualProgress={actualProgress && actualProgress.length > 0 ? actualProgress : generateSampleActualData(userPlan)}
             timeFilter="Tất cả"
             height={250}
           />
-          {console.log("DASHBOARD DEBUG: Sau khi render QuitProgressChart")}
         </div>
       </div>
 
@@ -324,9 +364,9 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
               <div className="milestone-content">
                 <h4>{milestone.title}</h4>
                 <p>{milestone.description}</p>
-                {!milestone.achieved && (
+                {!milestone.achieved && dashboardStats && (
                   <span className="days-remaining">
-                    Còn {milestone.days - dashboardStats.daysSincePlanCreation} ngày
+                    Còn {Math.max(0, milestone.days - (externalStats?.noSmokingDays || dashboardStats?.daysSincePlanCreation || 0))} ngày
                   </span>
                 )}
               </div>
@@ -363,12 +403,12 @@ const ProgressDashboard = ({ userPlan, completionDate, dashboardStats: externalS
         <div className="story-content">
           <p>
             Bạn đã lập thành công <strong>{userPlan?.name || 'Kế hoạch cá nhân'}</strong> và duy trì được{' '}
-            <strong>{dashboardStats.daysSincePlanCreation} ngày</strong> không hút thuốc.
+            <strong>{externalStats?.noSmokingDays || dashboardStats?.daysSincePlanCreation || 0} ngày</strong> không hút thuốc.
           </p>
           <p>
             Trong thời gian này, bạn đã tiết kiệm được{' '}
-            <strong>{(dashboardStats.moneySaved / 1000).toFixed(0)}K VNĐ</strong> và tránh được{' '}
-            <strong>{dashboardStats.cigarettesSaved}</strong> điếu thuốc.
+            <strong>{(((externalStats?.savedMoney || dashboardStats?.moneySaved || 0) / 1000).toFixed(0))}K VNĐ</strong> và tránh được{' '}
+            <strong>{(externalStats?.savedCigarettes || dashboardStats?.cigarettesSaved || 0).toLocaleString()}</strong> điếu thuốc.
           </p>
           <p>
             Đây là một thành tích đáng tự hào! Hãy tiếp tục duy trì và truyền cảm hứng cho những người khác.

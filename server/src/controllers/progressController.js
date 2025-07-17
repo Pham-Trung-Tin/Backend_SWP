@@ -575,6 +575,23 @@ export const createCheckinByUserId = async (req, res) => {
             streakDays = prevStreak.length > 0 ? prevStreak[0].streak_days + 1 : 1;
         }
 
+        // Calculate days_clean - số ngày đã checkin (tăng dần theo từng ngày)
+        const [totalCheckins] = await pool.execute(
+            `SELECT COUNT(*) as total_days FROM daily_progress 
+             WHERE smoker_id = ? 
+             AND date <= ?`,
+            [userId, date]
+        );
+        
+        const calculatedDaysClean = totalCheckins[0].total_days + 1; // +1 vì đang tạo checkin mới
+        
+        console.log('🔍 Days clean calculation:', {
+            userId,
+            date,
+            existingCheckins: totalCheckins[0].total_days,
+            calculatedDaysClean
+        });
+
         // Calculate progress percentage if not provided
         const calculatedProgressPercentage = progressPercentage || 
             (targetCigarettes > 0 ? Math.round(((targetCigarettes - actualCigarettes) / targetCigarettes) * 100) : 0);
@@ -597,7 +614,7 @@ export const createCheckinByUserId = async (req, res) => {
                 calculatedCigarettesAvoided,
                 streakDays,
                 toolType,
-                daysClean,
+                calculatedDaysClean,
                 vapesAvoided,
                 calculatedProgressPercentage,
                 JSON.stringify(progressData)
@@ -615,6 +632,8 @@ export const createCheckinByUserId = async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error creating checkin by userId:', error);
+        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Error message:', error.message);
         return sendError(res, 'Failed to create daily checkin', 500);
     }
 };
@@ -728,9 +747,47 @@ export const updateCheckinByUserId = async (req, res) => {
             params.push(toolType);
         }
 
-        if (daysClean !== undefined) {
+        // Không tự động update days_clean trong update function
+        // days_clean chỉ được tính toán khi tạo checkin mới
+        // Để tránh phi logic khi user chỉ cập nhật số điếu
+        
+        // Luôn tính toán lại days_clean để đảm bảo giá trị đúng
+        console.log('🔍 Checking days_clean condition:', {
+            currentDaysClean: existingRecord.days_clean,
+            isZero: existingRecord.days_clean === 0,
+            isNull: existingRecord.days_clean === null
+        });
+        
+        // Tính toán lại days_clean cho tất cả trường hợp
+        console.log('🔍 Always calculating days_clean...');
+        
+        const [totalCheckins] = await pool.execute(
+            `SELECT COUNT(*) as total_days FROM daily_progress 
+             WHERE smoker_id = ? 
+             AND date <= ?`,
+            [userId, date]
+        );
+        
+        const calculatedDaysClean = totalCheckins[0].total_days;
+        
+        console.log('🔍 Update days_clean calculation:', {
+            userId,
+            date,
+            totalCheckins: totalCheckins[0].total_days,
+            calculatedDaysClean,
+            currentValue: existingRecord.days_clean
+        });
+        
+        if (calculatedDaysClean > 0) {
             updates.push('days_clean = ?');
-            params.push(daysClean);
+            params.push(calculatedDaysClean);
+            
+            console.log('🔄 Updating days_clean for existing record:', {
+                userId,
+                date,
+                calculatedDaysClean,
+                oldValue: existingRecord.days_clean
+            });
         }
 
         if (vapesAvoided !== undefined) {
@@ -817,5 +874,40 @@ export const getProgressByUserId = async (req, res) => {
     } catch (error) {
         console.error('❌ Error getting progress by userId:', error);
         return sendError(res, 'Failed to retrieve progress data', 500);
+    }
+};
+
+// DELETE /api/progress/user/:userId/clear - Clear all progress for specific user
+export const clearUserProgress = async (req, res) => {
+    if (!req.user || !req.user.id) {
+        return sendError(res, 'Authentication required', 401);
+    }
+
+    try {
+        const userId = req.params.userId;
+        
+        // Security check: user can only clear their own progress
+        if (parseInt(userId) !== req.user.id) {
+            return sendError(res, 'You can only clear your own progress data', 403);
+        }
+
+        console.log(`🔍 Clearing all progress for user ${userId}`);
+
+        // Delete all progress entries for this user
+        const [result] = await pool.execute(
+            'DELETE FROM daily_progress WHERE smoker_id = ?',
+            [userId]
+        );
+
+        console.log(`✅ Deleted ${result.affectedRows} progress entries for user ${userId}`);
+        
+        return sendSuccess(res, 'All progress data cleared successfully', {
+            deletedCount: result.affectedRows,
+            userId: parseInt(userId)
+        });
+
+    } catch (error) {
+        console.error('❌ Error clearing user progress:', error);
+        return sendError(res, 'Failed to clear progress data', 500);
     }
 };

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import QuitProgressChart from '../components/QuitProgressChart';
 import DailyCheckin from '../components/DailyCheckin';
 import ProgressDashboard from '../components/ProgressDashboard';
 import ResetCheckinData from '../components/ResetCheckinData';
 import { FaCalendarCheck, FaLeaf, FaCoins, FaHeart } from 'react-icons/fa';
 import progressService from '../services/progressService';
+import { getUserActivePlan } from '../services/quitPlanService';
 import './Progress.css';
 import '../styles/DailyCheckin.css';
 import '../styles/ProgressDashboard.css';
@@ -23,6 +23,7 @@ export default function Progress() {
   const [moodData, setMoodData] = useState([]);
   const [hasPlan, setHasPlan] = useState(false); 
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Thêm state isLoading
   // Thêm state để lưu trữ các thống kê dashboard
   const [dashboardStats, setDashboardStats] = useState({
     noSmokingDays: 0,
@@ -36,6 +37,22 @@ export default function Progress() {
   // Load user plan and progress from localStorage and API
   useEffect(() => {
     loadUserPlanAndProgress();
+    
+    // Lắng nghe thay đổi từ JourneyStepper
+    const handleStorageChange = (event) => {
+      console.log('🔄 Progress nhận thông báo thay đổi từ JourneyStepper:', event.detail);
+      if (event.detail?.key === 'activePlan') {
+        console.log('🔄 Progress reload data sau khi JourneyStepper thay đổi');
+        
+        // Debug: kiểm tra dữ liệu trong localStorage
+        const currentLocalStorageData = localStorage.getItem('activePlan');
+        console.log('📦 Dữ liệu activePlan trong localStorage:', currentLocalStorageData ? JSON.parse(currentLocalStorageData) : null);
+        
+        loadUserPlanAndProgress();
+      }
+    };
+    
+    window.addEventListener('localStorageChanged', handleStorageChange);
     
     // Force refresh of data after component mounts to ensure we have latest data
     const refreshTimer = setTimeout(() => {
@@ -102,100 +119,139 @@ export default function Progress() {
         recalculateStatistics();
       }, 1000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(refreshTimer);
+        window.removeEventListener('localStorageChanged', handleStorageChange);
+      };
     }
+    
+    // Cleanup function khi component unmount
+    return () => {
+      clearTimeout(refreshTimer);
+      window.removeEventListener('localStorageChanged', handleStorageChange);
+    };
   }, []);
   
   const loadUserPlanAndProgress = async () => {
-    console.log("LOADING USER PLAN...");
+    console.log("🔄 Loading user plan from DATABASE...");
+    setIsLoading(true);
     
-    // KHÔNG xóa thống kê cũ khi load lại trang để duy trì dữ liệu giữa các phiên
-    console.log("Giữ lại thống kê cũ để duy trì dữ liệu giữa các lần chuyển trang");
+    // Tìm token theo đúng key như JourneyStepper
+    const auth_token = localStorage.getItem('nosmoke_token') || 
+                      sessionStorage.getItem('nosmoke_token') ||
+                      localStorage.getItem('auth_token') || 
+                      sessionStorage.getItem('auth_token');
     
-    // Thử tải kế hoạch từ DATABASE trước
-    let planFromDatabase = null;
-    const auth_token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+    console.log("🔐 Checking auth tokens in Progress:", {
+      nosmoke_token_local: !!localStorage.getItem('nosmoke_token'),
+      nosmoke_token_session: !!sessionStorage.getItem('nosmoke_token'),
+      auth_token_local: !!localStorage.getItem('auth_token'),
+      auth_token_session: !!sessionStorage.getItem('auth_token'),
+      final_token: !!auth_token
+    });
     
-    if (auth_token) {
-      try {
-        console.log("🔄 Đang tải kế hoạch từ DATABASE...");
-        const quitPlanService = await import('../services/quitPlanService');
-        const response = await quitPlanService.getUserActivePlan();
-        
-        if (response && response.success && response.plan) {
-          planFromDatabase = response.plan;
-          console.log("✅ Đã tải kế hoạch từ DATABASE:", planFromDatabase);
-          
-          // Cập nhật localStorage với kế hoạch từ database
-          localStorage.setItem('activePlan', JSON.stringify(planFromDatabase));
-          
-          // Set state với kế hoạch từ database
-          setUserPlan(planFromDatabase);
-          setHasPlan(true);
-          
-          // Load progress và return sớm
-          await loadActualProgressFromCheckins(planFromDatabase);
-          return;
-        } else {
-          console.log("ℹ️ Không tìm thấy kế hoạch active trong database");
-        }
-      } catch (error) {
-        console.error("❌ Lỗi khi tải kế hoạch từ database:", error);
-      }
-    } else {
+    if (!auth_token) {
       console.log("⚠️ Không có auth token, không thể tải từ database");
+      setUserPlan(null);
+      setHasPlan(false);
+      setIsLoading(false);
+      return;
     }
 
-    // Fallback: Thử tải từ localStorage nếu không có trong database
-    const savedActivePlan = localStorage.getItem('activePlan');
-    
-    // Kiểm tra xem có kế hoạch active thực sự không
-    let hasActivePlan = false;
-    let localPlan = null;
-    
-    if (savedActivePlan) {
-      try {
-        const parsedPlan = JSON.parse(savedActivePlan);
-        if (parsedPlan && Array.isArray(parsedPlan.weeks) && parsedPlan.weeks.length > 0) {
-          console.log("📱 Đã tìm thấy kế hoạch trong localStorage:", parsedPlan.name);
-          hasActivePlan = true;
-          localPlan = parsedPlan;
+    try {
+      // Ưu tiên DATABASE làm nguồn dữ liệu chính
+      console.log("🔄 Đang tải kế hoạch từ DATABASE...");
+      const response = await getUserActivePlan();
+      
+      if (response && response.success && response.plan) {
+        const planFromDatabase = response.plan;
+        console.log("✅ Đã tải kế hoạch từ DATABASE:", planFromDatabase.plan_name);
+        console.log("📊 Chi tiết kế hoạch từ DATABASE:", {
+          id: planFromDatabase.id,
+          plan_name: planFromDatabase.plan_name,
+          initial_cigarettes: planFromDatabase.initial_cigarettes,
+          total_weeks: planFromDatabase.total_weeks,
+          start_date: planFromDatabase.start_date,
+          is_active: planFromDatabase.is_active,
+          metadata: planFromDatabase.metadata
+        });
+        
+        // Đồng bộ ngay vào localStorage
+        localStorage.setItem('activePlan', JSON.stringify(planFromDatabase));
+        
+        // Set state với kế hoạch từ database
+        setUserPlan(planFromDatabase);
+        setHasPlan(true);
+        
+        console.log("✅ Đã set userPlan state với dữ liệu từ DATABASE");
+        
+        // Load progress và kết thúc
+        await loadActualProgressFromCheckins(planFromDatabase);
+        setIsLoading(false);
+        return;
+      } else {
+        console.log("ℹ️ Không tìm thấy kế hoạch active trong database");
+        
+        // Kiểm tra localStorage làm backup
+        const savedPlan = localStorage.getItem('activePlan');
+        if (savedPlan) {
+          try {
+            const parsedPlan = JSON.parse(savedPlan);
+            console.log("✅ Tìm thấy kế hoạch trong localStorage:", parsedPlan.plan_name || parsedPlan.planName);
+            console.log("📦 Chi tiết kế hoạch từ localStorage:", {
+              id: parsedPlan.id,
+              plan_name: parsedPlan.plan_name || parsedPlan.planName,
+              initial_cigarettes: parsedPlan.initial_cigarettes || parsedPlan.initialCigarettes,
+              total_weeks: parsedPlan.total_weeks || parsedPlan.totalWeeks,
+              start_date: parsedPlan.start_date || parsedPlan.startDate,
+              is_active: parsedPlan.is_active || parsedPlan.isActive
+            });
+            
+            setUserPlan(parsedPlan);
+            setHasPlan(true);
+            console.log("✅ Đã set userPlan state với dữ liệu từ localStorage");
+            
+            await loadActualProgressFromCheckins(parsedPlan);
+            setIsLoading(false);
+            return;
+          } catch (error) {
+            console.error("❌ Lỗi khi parse localStorage:", error);
+          }
         }
-      } catch (e) {
-        console.error("❌ Lỗi khi parse kế hoạch từ localStorage:", e);
+        
+        // Xóa localStorage cũ nếu database không có và localStorage có lỗi
+        localStorage.removeItem('activePlan');
+        localStorage.removeItem('quitPlanCompletion');
+        
+        setUserPlan(null);
+        setHasPlan(false);
+        setIsLoading(false);
       }
-    }
-    
-    // Load completion data từ JourneyStepper
-    const savedCompletion = localStorage.getItem('quitPlanCompletion');
-    if (savedCompletion) {
-      try {
-        const completion = JSON.parse(savedCompletion);
-        if (completion && completion.userPlan) {
-          setCompletionData(completion);
-          setUserPlan(completion.userPlan);
-          setShowCompletionDashboard(true);
+    } catch (error) {
+      console.error("❌ Lỗi khi tải kế hoạch từ database:", error);
+      
+      // Fallback sang localStorage nếu API lỗi
+      const savedPlan = localStorage.getItem('activePlan');
+      if (savedPlan) {
+        try {
+          const parsedPlan = JSON.parse(savedPlan);
+          console.log("✅ Fallback: Sử dụng kế hoạch từ localStorage");
+          
+          setUserPlan(parsedPlan);
           setHasPlan(true);
-          console.log("✅ Đã tải kế hoạch từ completion data");
-        } else {
-          console.warn('Found saved completion data but it was incomplete');
-          setUserPlan(localPlan);
-          setHasPlan(hasActivePlan);
+          await loadActualProgressFromCheckins(parsedPlan);
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          console.error("❌ Lỗi khi parse localStorage:", error);
         }
-      } catch (error) {
-        console.error('Error parsing completion data:', error);
-        setUserPlan(localPlan);
-        setHasPlan(hasActivePlan);
       }
-    } else {
-      // Nếu chưa có completion data, sử dụng plan từ localStorage hoặc null
-      setUserPlan(localPlan);
-      setHasPlan(hasActivePlan);
-      console.log("📱 Sử dụng kế hoạch từ localStorage hoặc null:", localPlan);
+      
+      setUserPlan(null);
+      setHasPlan(false);
+      setIsLoading(false);
     }
-
-    // Load actual progress từ daily check-ins
-    await loadActualProgressFromCheckins(localPlan || getDefaultPlan());
   };
   
   const getActivePlan = () => {
@@ -750,7 +806,23 @@ export default function Progress() {
     return newStats;
   };
   
-  if (!userPlan) {
+  // Debug logging trước khi render
+  console.log("🎨 Progress component render với:", {
+    isLoading,
+    hasPlan,
+    userPlan: userPlan ? {
+      id: userPlan.id,
+      plan_name: userPlan.plan_name || userPlan.planName,
+      initial_cigarettes: userPlan.initial_cigarettes || userPlan.initialCigarettes,
+      total_weeks: userPlan.total_weeks || userPlan.totalWeeks,
+      start_date: userPlan.start_date || userPlan.startDate
+    } : null,
+    userProgress: userProgress?.length || 0,
+    actualProgress: actualProgress?.length || 0
+  });
+  
+  // Hiển thị loading trong khi tải dữ liệu
+  if (isLoading) {
     return (
       <div className="progress-container">
         <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -759,8 +831,10 @@ export default function Progress() {
       </div>
     );
   }
-    // Kiểm tra xem có cần hiển thị thông báo cần lập kế hoạch
-  if (!hasPlan) {
+  
+  // Kiểm tra xem có cần hiển thị thông báo cần lập kế hoạch
+  if (!hasPlan || !userPlan) {
+    console.log("🚫 Không có kế hoạch - hiển thị thông báo tạo kế hoạch");
     return (
       <div className="progress-container">
         <div style={{ 
@@ -839,6 +913,14 @@ export default function Progress() {
     );
   }
 
+  console.log("🎨 Render Progress Dashboard với userPlan:", {
+    planName: userPlan?.plan_name || userPlan?.planName,
+    planId: userPlan?.id,
+    initialCigarettes: userPlan?.initial_cigarettes || userPlan?.initialCigarettes,
+    startDate: userPlan?.start_date || userPlan?.startDate,
+    totalWeeks: userPlan?.total_weeks || userPlan?.totalWeeks
+  });
+
   return (
     <div className="progress-container">
       <h1 className="page-title">
@@ -854,7 +936,7 @@ export default function Progress() {
           userPlan={userPlan} 
           completionDate={completionData?.completionDate || new Date().toISOString()}
           dashboardStats={dashboardStats}
-          actualProgress={actualProgress} // Truyền dữ liệu thực tế vào ProgressDashboard
+          actualProgress={actualProgress} // Debug: {actualProgress?.length || 0} mục
           onDataReset={() => {
             // Reset data & recalculate
             localStorage.removeItem('dashboardStats');
@@ -862,6 +944,25 @@ export default function Progress() {
             recalculateStatistics();
           }}
         />
+        
+        {/* Debug info */}
+        {actualProgress && actualProgress.length > 0 && (
+          <div style={{
+            marginTop: '20px',
+            padding: '10px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '5px',
+            fontSize: '12px'
+          }}>
+            <strong>Debug - Dữ liệu actualProgress:</strong>
+            <br />
+            Tổng số mục: {actualProgress.length}
+            <br />
+            Mục đầu tiên: {actualProgress[0] ? `${actualProgress[0].date}: ${actualProgress[0].actualCigarettes}/${actualProgress[0].targetCigarettes}` : 'N/A'}
+            <br />
+            Mục cuối cùng: {actualProgress[actualProgress.length - 1] ? `${actualProgress[actualProgress.length - 1].date}: ${actualProgress[actualProgress.length - 1].actualCigarettes}/${actualProgress[actualProgress.length - 1].targetCigarettes}` : 'N/A'}
+          </div>
+        )}
     </div>
   );
 }

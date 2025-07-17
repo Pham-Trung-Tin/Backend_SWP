@@ -5,8 +5,11 @@ import { logDebug } from '../utils/debugHelpers';
 
 // Debug function to check authentication status
 const checkAuthStatus = () => {
-  const tokenLocal = localStorage.getItem('auth_token');
-  const tokenSession = sessionStorage.getItem('auth_token');
+  // Tìm token từ cả localStorage và sessionStorage với đúng key (tương thích với quitPlanService.js)
+  const tokenLocal = localStorage.getItem('nosmoke_token') || 
+                    localStorage.getItem('auth_token');
+  const tokenSession = sessionStorage.getItem('nosmoke_token') || 
+                      sessionStorage.getItem('auth_token');
   const userLocal = localStorage.getItem('nosmoke_user');
   const userSession = sessionStorage.getItem('nosmoke_user');
 
@@ -50,9 +53,10 @@ export default function JourneyStepper() {
     }
   }, []);
 
-  // Hàm kiểm tra kế hoạch từ database
+  // Hàm kiểm tra kế hoạch từ database - CHÍNH THỨC
   const checkExistingPlanFromDatabase = async () => {
     try {
+      console.log('🔍 Kiểm tra kế hoạch từ DATABASE...');
       const userPlans = await getUserPlans();
 
       if (userPlans && userPlans.length > 0) {
@@ -69,6 +73,18 @@ export default function JourneyStepper() {
         }
 
         if (planToUse) {
+          console.log('✅ Tìm thấy kế hoạch trong DATABASE:', planToUse.plan_name);
+          
+          // Đồng bộ ngay vào localStorage
+          localStorage.setItem('activePlan', JSON.stringify(planToUse));
+          
+          // Trigger reload cho Progress component
+          window.dispatchEvent(new CustomEvent('localStorageChanged', { 
+            detail: { key: 'activePlan' } 
+          }));
+          
+          console.log('✅ Đã trigger reload cho Progress component');
+          
           // Cập nhật state để hiển thị màn hình hoàn thành
           setIsCompleted(true);
           setShowCompletionScreen(true);
@@ -87,22 +103,32 @@ export default function JourneyStepper() {
             reasonToQuit: planToUse.goal || prevData.reasonToQuit,
             // Cập nhật selectedPlan để có thể chỉnh sửa
             selectedPlan: {
-              id: planToUse.metadata?.selectedPlanId || planToUse.id, // Sử dụng ID từ database nếu không có selectedPlanId
+              id: planToUse.metadata?.selectedPlanId || planToUse.id,
               name: planToUse.plan_name || planToUse.planName,
               title: planToUse.plan_name || planToUse.planName,
               totalWeeks: planToUse.total_weeks || planToUse.totalWeeks,
               weeks: planToUse.weeks || [],
-              // Thêm thông tin thời gian từ database
               createdAt: planToUse.created_at || planToUse.createdAt,
               updatedAt: planToUse.updated_at || planToUse.updatedAt,
-              databaseId: planToUse.id // Lưu ID từ database để dễ dàng cập nhật sau này
+              databaseId: planToUse.id
             }
           }));
         }
+      } else {
+        console.log('ℹ️ Không tìm thấy kế hoạch trong DATABASE');
+        // Xóa localStorage nếu database không có dữ liệu
+        localStorage.removeItem('activePlan');
+        
+        // Trigger reload cho Progress component
+        window.dispatchEvent(new CustomEvent('localStorageChanged', { 
+          detail: { key: 'activePlan' } 
+        }));
+        
+        console.log('✅ Đã trigger reload cho Progress component (không có kế hoạch)');
       }
     } catch (error) {
-      console.error('❌ Error checking plans from database:', error);
-      // Nếu có lỗi API, không làm gì cả, để người dùng tạo kế hoạch mới
+      console.error('❌ Lỗi khi kiểm tra kế hoạch từ DATABASE:', error);
+      // Không fallback sang localStorage nữa - chỉ log lỗi
     }
   };
 
@@ -233,6 +259,31 @@ export default function JourneyStepper() {
       // Cập nhật qua API
       const apiResponse = await updateQuitPlan(activePlan.id, updateData);
 
+      // Đồng bộ ngay vào localStorage sau khi API thành công
+      if (apiResponse.success) {
+        const updatedPlan = {
+          ...updateData,
+          id: activePlan.id,
+          plan_name: updateData.planName,
+          initial_cigarettes: updateData.initialCigarettes,
+          total_weeks: updateData.totalWeeks,
+          start_date: activePlan.start_date,
+          created_at: activePlan.created_at,
+          updated_at: new Date().toISOString(),
+          is_active: true
+        };
+
+        // Cập nhật localStorage để đồng bộ
+        localStorage.setItem('activePlan', JSON.stringify(updatedPlan));
+        
+        // Trigger reload cho Progress component
+        window.dispatchEvent(new CustomEvent('localStorageChanged', { 
+          detail: { key: 'activePlan' } 
+        }));
+
+        console.log('✅ Đã đồng bộ dữ liệu vào localStorage sau khi cập nhật');
+      }
+
       // Chỉ hiển thị thông báo thành công khi đang ở step 4 (bước cuối cùng)
       if (currentStep === 4) {
         if (completeSelectedPlan) {
@@ -346,6 +397,31 @@ export default function JourneyStepper() {
       // Gọi API để lưu kế hoạch lên database
       const apiResponse = await createQuitPlan(planDataForAPI);
 
+      // Đồng bộ ngay vào localStorage sau khi API thành công
+      if (apiResponse.success) {
+        const createdPlan = {
+          ...planDataForAPI,
+          id: apiResponse.data?.id || Date.now(),
+          plan_name: planDataForAPI.planName,
+          initial_cigarettes: planDataForAPI.initialCigarettes,
+          total_weeks: planDataForAPI.totalWeeks,
+          start_date: planDataForAPI.startDate,
+          created_at: now,
+          updated_at: now,
+          is_active: true
+        };
+
+        // Lưu vào localStorage để đồng bộ
+        localStorage.setItem('activePlan', JSON.stringify(createdPlan));
+        
+        // Trigger reload cho Progress component
+        window.dispatchEvent(new CustomEvent('localStorageChanged', { 
+          detail: { key: 'activePlan' } 
+        }));
+
+        console.log('✅ Đã đồng bộ kế hoạch mới vào localStorage');
+      }
+
       // Hiển thị thông báo thành công với số tuần
       const planWeeks = completeSelectedPlan?.totalWeeks || planDataForAPI.totalWeeks || 8;
       alert(`Đã tạo kế hoạch cai thuốc thành công! Thời gian dự kiến: ${planWeeks} tuần.`);
@@ -440,6 +516,17 @@ export default function JourneyStepper() {
 
       // Xóa dữ liệu liên quan đến kế hoạch đã hoàn thành
       logDebug('QuitPlan', '✅ Đã xóa kế hoạch khỏi database thành công', null, true);
+
+      // Đồng bộ xóa localStorage
+      localStorage.removeItem('activePlan');
+      localStorage.removeItem('quitPlanCompletion');
+      
+      // Trigger reload cho Progress component
+      window.dispatchEvent(new CustomEvent('localStorageChanged', { 
+        detail: { key: 'activePlan' } 
+      }));
+
+      console.log('✅ Đã đồng bộ xóa dữ liệu khỏi localStorage');
 
       // Reset lại trạng thái
       setFormData({

@@ -195,6 +195,17 @@ export const deletePlan = async (planId) => {
         }
 
         console.log('✅ Quit plan deleted successfully:', data);
+        
+        // Clear progress data khi xóa plan
+        try {
+            console.log('🔍 Attempting to clear progress data...');
+            const progressService = await import('./progressService');
+            await progressService.default.forceCleanAllProgress();
+            console.log('✅ Progress data cleared after deleting plan');
+        } catch (progressError) {
+            console.warn('⚠️ Could not clear progress data:', progressError);
+        }
+        
         return data.data || data;
     } catch (error) {
         console.error('❌ Error deleting quit plan:', error);
