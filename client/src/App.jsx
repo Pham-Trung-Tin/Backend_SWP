@@ -23,7 +23,7 @@ import CoachRedirect from "./components/CoachRedirect.jsx"; // Import CoachRedir
 import AccessDenied from "./page/AccessDenied.jsx"; // Import AccessDenied
 import UserProfile from "./page/User.jsx"; // Import UserProfile component
 import CoachLayout from "./components/CoachLayout.jsx"; // Import CoachLayout
-import CoachDashboard from "./page/coach/CoachDashboard.jsx"; // Import CoachDashboard
+import CoachDashboardNew from "./page/coach/CoachDashboardNew.jsx"; // Import CoachDashboardNew
 import CoachBookings from "./page/coach/CoachBookings.jsx"; // Import CoachBookings
 import CoachMessaging from "./page/coach/CoachMessaging.jsx"; // Import CoachMessaging
 import { AuthProvider } from "./context/AuthContext.jsx"; // Import AuthProvider
@@ -336,7 +336,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <CoachDashboard />
+        element: <CoachDashboardNew />
       },
       {
         path: "bookings",
